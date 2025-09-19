@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Login } from "./login";
+import { Login } from "./Login";
 import { SignUp } from "./SignUp";
 import type { User } from "../../types/auth";
 import { AuthService } from "../../data/authData";

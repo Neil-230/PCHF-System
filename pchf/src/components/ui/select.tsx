@@ -1,93 +1,67 @@
 "use client";
 
-import * as React from "react";
-import { CheckIcon, ChevronDownIcon } from "lucide-react";
+import React from "react";
+import { ChevronDown } from "lucide-react";
 
-interface SelectProps {
-  value?: string;
-  onChange?: (value: string) => void;
-  children?: React.ReactNode;
-  placeholder?: string;
-}
+type Option = { value: string; label: string };
 
-interface SelectItemProps {
+type SelectProps = {
+  label?: string;
+  size?: "sm" | "lg" | "default";
+  options?: Option[]; // ✅ optional (Bootstrap style)
   value: string;
-  children: React.ReactNode;
-}
+  onChange: (value: string) => void;
+  disabled?: boolean;
+  children?: React.ReactNode; // ✅ optional (Radix style)
+};
 
-export function Select({ value, onChange, children, placeholder }: SelectProps) {
-  const [open, setOpen] = React.useState(false);
-  const [selected, setSelected] = React.useState(value || "");
-
-  const handleSelect = (val: string) => {
-    setSelected(val);
-    onChange?.(val);
-    setOpen(false);
-  };
+export function BootstrapSelect({
+  label,
+  size = "default",
+  options,
+  value,
+  onChange,
+  disabled = false,
+  children,
+}: SelectProps) {
+  const sizeClass =
+    size === "sm" ? "form-select-sm" : size === "lg" ? "form-select-lg" : "";
 
   return (
-    <div
-      className="dropdown"
-      tabIndex={0}
-      onBlur={() => setOpen(false)}
-      onClick={() => setOpen(!open)}
-    >
-      <button
-        className="btn btn-outline-secondary d-flex justify-content-between align-items-center w-100"
-        type="button"
-      >
-        {selected || placeholder || "Select..."}
-        <ChevronDownIcon size={16} />
-      </button>
+    <div className="">
+      {label && <label className="form-label fw-semibold">{label}</label>}
+        <select
+          className={`form-select border-secondary ${sizeClass}`}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          disabled={disabled}
+        >
+          {/* ✅ If options are passed, use them */}
+          {options &&
+            options.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
 
-      {open && (
-        <ul className="dropdown-menu show w-100 mt-0">
-          {React.Children.map(children, (child) => {
-            if (
-              React.isValidElement<
-                SelectItemProps & { onSelect?: (val: string) => void; selected?: string }
-              >(child) &&
-              child.type === SelectItem
-            ) {
-              return React.cloneElement(child, {
-                onSelect: handleSelect,
-                selected,
-              });
-            }
-            return child;
-          })}
-        </ul>
-      )}
+          {/* ✅ If children are passed, render them */}
+          {children}
+        </select>
+
+        <span className="position-absolute top-50 end-0 translate-middle-y pe-3">
+          <ChevronDown size={16} className="opacity-50" />
+        </span>
     </div>
   );
 }
 
-export function SelectItem({
-  value,
-  children,
-  onSelect,
-  selected,
-}: SelectItemProps & { onSelect?: (val: string) => void; selected?: string }) {
-  const isSelected = selected === value;
+export { BootstrapSelect as Select };
 
-  return (
-    <li
-      className={`dropdown-item d-flex justify-content-between align-items-center ${
-        isSelected ? "active" : ""
-      }`}
-      onClick={() => onSelect?.(value)}
-      style={{ cursor: "pointer" }}
-    >
-      {children}
-      {isSelected && <CheckIcon size={16} />}
-    </li>
-  );
-}
+type SelectItemProps = {
+  value: string;
+  children: React.ReactNode;
+};
 
-export function SelectLabel({ children }: { children: React.ReactNode }) {
-  return <h6 className="dropdown-header">{children}</h6>;
-}
-
-export function SelectSeparator() {
-  return <div className="dropdown-divider" />;
+export function SelectItem({ value, children }: SelectItemProps) {
+  return <option value={value}>{children}</option>;
 }

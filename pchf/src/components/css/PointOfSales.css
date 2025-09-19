@@ -1,0 +1,12 @@
+
+input.form-control:focus {
+  box-shadow: none;
+  outline: none;
+}
+
+select.form-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: none !important;
+}

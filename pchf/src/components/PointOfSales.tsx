@@ -4,12 +4,13 @@ import { mockProducts, categories } from "../data/mockData";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/Badge";
-import { Input } from "./ui/input";
-import { Select, SelectItem, SelectLabel, SelectSeparator } from "./ui/select";
+
+import { BootstrapSelect } from "./ui/select";
 import { Separator } from "./ui/separator";
 import { Plus, Minus, Search, CreditCard, DollarSign, Smartphone } from "lucide-react";
 import { Dialog, DialogHeader, DialogTitle } from "./ui/dialog";
 import { toast } from "sonner";
+import './css/PointOfSales.css'
 
 interface PointOfSaleProps {
   onTransactionComplete: (transaction: any) => void;
@@ -90,27 +91,34 @@ export function PointOfSale({ onTransactionComplete }: PointOfSaleProps) {
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
       {/* Products Section */}
       <div className="lg:col-span-2 space-y-4">
-        <div className="flex gap-4 items-center">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 size-4 text-muted-foreground" />
-            <Input
-              placeholder="Search products or SKU..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          <Select value={selectedCategory} onChange={setSelectedCategory}>
-            <SelectItem value="All">All</SelectItem>
-            {categories.map((cat) => (
-              <SelectItem key={cat} value={cat}>
-                {cat}
-              </SelectItem>
-            ))}
-          </Select>
+        {/* SELECT AND SEARCH HEADER */}
+        <div className="d-flex gap-2 align-items-center mb-3">
+          {/* Search Bar */}
+          <form className="flex-grow-1">
+            <div className="input-group">
+              <span className="input-group-text border-end-0 bg-transparent border-secondary">
+                <Search className="text-secondary" />
+              </span>
+              <input
+                type="text"
+                className="form-control border-start-0 border-secondary"
+                placeholder="Search products or SKU..."
+                onChange={(e) => setSearchQuery(e.target.value)}
+                value={searchQuery}
+              />
+            </div>
+          </form>
+
+          {/* Bootstrap Select for Categories */}
+          <BootstrapSelect
+            options={[{ value: "All", label: "All" }, ...categories.map((c) => ({ value: c, label: c }))]}
+            value={selectedCategory}
+            onChange={setSelectedCategory}
+          />
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 max-h-[calc(100vh-200px)] overflow-y-auto">
+        {/* Product Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 max-h-[calc(200px)] overflow-y-auto">
           {filteredProducts.map((product) => (
             <Card
               key={product.id}
@@ -131,7 +139,7 @@ export function PointOfSale({ onTransactionComplete }: PointOfSaleProps) {
               </CardHeader>
               <CardContent>
                 <p className="text-xs text-muted-foreground">SKU: {product.sku}</p>
-                <p className="font-semibold">${product.price.toFixed(2)}</p>
+                <p className="fw-semibold">${product.price.toFixed(2)}</p>
                 <Badge variant="outline" className="text-xs">
                   {product.category}
                 </Badge>
@@ -142,10 +150,10 @@ export function PointOfSale({ onTransactionComplete }: PointOfSaleProps) {
       </div>
 
       {/* Cart Section */}
-      <div className="bg-card border rounded-lg p-4 flex flex-col">
-        <h3 className="font-semibold mb-4">Current Order</h3>
+      <div className="bg-card border rounded-lg p-4 d-flex flex-column">
+        <h3 className="fw-semibold mb-4">Current Order</h3>
         {cart.length === 0 ? (
-          <div className="flex-1 flex items-center justify-center text-muted-foreground">
+          <div className="flex-1 d-flex align-items-center justify-content-center text-muted-foreground">
             <div className="text-center">
               <p>No items in cart</p>
               <p className="text-sm">Select products to add them</p>
@@ -155,13 +163,19 @@ export function PointOfSale({ onTransactionComplete }: PointOfSaleProps) {
           <>
             <div className="flex-1 space-y-3 overflow-y-auto">
               {cart.map((item) => (
-                <div key={item.product.id} className="flex items-center justify-between">
+                <div key={item.product.id} className="d-flex align-items-center justify-content-between">
                   <div className="flex-1">
-                    <p className="font-medium text-sm">{item.product.name}</p>
-                    <p className="text-xs text-muted-foreground">${item.product.price.toFixed(2)} each</p>
+                    <p className="fw-medium text-sm">{item.product.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      ${item.product.price.toFixed(2)} each
+                    </p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Button size="sm" variant="outline" onClick={() => updateQuantity(item.product.id, item.quantity - 1)}>
+                  <div className="d-flex align-items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
+                    >
                       <Minus className="size-3" />
                     </Button>
                     <span className="w-8 text-center text-sm">{item.quantity}</span>
@@ -174,7 +188,7 @@ export function PointOfSale({ onTransactionComplete }: PointOfSaleProps) {
                       <Plus className="size-3" />
                     </Button>
                   </div>
-                  <p className="font-medium text-sm w-16 text-right">
+                  <p className="fw-medium text-sm w-16 text-end">
                     ${(item.product.price * item.quantity).toFixed(2)}
                   </p>
                 </div>
@@ -184,16 +198,16 @@ export function PointOfSale({ onTransactionComplete }: PointOfSaleProps) {
             <Separator className="my-4" />
 
             <div className="space-y-2">
-              <div className="flex justify-between text-sm">
+              <div className="d-flex justify-content-between text-sm">
                 <span>Subtotal:</span>
                 <span>${subtotal.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between text-sm">
+              <div className="d-flex justify-content-between text-sm">
                 <span>Tax (10%):</span>
                 <span>${tax.toFixed(2)}</span>
               </div>
               <Separator />
-              <div className="flex justify-between font-semibold">
+              <div className="d-flex justify-content-between fw-semibold">
                 <span>Total:</span>
                 <span>${total.toFixed(2)}</span>
               </div>
@@ -205,16 +219,24 @@ export function PointOfSale({ onTransactionComplete }: PointOfSaleProps) {
               </DialogHeader>
               <div className="space-y-4 mt-4">
                 <div className="text-center p-4 bg-muted rounded-lg">
-                  <p className="font-semibold">Total: ${total.toFixed(2)}</p>
+                  <p className="fw-semibold">Total: ${total.toFixed(2)}</p>
                 </div>
                 <div className="grid grid-cols-1 gap-3">
-                  <Button onClick={() => handlePayment("card")} className="flex items-center gap-2 h-12">
+                  <Button onClick={() => handlePayment("card")} className="d-flex align-items-center gap-2 h-12">
                     <CreditCard className="size-4" /> Credit/Debit Card
                   </Button>
-                  <Button onClick={() => handlePayment("cash")} variant="outline" className="flex items-center gap-2 h-12">
+                  <Button
+                    onClick={() => handlePayment("cash")}
+                    variant="outline"
+                    className="d-flex align-items-center gap-2 h-12"
+                  >
                     <DollarSign className="size-4" /> Cash
                   </Button>
-                  <Button onClick={() => handlePayment("digital")} variant="outline" className="flex items-center gap-2 h-12">
+                  <Button
+                    onClick={() => handlePayment("digital")}
+                    variant="outline"
+                    className="d-flex align-items-center gap-2 h-12"
+                  >
                     <Smartphone className="size-4" /> Digital Wallet
                   </Button>
                 </div>
