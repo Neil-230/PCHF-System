@@ -1,4 +1,4 @@
-import { Product } from '../types/index';
+import type { Product, Transaction, InventoryAlert } from '../types/index';
 
 export const mockProducts: Product[] = [
   {
