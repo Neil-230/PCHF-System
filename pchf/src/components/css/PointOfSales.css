@@ -10,3 +10,8 @@ select.form-select {
   -moz-appearance: none;
   background-image: none !important;
 }
+
+
+.lucide-chevron-down {
+  display: none;
+}

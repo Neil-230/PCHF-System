@@ -88,7 +88,13 @@ export function PointOfSale({ onTransactionComplete }: PointOfSaleProps) {
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
+    <div className=""
+      style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+          gap: "1rem" // optional, same as gap-4 in Tailwind
+          }}
+      >
       {/* Products Section */}
       <div className="lg:col-span-2 space-y-4">
         {/* SELECT AND SEARCH HEADER */}
@@ -118,7 +124,12 @@ export function PointOfSale({ onTransactionComplete }: PointOfSaleProps) {
         </div>
 
         {/* Product Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 max-h-[calc(200px)] overflow-y-auto">
+        <div className=""
+          style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+          gap: "1rem" // optional, same as gap-4 in Tailwind
+          }}>
           {filteredProducts.map((product) => (
             <Card
               key={product.id}
@@ -151,10 +162,10 @@ export function PointOfSale({ onTransactionComplete }: PointOfSaleProps) {
 
       {/* Cart Section */}
       <div className="bg-card border rounded-lg p-4 d-flex flex-column">
-        <h3 className="fw-semibold mb-4">Current Order</h3>
+        <h3 className="fw-bold">Current Order</h3>
         {cart.length === 0 ? (
-          <div className="flex-1 d-flex align-items-center justify-content-center text-muted-foreground">
-            <div className="text-center">
+          <div className="d-flex align-items-center justify-content-center flex-grow-1 text-muted-foreground" style={{ minHeight: "200px" }}>
+            <div className="text-center text- ">
               <p>No items in cart</p>
               <p className="text-sm">Select products to add them</p>
             </div>
