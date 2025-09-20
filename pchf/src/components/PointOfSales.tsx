@@ -122,13 +122,14 @@ export function PointOfSale({ onTransactionComplete }: PointOfSaleProps) {
             onChange={setSelectedCategory}
           />
         </div>
-
+        
         {/* Product Grid */}
-        <div className=""
-          style={{
+        <div 
+          className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 flex-grow overflow-y-auto"
+          style={{ maxHeight: "calc(100vh - 174px)",
           display: "grid",
           gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-          gap: "1rem" // optional, same as gap-4 in Tailwind
+          gap: "1rem"
           }}>
           {filteredProducts.map((product) => (
             <Card
@@ -136,16 +137,18 @@ export function PointOfSale({ onTransactionComplete }: PointOfSaleProps) {
               className={`cursor-pointer transition-all hover:shadow-md ${product.stock === 0 ? "opacity-50" : ""}`}
               onClick={() => addToCart(product)}
             >
-              <CardHeader className="pb-2">
-                <div className="flex justify-between items-start">
-                  <CardTitle className="text-sm line-clamp-2">{product.name}</CardTitle>
-                  <Badge
-                    variant={
-                      product.stock > 10 ? "default" : product.stock > 0 ? "secondary" : "destructive"
-                    }
-                  >
-                    {product.stock > 0 ? `${product.stock}` : "Out"}
-                  </Badge>
+              <CardHeader>
+                <div className="d-flex flex-row">
+                  <CardTitle>{product.name}</CardTitle>
+                  <div className="ms-2">
+                    <Badge
+                      variant={
+                        product.stock > 10 ? "default" : product.stock > 0 ? "secondary" : "destructive"
+                      }
+                    >
+                      {product.stock > 0 ? `${product.stock}` : "Out"}
+                    </Badge>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>

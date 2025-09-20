@@ -2,7 +2,7 @@ import * as React from "react";
 
 function Card({ className="", ...props }: React.ComponentProps<"div">){
   return(
-    <div className={`card ${className}`} {...props}/>
+    <div className={`card p-1 ${className}`} {...props}/>
   );
 }
 function CardHeader({className="", ...props }: React.ComponentProps<"div">){
@@ -27,7 +27,7 @@ function CardAction({ className = "", ...props }: React.ComponentProps<"div">) {
 }
 function CardContent({ className = "", ...props }: React.ComponentProps<"div">) {
   return (
-    <div className={`card-body ${className}`} {...props} />
+    <div className={`card-body pb-0 pt-0 ${className}`} {...props} />
   );
 }
 function CardFooter({ className = "", ...props }: React.ComponentProps<"div">) {
