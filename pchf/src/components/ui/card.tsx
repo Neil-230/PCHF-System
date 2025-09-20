@@ -7,7 +7,7 @@ function Card({ className="", ...props }: React.ComponentProps<"div">){
 }
 function CardHeader({className="", ...props }: React.ComponentProps<"div">){
   return(
-    <div className={`card-header ${className}`}{...props}/>
+    <div className={`card-header bg-transparent border-bottom-0 ${className}`}{...props}/>
   );
 }
 function CardTitle ({className = "", ...props }: React.ComponentProps<"div">){
