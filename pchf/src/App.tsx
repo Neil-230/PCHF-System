@@ -6,7 +6,7 @@ import { useState, useEffect } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import { Layout } from "./components/Layout";
-import Dashboard from "./components/Dashboard";
+import { Dashboard } from "./components/Dashboard";
 import InventoryManagement from "./components/InventoryManagement";
 import TransactionHistory from "./components/TransactionHistory";
 import Settings from "./components/Settings";
@@ -67,7 +67,7 @@ export default function App() {
   const renderContent = () => {
     switch (activeTab) {
       case "dashboard":
-        return <Dashboard />;
+        return <Dashboard transactions={transactions} />;
       case "pos":
         return <PointOfSale onTransactionComplete={handleTransactionComplete} />;
       case "inventory":
@@ -79,7 +79,7 @@ export default function App() {
       case "settings":
         return <Settings  />;
       default:
-        return <Dashboard  />;
+        return <Dashboard transactions={transactions}  />;
     }
   };
 

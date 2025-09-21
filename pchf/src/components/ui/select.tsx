@@ -8,11 +8,11 @@ type Option = { value: string; label: string };
 type SelectProps = {
   label?: string;
   size?: "sm" | "lg" | "default";
-  options?: Option[]; // ✅ optional (Bootstrap style)
+  options?: Option[]; // optional (Bootstrap style)
   value: string;
   onChange: (value: string) => void;
   disabled?: boolean;
-  children?: React.ReactNode; // ✅ optional (Radix style)
+  children?: React.ReactNode; // optional (Radix style)
 };
 
 export function BootstrapSelect({
@@ -29,14 +29,14 @@ export function BootstrapSelect({
 
   return (
     <div className="">
-      {label && <label className="form-label fw-semibold">{label}</label>}
+      {label && <label className="form-label fw-semibold ">{label}</label>}
         <select
-          className={`form-select border-secondary ${sizeClass}`}
+          className={`form-select border-muted ${sizeClass}`}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled}
         >
-          {/* ✅ If options are passed, use them */}
+          {/*  If options are passed, use them */}
           {options &&
             options.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -44,7 +44,7 @@ export function BootstrapSelect({
               </option>
             ))}
 
-          {/* ✅ If children are passed, render them */}
+          {/* If children are passed, render them */}
           {children}
         </select>
 

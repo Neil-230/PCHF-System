@@ -1,5 +1,7 @@
 {
   "dependencies": {
-    "bootstrap": "^5.3.8"
+    "bootstrap": "^5.3.8",
+    "rechart": "^0.0.1",
+    "recharts": "^3.2.1"
   }
 }
