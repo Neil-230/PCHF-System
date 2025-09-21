@@ -4,7 +4,7 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Alert, AlertDescription } from "../ui/alert";
-import { Eye, EyeOff, CreditCard } from "lucide-react";
+import { Eye, EyeOff, CreditCard, Weight } from "lucide-react";
 
 interface LoginProps {
   onLogin: (email: string, password: string) => boolean;
@@ -47,22 +47,22 @@ export function Login({ onLogin, onSwitchToSignUp }: LoginProps) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className="w-full max-w-md space-y-6">
-        <div className="text-center space-y-2">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <div className="p-2 bg-primary rounded-lg">
-              <CreditCard className="w-6 h-6 text-primary-foreground" />
+    <div className=" d-flex align-items-center justify-content-center p-4" style={{minHeight:"100vh"}} >
+      <div className="d-flex flex-column" style={{minWidth:"32%"}}>
+        <div className="text-center d-flex flex-column justify-content-center">
+          <div className="d-flex items-center justify-content-center gap-2">
+            <div className="">
+              <CreditCard size={35}/>
             </div>
-            <h1 className="text-2xl font-semibold">Cashier System</h1>
+            <h3 >Cashier System</h3>
           </div>
-          <p className="text-muted-foreground">Sign in to access your dashboard</p>
+          <p className=" text-secondary">Sign in to access your dashboard</p>
         </div>
 
         <Card>
-          <CardHeader>
+          <CardHeader className="d-flex flex-column text-start ">
             <CardTitle>Welcome back</CardTitle>
-            <CardDescription>
+            <CardDescription className="text-secondary">
               Enter your credentials to access the system
             </CardDescription>
           </CardHeader>
@@ -74,8 +74,9 @@ export function Login({ onLogin, onSwitchToSignUp }: LoginProps) {
                 </Alert>
               )}
 
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+              {/* USERNAME */}
+              <div className="">
+                <Label htmlFor="email" className="fw-bold">Email</Label>
                 <Input
                   id="email"
                   type="email"
@@ -86,48 +87,48 @@ export function Login({ onLogin, onSwitchToSignUp }: LoginProps) {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="Enter your password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-                  <Button
-                    type="button"
-                    size="sm"
-                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </Button>
+              {/* PASSWORD */}
+              <div>
+                <Label htmlFor="password" className="fw-bold">Password</Label>
+                <div className="relative d-flex">
+                  <div className="position-relative w-100">
+                    <input
+                      className="form-control pe-5 " // add padding so text doesn't overlap the button
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Enter your password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-sm bg-transparent border-0 position-absolute top-50 end-0 translate-middle-y me-2"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? <EyeOff /> : <Eye />}
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button type="submit" className="w-100 mt-2 bg-dark border-secondary" disabled={isLoading}>
                 {isLoading ? 'Signing in...' : 'Sign in'}
               </Button>
             </form>
 
-            <div className="mt-6 space-y-3">
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-card px-2 text-muted-foreground">Demo Accounts</span>
-                </div>
+            <div className="mt-6">
+              <div className="d-flex align-items-center my-4">
+                <div className="flex-grow-1 border-top"></div>
+                <span className="mx-3 text-secondary">DEMO ACCOUNT</span>
+                <div className="flex-grow-1 border-top"></div>
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
-                <Button type="button" className="w-full" onClick={() => fillDemoCredentials('admin')}>
+              <div className="d-flex justify-content-center md-col-2 gap-2 mb-3">
+                <Button type="button" className="w-100 bg-dark border-secondary" onClick={() => fillDemoCredentials('admin')}>
                   Admin Demo
                 </Button>
-                <Button type="button" className="w-full" onClick={() => fillDemoCredentials('cashier')}>
+                <Button type="button" className="w-100 bg-dark border-secondary" onClick={() => fillDemoCredentials('cashier')}>
                   Cashier Demo
                 </Button>
               </div>
@@ -136,7 +137,11 @@ export function Login({ onLogin, onSwitchToSignUp }: LoginProps) {
             <div className="mt-6 text-center">
               <p className="text-sm text-muted-foreground">
                 Don't have an account?{' '}
-                <Button type="button" variant="link" className="p-0 h-auto" onClick={onSwitchToSignUp}>
+                <Button 
+                  type="button" 
+                  variant="link" 
+                  className="p-0 text-dark fw-bold text-decoration-none " 
+                  onClick={onSwitchToSignUp}>
                   Sign up
                 </Button>
               </p>
@@ -144,7 +149,7 @@ export function Login({ onLogin, onSwitchToSignUp }: LoginProps) {
           </CardContent>
         </Card>
 
-        <div className="text-center text-xs text-muted-foreground">
+        <div className="text-center mt-3">
           <p>Demo credentials are provided for testing purposes</p>
         </div>
       </div>

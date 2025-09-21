@@ -2,7 +2,7 @@ import * as React from "react";
 
 function Card({ className="", ...props }: React.ComponentProps<"div">){
   return(
-    <div className={`card p-1 ${className}`} {...props}/>
+    <div className={`card p-3 rounded-4 ${className}`} {...props}/>
   );
 }
 function CardHeader({className="", ...props }: React.ComponentProps<"div">){
@@ -17,7 +17,7 @@ function CardTitle ({className = "", ...props }: React.ComponentProps<"div">){
 }
 function CardDescription({className="", ...props }: React.ComponentProps<"div">){
   return(
-    <div className={`d-flex justify-content-end ${className}`} {...props}/>
+    <div className={`d-flex ${className}`} {...props}/>
   );
 }
 function CardAction({ className = "", ...props }: React.ComponentProps<"div">) {
