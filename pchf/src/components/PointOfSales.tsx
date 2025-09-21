@@ -88,7 +88,7 @@ export function PointOfSale({ onTransactionComplete }: PointOfSaleProps) {
   };
 
   return (
-    <div className=""
+    <div className="d-flex"
       style={{
           display: "grid",
           gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
@@ -96,28 +96,32 @@ export function PointOfSale({ onTransactionComplete }: PointOfSaleProps) {
           }}
       >
       {/* Products Section */}
-      <div className="lg:col-span-2 space-y-4">
+      <div className="col-md-8">
         {/* SELECT AND SEARCH HEADER */}
         <div className="d-flex gap-2 align-items-center mb-3">
           {/* Search Bar */}
           <form className="flex-grow-1">
-            <div className="input-group">
-              <span className="input-group-text border-end-0 bg-transparent border-secondary">
-                <Search className="text-secondary" />
-              </span>
+            <div className="position-relative w-100">
               <input
                 type="text"
-                className="form-control border-start-0 border-secondary"
+                className="form-control ps-5" // extra left padding so text doesn't overlap icon
                 placeholder="Search products or SKU..."
                 onChange={(e) => setSearchQuery(e.target.value)}
                 value={searchQuery}
+              />
+              <Search
+                className="position-absolute top-50 start-0 translate-middle-y ms-2 text-secondary"
+                size={18}
               />
             </div>
           </form>
 
           {/* Bootstrap Select for Categories */}
           <BootstrapSelect
-            options={[{ value: "All", label: "All" }, ...categories.map((c) => ({ value: c, label: c }))]}
+            options={[
+              { value: "All", label: "All" },
+              ...categories.filter((c) => c !== "All").map((c) => ({ value: c, label: c })),
+            ]}
             value={selectedCategory}
             onChange={setSelectedCategory}
           />
@@ -164,7 +168,7 @@ export function PointOfSale({ onTransactionComplete }: PointOfSaleProps) {
       </div>
 
       {/* Cart Section */}
-      <div className="bg-card border rounded-lg p-4 d-flex flex-column">
+      <div className="col-md-4 bg-card border rounded-lg p-4 d-flex flex-column">
         <h3 className="fw-bold">Current Order</h3>
         {cart.length === 0 ? (
           <div className="d-flex align-items-center justify-content-center flex-grow-1 text-muted-foreground" style={{ minHeight: "200px" }}>

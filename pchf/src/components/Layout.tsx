@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   ShoppingCart,
   Package,
@@ -9,6 +10,7 @@ import {
   User,
   LogOut,
   Home,
+  Menu,
 } from "lucide-react";
 
 interface LayoutProps {
@@ -33,6 +35,8 @@ const navigation = [
 ];
 
 export function Layout({ children, activeTab, onTabChange, user, onLogout }: LayoutProps) {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true); // sidebar state
+
   const getUserInitials = (name: string) =>
     name.split(" ").map((n) => n[0]).join("").toUpperCase();
 
@@ -41,46 +45,54 @@ export function Layout({ children, activeTab, onTabChange, user, onLogout }: Lay
   return (
     <div className="d-flex min-vh-100">
       {/* Sidebar */}
-      <div className=" border-end p-3" style={{ width: "250px" }}>
-        <div className="d-flex align-items-center mb-4">
-          <ShoppingCart size={24} className="me-2" />
-          <span className="fw-bold">CashierPro</span>
+      {isSidebarOpen && (
+        <div className="border-end pt-4" style={{ width: "250px" }}>
+          <div className="d-flex align-items-center mb-4 ms-4">
+            <ShoppingCart size={24} className="me-2" />
+            <span className="fw-bold">CashierPro</span>
+          </div>
+          <ul className="nav flex-column">
+            {allowedNavigation.map((item) => (
+              <li key={item.id} className="nav-item">
+                <button
+                  className="nav-link d-flex align-items-center text-dark w-100"
+                  style={{
+                    backgroundColor: activeTab === item.id ? "#dadada46" : "transparent",
+                    fontWeight: activeTab === item.id ? "bold" : "normal",
+                  }}
+                  onClick={() => onTabChange(item.id)}
+                >
+                  <item.icon size={18} className="me-2" />
+                  {item.label}
+                </button>
+              </li>
+            ))}
+          </ul>
         </div>
-        <ul className="nav flex-column">
-          {allowedNavigation.map((item) => (
-            <li key={item.id} className="nav-item">
-              <button
-                className={`nav-link d-flex align-items-center ${
-                  activeTab === item.id ? "active fw-bold" : ""
-                }`}
-                onClick={() => onTabChange(item.id)}
-              >
-                <item.icon size={18} className="me-2" />
-                {item.label}
-              </button>
-            </li>
-          ))}
-        </ul>
-      </div>
+      )}
 
       {/* Main content */}
       <div className="flex-grow-1 d-flex flex-column">
         {/* Header */}
         <header className="border-bottom px-3 py-2 d-flex align-items-center">
+          {/* Toggle button */}
+          <button
+            className="btn btn-light me-3"
+            onClick={() => setIsSidebarOpen((prev) => !prev)}
+          >
+            <Menu size={20} />
+          </button>
+
           <h5 className="m-0">
             {allowedNavigation.find((nav) => nav.id === activeTab)?.label || "Point of Sale"}
           </h5>
 
           {/* Right side */}
           <div className="ms-auto d-flex align-items-center gap-3">
-            {/* Notifications Dropdown */}
             <div className="dropdown">
-              <button
-                className="btn position-relative"
-                data-bs-toggle="dropdown"
-              >
+              <button className="btn position-relative" data-bs-toggle="dropdown">
                 <Bell size={20} />
-                <span className="badge bg-danger position-absolute top-0 start-100 translate-middle p-1">
+                <span className="badge bg-dark position-absolute top-0 start-100 translate-middle p-1">
                   3
                 </span>
               </button>
@@ -100,24 +112,12 @@ export function Layout({ children, activeTab, onTabChange, user, onLogout }: Lay
                     <div className="small text-muted">Energy Drink is out of stock</div>
                   </div>
                 </div>
-                <div className="dropdown-item d-flex gap-2">
-                  <BarChart3 size={16} className="text-primary mt-1" />
-                  <div>
-                    <strong>Daily Sales Report</strong>
-                    <div className="small text-muted">Today's sales: $342.75</div>
-                  </div>
-                </div>
-                <div className="dropdown-divider"></div>
-                <button className="dropdown-item text-center">View All Notifications</button>
               </div>
             </div>
 
             {/* Account Dropdown */}
             <div className="dropdown">
-              <button
-                className="btn d-flex align-items-center gap-2"
-                data-bs-toggle="dropdown"
-              >
+              <button className="btn d-flex align-items-center gap-2" data-bs-toggle="dropdown">
                 <div
                   className="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center"
                   style={{ width: "32px", height: "32px" }}
