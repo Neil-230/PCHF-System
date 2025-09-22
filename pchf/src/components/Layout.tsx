@@ -46,7 +46,13 @@ export function Layout({ children, activeTab, onTabChange, user, onLogout }: Lay
     <div className="d-flex min-vh-100">
       {/* Sidebar */}
       {isSidebarOpen && (
-        <div className="border-end pt-4" style={{ width: "250px" }}>
+        <div className="border-end pt-4" 
+          style={{
+            width: "250px",
+            height: "100vh",
+            position: "sticky",
+            top: 0,
+          }}>
           <div className="d-flex align-items-center mb-4 ms-4">
             <ShoppingCart size={24} className="me-2" />
             <span className="fw-bold">CashierPro</span>

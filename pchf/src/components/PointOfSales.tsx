@@ -130,7 +130,7 @@ export function PointOfSale({ onTransactionComplete }: PointOfSaleProps) {
         {/* Product Grid */}
         <div 
           className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 flex-grow overflow-y-auto"
-          style={{ maxHeight: "calc(100vh - 174px)",
+          style={{ maxHeight: "calc(100vh - 180px)",
           display: "grid",
           gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
           gap: "1rem"

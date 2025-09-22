@@ -183,9 +183,11 @@ export function Dashboard({ transactions }: DashboardProps) {
         </div>
 
         <div className="col-lg-6">
-          <div className="card p-3">
+          <div className="card d-flex ">
             <h6>Sales by Category</h6>
-            <Pie data={categoryData} />
+            <div style={{ width: "100%", height: "285px" }}>
+              <Pie data={categoryData} options={{ responsive: true, maintainAspectRatio: false }} />
+            </div>
           </div>
         </div>
       </div>
