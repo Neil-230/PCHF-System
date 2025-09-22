@@ -7,7 +7,7 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import { Layout } from "./components/Layout";
 import { Dashboard } from "./components/Dashboard";
-import InventoryManagement from "./components/InventoryManagement";
+import { InventoryManagement } from "./components/InventoryManagement";
 import TransactionHistory from "./components/TransactionHistory";
 import Settings from "./components/Settings";
 import { PointOfSale } from "./components/PointOfSales";
