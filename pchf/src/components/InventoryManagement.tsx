@@ -131,7 +131,7 @@ export function InventoryManagement() {
           <div className="card text-center p-3 gap-4">
             <h6 className="text-start">Total Value</h6>
 
-            <div className="fw-bold text-start">${totalValue.toFixed(2)}</div>
+            <div className="fw-bold text-start">₱{totalValue.toFixed(2)}</div>
           </div>
         </div>
         <div className="col-md-3">
@@ -321,7 +321,7 @@ export function InventoryManagement() {
                     <td>
                       <span className="badge text-dark border" >{product.category}</span>
                     </td>
-                    <td className="fw-semibold">${product.price.toFixed(2)}</td>
+                    <td className="fw-semibold">₱{product.price.toFixed(2)}</td>
                     <td>{product.stock}</td>
                     <td>
                       <span className={`badge bg-${stockStatus.variant}`}>{stockStatus.label}</span>
