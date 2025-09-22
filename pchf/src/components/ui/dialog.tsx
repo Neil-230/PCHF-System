@@ -37,13 +37,13 @@ export function Dialog({ open, onClose, children }: DialogProps) {
     >
       <div
         className="bg-white rounded shadow p-4 position-relative"
-        style={{ maxWidth: "600px", width: "90%" }}
+        style={{ maxWidth: "400px", width: "90%"}}
         onClick={(e) => e.stopPropagation()}
       >
         {children}
         <button
           type="button"
-          className="btn-close position-absolute top-2 end-2"
+          className="CloseBtn btn-close position-absolute top-2 end-2"
           onClick={onClose}
         >
           <XIcon />

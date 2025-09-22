@@ -1,6 +1,6 @@
 import * as React from "react";
 
-type ButtonVariant = "primary" | "secondary" | "danger" | "outline" | "link";
+type ButtonVariant = "dark" | "secondary" | "danger" | "outline" | "link";
 type ButtonSize = "sm" | "lg" | "default";
 
 interface ButtonProps extends React.ComponentProps<"button"> {
@@ -11,7 +11,7 @@ interface ButtonProps extends React.ComponentProps<"button"> {
 
 function Button({
   className = "",
-  variant = "primary",
+  variant = "dark",
   size = "default",
   asChild = false,
   ...props
@@ -22,10 +22,10 @@ function Button({
   let classes = "btn";
 
   // Variants
-  if (variant === "primary") classes += " btn-primary";
+  if (variant === "dark") classes += " btn-dark";
   if (variant === "secondary") classes += " btn-secondary";
   if (variant === "danger") classes += " btn-danger";
-  if (variant === "outline") classes += " btn-outline-primary";
+  if (variant === "outline") classes += " btn-outline-secondary";
   if (variant === "link") classes += " btn-link";
 
   // Sizes

@@ -1,7 +1,6 @@
 import React from "react";
 import { mockProducts } from "../data/mockData";
 import {
-  DollarSign,
   TrendingUp,
   ShoppingCart,
   Package,
@@ -49,13 +48,16 @@ export function Dashboard({ transactions }: DashboardProps) {
   const todaySales = todayTransactions.reduce((sum, t) => sum + t.total, 0);
   const todayItemsSold = todayTransactions.reduce(
     (sum, t) =>
-      sum + t.items.reduce((itemSum: number, item: any) => itemSum + item.quantity, 0),
+      sum +
+      t.items.reduce((itemSum: number, item: any) => itemSum + item.quantity, 0),
     0
   );
 
   const totalProducts = mockProducts.length;
   const totalStock = mockProducts.reduce((sum, p) => sum + p.stock, 0);
-  const lowStockItems = mockProducts.filter((p) => p.stock <= 10 && p.stock > 0).length;
+  const lowStockItems = mockProducts.filter(
+    (p) => p.stock <= 10 && p.stock > 0
+  ).length;
   const outOfStockItems = mockProducts.filter((p) => p.stock === 0).length;
   const inventoryValue = mockProducts.reduce(
     (sum, p) => sum + p.price * p.stock,
@@ -124,9 +126,9 @@ export function Dashboard({ transactions }: DashboardProps) {
           <div className="card p-3">
             <div className="d-flex justify-content-between align-items-center">
               <h6>Today's Sales</h6>
-              <DollarSign size={18} />
+              <TrendingUp size={18} />
             </div>
-            <h3>${todaySales.toFixed(2)}</h3>
+            <h3>₱{todaySales.toFixed(2)}</h3>
             <small>
               <TrendingUp size={14} /> +12% from yesterday
             </small>
@@ -152,7 +154,7 @@ export function Dashboard({ transactions }: DashboardProps) {
               <h6>Inventory Value</h6>
               <Package size={18} />
             </div>
-            <h3>${inventoryValue.toFixed(2)}</h3>
+            <h3>₱{inventoryValue.toFixed(2)}</h3>
             <small>{totalStock} items in stock</small>
           </div>
         </div>
@@ -172,7 +174,7 @@ export function Dashboard({ transactions }: DashboardProps) {
       </div>
 
       {/* Charts */}
-      <div className="row g-3 mt-4">
+      <div className="row mt-4">
         <div className="col-lg-6">
           <div className="card p-3">
             <h6>
@@ -185,15 +187,18 @@ export function Dashboard({ transactions }: DashboardProps) {
         <div className="col-lg-6">
           <div className="card d-flex ">
             <h6>Sales by Category</h6>
-            <div style={{ width: "100%", height: "285px" }}>
-              <Pie data={categoryData} options={{ responsive: true, maintainAspectRatio: false }} />
+            <div style={{ width: "100%", height: "242px" }}>
+              <Pie
+                data={categoryData}
+                options={{ responsive: true, maintainAspectRatio: false }}
+              />
             </div>
           </div>
         </div>
       </div>
       {/* Top Products */}
-      <div className="row g-3 mt-4">
-        <div className="col-12">
+      <div className="row g-3 mt-1">
+        <div className="col-md-6">
           <div className="card p-3">
             <h6>Top Products by Value</h6>
             {mockProducts
@@ -203,7 +208,10 @@ export function Dashboard({ transactions }: DashboardProps) {
                 <div
                   key={product.id}
                   className="d-flex justify-content-between align-items-center mb-2"
-                  style={{ borderBottom: "1px solid #eee", paddingBottom: "5px" }}
+                  style={{
+                    borderBottom: "1px solid #eee",
+                    paddingBottom: "5px",
+                  }}
                 >
                   <div className="d-flex align-items-center gap-2">
                     <div
@@ -222,17 +230,25 @@ export function Dashboard({ transactions }: DashboardProps) {
                       {index + 1}
                     </div>
                     <div>
-                      <p style={{ margin: 0, fontWeight: "500" }}>{product.name}</p>
+                      <p style={{ margin: 0, fontWeight: "500" }}>
+                        {product.name}
+                      </p>
                       <small style={{ color: "gray" }}>
-                        {product.stock} in stock • ${product.price.toFixed(2)}
+                        {product.stock} in stock • ₱{product.price.toFixed(2)}
                       </small>
                     </div>
                   </div>
                   <div style={{ textAlign: "right" }}>
                     <p style={{ margin: 0, fontWeight: "500" }}>
-                      ${(product.price * product.stock).toFixed(2)}
+                      ₱{(product.price * product.stock).toFixed(2)}
                     </p>
-                    <small style={{ border: "1px solid #ccc", borderRadius: "4px", padding: "2px 6px" }}>
+                    <small
+                      style={{
+                        border: "1px solid #ccc",
+                        borderRadius: "4px",
+                        padding: "2px 6px",
+                      }}
+                    >
                       {product.category}
                     </small>
                   </div>
@@ -240,58 +256,82 @@ export function Dashboard({ transactions }: DashboardProps) {
               ))}
           </div>
         </div>
-      </div>
 
-      {/* Recent Transactions and Inventory Status */}
-      <div className="row g-3 mt-4">
-        {/* Recent Transactions */}
         <div className="col-lg-6">
-          <div className="card p-3">
-            <h6><Clock size={18} /> Recent Transactions</h6>
-            {transactions.map((transaction) => (
-              <div
-                key={transaction.id}
-                className="d-flex justify-content-between align-items-center mb-2"
-                style={{ borderBottom: "1px solid #eee", paddingBottom: "5px" }}
-              >
-                <div>
-                  <p style={{ margin: 0, fontWeight: "500" }}>{transaction.id}</p>
-                  <small style={{ color: "gray" }}>
-                    {new Date(transaction.timestamp).toLocaleTimeString()} • {transaction.items.length} items
-                  </small>
+          <div className="card h-100">
+            {/* Header (fixed) */}
+            <div className="card-header">
+              <h6>
+                <Clock size={18} /> Recent Transactions
+              </h6>
+            </div>
+
+            {/* Scrollable Body */}
+            <div
+              className="card-body"
+              style={{ maxHeight: "255px", overflowY: "auto" }}
+            >
+              {transactions.map((transaction) => (
+                <div
+                  key={transaction.id}
+                  className="d-flex justify-content-between align-items-center mb-2"
+                  style={{
+                    borderBottom: "1px solid #eee",
+                    paddingBottom: "5px",
+                  }}
+                >
+                  <div>
+                    <p style={{ margin: 0, fontWeight: "500" }}>
+                      {transaction.id}
+                    </p>
+                    <small style={{ color: "gray" }}>
+                      {new Date(transaction.timestamp).toLocaleTimeString()} •{" "}
+                      {transaction.items.length} items
+                    </small>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <p style={{ margin: 0, fontWeight: "500" }}>
+                      ₱{transaction.total.toFixed(2)}
+                    </p>
+                    <small
+                      style={{
+                        border: "1px solid #ccc",
+                        borderRadius: "4px",
+                        padding: "2px 6px",
+                      }}
+                    >
+                      {transaction.paymentMethod}
+                    </small>
+                  </div>
                 </div>
-                <div style={{ textAlign: "right" }}>
-                  <p style={{ margin: 0, fontWeight: "500" }}>${transaction.total.toFixed(2)}</p>
-                  <small style={{ border: "1px solid #ccc", borderRadius: "4px", padding: "2px 6px" }}>
-                    {transaction.paymentMethod}
-                  </small>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
+      </div>
 
-        {/* Inventory Status */}
-        <div className="col-lg-6">
-          <div className="card p-3">
-            <h6>Inventory Status</h6>
-            <div className="d-flex justify-content-between text-center">
-              <div style={{ flex: 1 }}>
-                <h3 style={{ color: "green" }}>{totalProducts - lowStockItems - outOfStockItems}</h3>
-                <small>Well Stocked</small>
-              </div>
-              <div style={{ flex: 1 }}>
-                <h3 style={{ color: "orange" }}>{lowStockItems}</h3>
-                <small>Low Stock</small>
-              </div>
-              <div style={{ flex: 1 }}>
-                <h3 style={{ color: "red" }}>{outOfStockItems}</h3>
-                <small>Out of Stock</small>
-              </div>
-              <div style={{ flex: 1 }}>
-                <h3>{totalProducts}</h3>
-                <small>Total Products</small>
-              </div>
+      {/* Inventory Status */}
+      <div className="mt-4">
+        <div className="card p-3">
+          <h6>Inventory Status</h6>
+          <div className="d-flex justify-content-between text-center">
+            <div style={{ flex: 1 }}>
+              <h3 style={{ color: "green" }}>
+                {totalProducts - lowStockItems - outOfStockItems}
+              </h3>
+              <small>Well Stocked</small>
+            </div>
+            <div style={{ flex: 1 }}>
+              <h3 style={{ color: "orange" }}>{lowStockItems}</h3>
+              <small>Low Stock</small>
+            </div>
+            <div style={{ flex: 1 }}>
+              <h3 style={{ color: "red" }}>{outOfStockItems}</h3>
+              <small>Out of Stock</small>
+            </div>
+            <div style={{ flex: 1 }}>
+              <h3>{totalProducts}</h3>
+              <small>Total Products</small>
             </div>
           </div>
         </div>
