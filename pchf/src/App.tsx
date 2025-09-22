@@ -9,7 +9,7 @@ import { Layout } from "./components/Layout";
 import { Dashboard } from "./components/Dashboard";
 import { InventoryManagement } from "./components/InventoryManagement";
 import { TransactionHistory } from "./components/TransactionHistory";
-import Settings from "./components/Settings";
+import {Settings} from "./components/Settings";
 import { PointOfSale } from "./components/PointOfSales";
 import { Toaster } from "sonner";
 import { AuthService } from "./data/authData";
@@ -77,7 +77,7 @@ export default function App() {
       case "alerts":
         return <div>Inventory Alerts</div>; // Replace with <InventoryAlerts /> if available
       case "settings":
-        return <Settings  />;
+        return <Settings onLogout={handleLogout} />;
       default:
         return <Dashboard transactions={transactions}  />;
     }
