@@ -8,7 +8,7 @@ import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import { Layout } from "./components/Layout";
 import { Dashboard } from "./components/Dashboard";
 import { InventoryManagement } from "./components/InventoryManagement";
-import TransactionHistory from "./components/TransactionHistory";
+import { TransactionHistory } from "./components/TransactionHistory";
 import Settings from "./components/Settings";
 import { PointOfSale } from "./components/PointOfSales";
 import { Toaster } from "sonner";
@@ -73,7 +73,7 @@ export default function App() {
       case "inventory":
         return <InventoryManagement />;
       case "transactions":
-        return <TransactionHistory />;
+        return <TransactionHistory transactions={transactions} />;
       case "alerts":
         return <div>Inventory Alerts</div>; // Replace with <InventoryAlerts /> if available
       case "settings":
