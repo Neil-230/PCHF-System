@@ -74,8 +74,6 @@ export default function App() {
         return <InventoryManagement />;
       case "transactions":
         return <TransactionHistory transactions={transactions} />;
-      case "alerts":
-        return <div>Inventory Alerts</div>; // Replace with <InventoryAlerts /> if available
       case "settings":
         return <Settings onLogout={handleLogout} />;
       default:

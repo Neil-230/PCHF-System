@@ -247,7 +247,7 @@ export function Settings({ onLogout }: SettingsProps) {
 
 
       <div className="d-flex justify-content-end">
-        <button className="btn btn-dark btn-lg" onClick={handleSaveSettings}>
+        <button className="btn btn-dark btn-lg p-2" onClick={handleSaveSettings}>
           Save All Settings
         </button>
       </div>

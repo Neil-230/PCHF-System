@@ -30,7 +30,6 @@ const navigation = [
   { id: "pos", label: "Point of Sale", icon: CreditCard, roles: ["admin", "cashier"] },
   { id: "inventory", label: "Inventory", icon: Package, roles: ["admin"] },
   { id: "transactions", label: "Transactions", icon: BarChart3, roles: ["admin", "cashier"] },
-  { id: "alerts", label: "Alerts", icon: AlertTriangle, roles: ["admin"] },
   { id: "settings", label: "Settings", icon: Settings, roles: ["admin", "cashier"] },
 ];
 
