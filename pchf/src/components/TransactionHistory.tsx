@@ -56,7 +56,7 @@ export function TransactionHistory({ transactions }: TransactionHistoryProps) {
       {/* Stats */}
       <div className="row mb-4">
         <div className="col-md-4">
-          <div className="card text-center">
+          <div className="card text-center border-0" style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}>
             <div className="card-body">
               <h6 className="card-title">Total Revenue</h6>
               <p className="fw-bold">₱{totalRevenue.toFixed(2)}</p>
@@ -64,7 +64,7 @@ export function TransactionHistory({ transactions }: TransactionHistoryProps) {
           </div>
         </div>
         <div className="col-md-4">
-          <div className="card text-center">
+          <div className="card text-center border-0" style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}>
             <div className="card-body">
               <h6 className="card-title">Total Transactions</h6>
               <p className="fw-bold">{completedTransactions}</p>
@@ -72,7 +72,7 @@ export function TransactionHistory({ transactions }: TransactionHistoryProps) {
           </div>
         </div>
         <div className="col-md-4">
-          <div className="card text-center">
+          <div className="card text-center border-0" style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}>
             <div className="card-body">
               <h6 className="card-title">Average Transaction</h6>
               <p className="fw-bold">₱{averageTransaction.toFixed(2)}</p>
@@ -121,7 +121,7 @@ export function TransactionHistory({ transactions }: TransactionHistoryProps) {
       </div>
 
       {/* Transactions Table */}
-      <div className="card">
+      <div className="card border-0" style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}>
         <div className="card-body p-0">
           <table className="table table-hover mb-0">
             <thead className="table-light">

@@ -119,7 +119,7 @@ export function InventoryManagement() {
       {/* Stats Cards */}
       <div className="row g-3 mb-3">
         <div className="col-md-3">
-          <div className="card text-center p-3 gap-4">
+          <div className="card text-center p-3 gap-4 border-0" style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}>
             <div className="d-flex flex-row justify-content-between align-items-center">
               <h6>Total Products</h6>
               <Package size={20} className="mb-2"/>
@@ -128,14 +128,14 @@ export function InventoryManagement() {
           </div>
         </div>
         <div className="col-md-3">
-          <div className="card text-center p-3 gap-4">
+          <div className="card text-center p-3 gap-4 border-0" style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}>
             <h6 className="text-start">Total Value</h6>
 
             <div className="fw-bold text-start">₱{totalValue.toFixed(2)}</div>
           </div>
         </div>
         <div className="col-md-3">
-          <div className="card text-center p-3 gap-4">
+          <div className="card text-center p-3 gap-4 border-0" style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}>
             <div className="d-flex flex-row justify-content-between align-items-center">
               <h6>Low Stock</h6>
               <span className="badge bg-secondary text-light" style={{ width: "25px" }}>{lowStockProducts}</span>
@@ -144,7 +144,7 @@ export function InventoryManagement() {
           </div>
         </div>
         <div className="col-md-3">
-          <div className="card text-center p-3 gap-4">
+          <div className="card text-center p-3 gap-4 border-0" style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}>
             <div className="d-flex flex-row justify-content-between align-items-center">
               <h6>Out of Stock</h6>
               <span className="badge bg-danger text-light" style={{ width: "25px" }}>{outOfStockProducts}</span>
@@ -155,7 +155,7 @@ export function InventoryManagement() {
       </div>
       {/* Controls */}
       <div className="d-flex align-items-center gap-3 my-3">
-        <div className="flex-grow-1 position-relative">
+        <div className="flex-grow-1 position-relative border-0">
           <Search
             size={18}
             style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", color: "#6c757d" }}
@@ -290,11 +290,11 @@ export function InventoryManagement() {
       )}
 
       {/* Products Table */}
-      <div className="card">
-        <div className="card-body p-0">
+      <div className="card border-0 rounded-3" style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}>
+        <div className="card-body p-0 ">
           <table className="table table-striped table-hover mb-0">
-            <thead className="table-light">
-              <tr>
+            <thead className="">
+              <tr className="">
                 <th>Product</th>
                 <th>SKU</th>
                 <th>Category</th>
@@ -309,7 +309,7 @@ export function InventoryManagement() {
                 const stockStatus = getStockStatus(product.stock);
                 return (
                   <tr key={product.id}>
-                    <td>
+                    <td style={{backgroundColor:"white"}}>
                       <div>
                         <p className="fw-semibold">{product.name}</p>
                         {product.description && (

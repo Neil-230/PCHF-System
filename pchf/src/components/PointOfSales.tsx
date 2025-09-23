@@ -180,7 +180,8 @@ export function PointOfSale({ onTransactionComplete }: PointOfSaleProps) {
       <div className="container-fluid">
         <div className="row">
           {/* Products Section */}
-          <div className="col-md-8">
+          <div className="col-md-8 ps-0">
+            {/* Header */}
             <div className="d-flex gap-2 align-items-center mb-3">
               <form className="flex-grow-1">
                 <div className="position-relative w-100">
@@ -200,9 +201,11 @@ export function PointOfSale({ onTransactionComplete }: PointOfSaleProps) {
                 onChange={setSelectedCategory}
               />
             </div>
+            {/* __________ */}
 
+            {/* Products */}
             <div
-              className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 flex-grow overflow-y-auto"
+              className="grid gap-3 flex-grow overflow-y-auto pe-3"
               style={{ maxHeight: "calc(100vh - 180px)", display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "1rem" }}
             >
               {filteredProducts.map((product) => (
@@ -224,15 +227,17 @@ export function PointOfSale({ onTransactionComplete }: PointOfSaleProps) {
                   <CardContent>
                     <p className="text-xs text-muted-foreground">SKU: {product.sku}</p>
                     <p className="fw-semibold">₱{product.price.toFixed(2)}</p>
-                    <Badge variant="outline" className="text-xs">{product.category}</Badge>
+                    <Badge variant="outline" className="">{product.category}</Badge>
                   </CardContent>
                 </Card>
               ))}
             </div>
+            {/* _____________ */}
           </div>
 
           {/* Cart Section */}
-          <div className="col-md-4 bg-card border rounded-lg p-4 d-flex flex-column">
+          <div className="col-md-4 border-0 rounded-3 p-4 d-flex flex-column"
+            style={{backgroundColor:"white", boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}>
             <h3 className="fw-bold">Current Order</h3>
 
             {cart.length === 0 ? (

@@ -49,3 +49,13 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+
+
+.Card {
+  transition: transform 0.5s ease-out, box-shadow 0.5s ease-out;
+}
+.card:hover {
+  transform: translateY(-1px);
+
+}

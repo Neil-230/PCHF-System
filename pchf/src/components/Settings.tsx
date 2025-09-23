@@ -45,7 +45,7 @@ export function Settings({ onLogout }: SettingsProps) {
   return (
     <div className="container my-4">
       {/* Store Information */}
-      <div className="card mb-4">
+      <div className="card mb-4 border-0 rounded-3" style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}>
         <div className="card-header d-flex align-items-center gap-2">
           <Store size={20} />
           <strong>Store Information</strong>
@@ -93,7 +93,7 @@ export function Settings({ onLogout }: SettingsProps) {
       </div>
 
       {/* Receipt Settings */}
-      <div className="card mb-4">
+      <div className="card mb-4 border-0 rounded-3" style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}>
         <div className="card-header d-flex align-items-center gap-2">
           <Receipt size={20} />
           <strong>Receipt Settings</strong>
@@ -137,7 +137,7 @@ export function Settings({ onLogout }: SettingsProps) {
       </div>
 
       {/* Notification Settings */}
-      <div className="card mb-4">
+      <div className="card mb-4 border-0 rounded-3" style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.22)"}}>
         <div className="card-header d-flex align-items-center gap-2">
           <Bell size={20} />
           <strong>Notifications</strong>
@@ -160,7 +160,7 @@ export function Settings({ onLogout }: SettingsProps) {
       </div>
 
       {/* Security Settings */}
-      <div className="card mb-4">
+      <div className="card mb-4 border-0 rounded-3" style={{ boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.22)"}}>
         <div className="card-header d-flex align-items-center gap-2">
           <Shield size={20} />
           <strong>Security & Access</strong>
@@ -204,7 +204,7 @@ export function Settings({ onLogout }: SettingsProps) {
       </div>
 
       {/* System Information */}
-      <div className="card mb-4">
+      <div className="card mb-4 border-0 rounded-3" style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.22)"}}>
         <div className="card-header d-flex align-items-center gap-2">
           <SettingsIcon size={20} />
           <strong>System Information</strong>
@@ -227,7 +227,8 @@ export function Settings({ onLogout }: SettingsProps) {
 
       {/* Account Management */}
       {onLogout && (
-        <div className="card mb-4">
+        <div className="card mb-4 border-0"
+        style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.22)"}}>
           <div className="card-header d-flex align-items-center gap-2">
             <LogOut size={20} />
             <strong>Account Management</strong>

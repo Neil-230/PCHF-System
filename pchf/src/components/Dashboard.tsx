@@ -95,20 +95,33 @@ export function Dashboard({ transactions }: DashboardProps) {
         className="d-flex justify-content-between align-items-center mb-4"
         style={{ borderBottom: "1px solid #ddd", paddingBottom: "10px" }}
       >
-        <div>
-          <h1 style={{ fontSize: "24px", fontWeight: "bold" }}>
-            Welcome back, John!
-          </h1>
-          <p style={{ color: "gray" }}>
-            Here's what's happening at your store today.
-          </p>
+        <div className="d-flex flex-column">
+          <div className="d-flex">
+            <h1 className="p-2 ps-3 rounded-3" style={{ 
+              fontSize: "24px", 
+              fontWeight: "bold", 
+              backgroundColor:"white",
+              boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)" }}>
+              Welcome back, John!
+            </h1>
+          </div>
+          <div className="d-flex">
+            <p className="p-2 ps-3 rounded-3" style={{ 
+              color: "gray",
+              backgroundColor:"white",
+              boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)" }}>
+              Here's what's happening at your store today.
+            </p>
+          </div>
         </div>
         <span
           style={{
+            backgroundColor:"white",
             border: "1px solid #ccc",
             borderRadius: "8px",
             padding: "5px 10px",
             fontSize: "14px",
+            boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"
           }}
         >
           {today.toLocaleDateString("en-US", {
@@ -120,10 +133,12 @@ export function Dashboard({ transactions }: DashboardProps) {
         </span>
       </div>
 
-      {/* Key Metrics */}
+      {/* Quick analysis */}
       <div className="row g-3">
         <div className="col-md-3">
-          <div className="card p-3">
+          <div className="card p-3 border-0"
+          style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}
+          >
             <div className="d-flex justify-content-between align-items-center">
               <h6>Today's Sales</h6>
               <TrendingUp size={18} />
@@ -136,7 +151,9 @@ export function Dashboard({ transactions }: DashboardProps) {
         </div>
 
         <div className="col-md-3">
-          <div className="card p-3">
+          <div className="card p-3 border-0"
+          style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}
+          >
             <div className="d-flex justify-content-between align-items-center">
               <h6>Transactions</h6>
               <ShoppingCart size={18} />
@@ -149,7 +166,9 @@ export function Dashboard({ transactions }: DashboardProps) {
         </div>
 
         <div className="col-md-3">
-          <div className="card p-3">
+          <div className="card p-3 border-0"
+          style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}
+          >
             <div className="d-flex justify-content-between align-items-center">
               <h6>Inventory Value</h6>
               <Package size={18} />
@@ -160,7 +179,9 @@ export function Dashboard({ transactions }: DashboardProps) {
         </div>
 
         <div className="col-md-3">
-          <div className="card p-3">
+          <div className="card p-3 border-0"
+          style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}
+          >
             <div className="d-flex justify-content-between align-items-center">
               <h6>Stock Alerts</h6>
               <AlertTriangle size={18} color="orange" />
@@ -176,7 +197,9 @@ export function Dashboard({ transactions }: DashboardProps) {
       {/* Charts */}
       <div className="row mt-4">
         <div className="col-lg-6">
-          <div className="card p-3">
+          <div className="card p-3 border-0"
+          style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}
+          >
             <h6>
               <BarChart3 size={18} /> Weekly Sales Trend
             </h6>
@@ -185,9 +208,11 @@ export function Dashboard({ transactions }: DashboardProps) {
         </div>
 
         <div className="col-lg-6">
-          <div className="card d-flex ">
+          <div className="card d-flex border-0"
+            style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}
+            >
             <h6>Sales by Category</h6>
-            <div style={{ width: "100%", height: "242px" }}>
+            <div style={{ width: "100%", height: "242px"}}>
               <Pie
                 data={categoryData}
                 options={{ responsive: true, maintainAspectRatio: false }}
@@ -199,7 +224,9 @@ export function Dashboard({ transactions }: DashboardProps) {
       {/* Top Products */}
       <div className="row g-3 mt-1">
         <div className="col-md-6">
-          <div className="card p-3">
+          <div className="card p-3 border-0"
+          style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}
+          >
             <h6>Top Products by Value</h6>
             {mockProducts
               .sort((a, b) => b.price * b.stock - a.price * a.stock)
@@ -258,7 +285,9 @@ export function Dashboard({ transactions }: DashboardProps) {
         </div>
 
         <div className="col-lg-6">
-          <div className="card h-100">
+          <div className="card p-3 border-0 h-100"
+          style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}
+          >
             {/* Header (fixed) */}
             <div className="card-header">
               <h6>
@@ -312,7 +341,9 @@ export function Dashboard({ transactions }: DashboardProps) {
 
       {/* Inventory Status */}
       <div className="mt-4">
-        <div className="card p-3">
+        <div className="card p-3 border-0"
+          style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}
+          >
           <h6>Inventory Status</h6>
           <div className="d-flex justify-content-between text-center">
             <div style={{ flex: 1 }}>

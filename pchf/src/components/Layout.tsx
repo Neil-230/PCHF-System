@@ -45,25 +45,32 @@ export function Layout({ children, activeTab, onTabChange, user, onLogout }: Lay
     <div className="d-flex min-vh-100">
       {/* Sidebar */}
       {isSidebarOpen && (
-        <div className="border-end pt-4" 
+        <div className="border-0 pt-4" 
           style={{
             width: "250px",
             height: "100vh",
             position: "sticky",
             top: 0,
+            backgroundColor:"white",
+            boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.07)"
+            // background: "linear-gradient(160deg, rgba(26, 51, 152, 1), rgba(105, 107, 117, 1)", 
           }}>
-          <div className="d-flex align-items-center mb-4 ms-4">
+          <div className="d-flex align-items-center mb-5 ms-4">
             <ShoppingCart size={24} className="me-2" />
             <span className="fw-bold">CashierPro</span>
           </div>
-          <ul className="nav flex-column">
+          <ul className="nav flex-column gap-3">
             {allowedNavigation.map((item) => (
-              <li key={item.id} className="nav-item">
+              <li key={item.id} className="nav-item d-flex justify-content-center">
                 <button
-                  className="nav-link d-flex align-items-center text-dark w-100"
+                  className="navbutton nav-link d-flex align-items-center text-dark"
                   style={{
-                    backgroundColor: activeTab === item.id ? "#dadada46" : "transparent",
+                    minWidth: "200px",
+                    backgroundColor: activeTab === item.id ? "rgba(255, 255, 255, 0.17)" : "transparent",
                     fontWeight: activeTab === item.id ? "bold" : "normal",
+                    borderRadius: activeTab === item.id ? "6px" : "0px",
+                    boxShadow:
+                    activeTab === item.id ? "2px 4px 8px  rgba(0, 0, 0, 0.10)":"none",
                   }}
                   onClick={() => onTabChange(item.id)}
                 >
@@ -77,12 +84,14 @@ export function Layout({ children, activeTab, onTabChange, user, onLogout }: Lay
       )}
 
       {/* Main content */}
-      <div className="flex-grow-1 d-flex flex-column">
+      <div className="flex-grow-1 d-flex flex-column"
+        >
         {/* Header */}
-        <header className="border-bottom px-3 py-2 d-flex align-items-center">
-          {/* Toggle button */}
+        <header className="border-0 m-2 me-4 ms-4 rounded-3 px-3 py-2 d-flex align-items-center"
+          style={{backgroundColor:"white", boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.07)"}}
+          >
           <button
-            className="btn btn-light me-3"
+            className="btn btn-light me-3 bg-transparent border-0"
             onClick={() => setIsSidebarOpen((prev) => !prev)}
           >
             <Menu size={20} />
@@ -158,7 +167,7 @@ export function Layout({ children, activeTab, onTabChange, user, onLogout }: Lay
           </div>
         </header>
 
-        {/* Page Content */}
+        {/* MAIN CONTENT */}
         <main className="p-4 flex-grow-1">{children}</main>
       </div>
     </div>
