@@ -17,6 +17,7 @@ import { AuthWrapper } from "./components/auth/AuthWrapper";
 import type { Transaction } from "./types";
 import type { User } from "./types/auth";
 import { mockTransactions } from "./data/mockData";
+import { Blocks } from "lucide-react";
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -106,7 +107,7 @@ export default function App() {
       >
         {renderContent()}
       </Layout>
-      <Toaster />
+      
     </>
   );
 }

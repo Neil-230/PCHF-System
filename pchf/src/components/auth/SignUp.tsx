@@ -6,6 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui
 import { Alert } from "../ui/alert";
 import { Select, SelectItem } from "../ui/select";
 import { Eye, EyeOff, CreditCard } from "lucide-react";
+import { toast } from "sonner";
+// import { Toaster } from "sonner";
 
 interface SignUpProps {
   onSignUp: (name: string, email: string, password: string, role: 'admin' | 'cashier') => boolean;
@@ -33,7 +35,7 @@ export function SignUp({ onSignUp, onSwitchToLogin }: SignUpProps) {
     }
 
     if (password.length < 6) {
-      setError('Password must be at least 6 characters long');
+      toast.error("Password must be at least 6 characters long");
       return;
     }
 
@@ -41,32 +43,34 @@ export function SignUp({ onSignUp, onSwitchToLogin }: SignUpProps) {
     try {
       const success = onSignUp(name, email, password, role);
       if (!success) {
-        setError('An account with this email already exists');
+        toast.error("An account with this email already exists");
+      }else{
+        toast.success("Account successfully created!");
       }
     } catch {
-      setError('An error occurred. Please try again.');
+      toast.error("An error occurred. Please try again.");
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className="w-full max-w-md space-y-6">
-        <div className="text-center space-y-2">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <div className="p-2 bg-primary rounded-lg">
-              <CreditCard className="w-6 h-6 text-primary-foreground" />
+    <div className=" d-flex align-items-center justify-content-center p-4" style={{minHeight:"100vh"}}>
+      <div className="d-flex flex-column" style={{minWidth:"32%"}}>
+        <div className="text-center d-flex flex-column justify-content-center">
+          <div className="d-flex items-center justify-content-center gap-2">
+            <div className="">
+              <CreditCard size={35} />
             </div>
-            <h1 className="text-2xl font-semibold">Cashier System</h1>
+            <h3 className="fw-bold">Cashier System</h3>
           </div>
-          <p className="text-muted-foreground">Create your account to get started</p>
+          <p className=" text-secondary">Create your account to get started</p>
         </div>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Create account</CardTitle>
-            <CardDescription>
+          <CardHeader className="d-flex flex-column text-start ">
+            <CardTitle className="fw-bold fs-4">Create account</CardTitle>
+            <CardDescription className="text-secondary">
               Fill in your information to create a new account
             </CardDescription>
           </CardHeader>
@@ -74,8 +78,8 @@ export function SignUp({ onSignUp, onSwitchToLogin }: SignUpProps) {
             <form onSubmit={handleSubmit} className="space-y-4">
               {error && <Alert variant="destructive">{error}</Alert>}
 
-              <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
+              <div className="">
+                <Label htmlFor="name" className="fw-bold">Full Name</Label>
                 <Input
                   id="name"
                   type="text"
@@ -86,8 +90,8 @@ export function SignUp({ onSignUp, onSwitchToLogin }: SignUpProps) {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+              <div className="">
+                <Label htmlFor="email" className="fw-bold">Email</Label>
                 <Input
                   id="email"
                   type="email"
@@ -99,7 +103,7 @@ export function SignUp({ onSignUp, onSwitchToLogin }: SignUpProps) {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="role">Role</Label>
+                <Label htmlFor="role" className="fw-bold">Role</Label>
                 <Select
                   value={role}
                   onChange={(value) => setRole(value as 'admin' | 'cashier')}
@@ -109,9 +113,9 @@ export function SignUp({ onSignUp, onSwitchToLogin }: SignUpProps) {
                 </Select>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <div className="relative">
+              <div className="">
+                <Label htmlFor="password" className="fw-bold">Password</Label>
+                <div className="position-relative w-100">
                   <Input
                     id="password"
                     type={showPassword ? 'text' : 'password'}
@@ -120,25 +124,24 @@ export function SignUp({ onSignUp, onSwitchToLogin }: SignUpProps) {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                   />
-                  <Button
+                  <button
                     type="button"
-                    variant="outline"
-                    size="sm"
-                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    className="btn btn-sm bg-transparent border-0 position-absolute top-50 end-0 translate-middle-y me-2"
                     onClick={() => setShowPassword(!showPassword)}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </Button>
+                  </button>
                 </div>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-muted">
                   Password must be at least 6 characters long
                 </p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm Password</Label>
-                <div className="relative">
-                  <Input
+                <Label htmlFor="confirmPassword" className="fw-bold">Confirm Password</Label>
+                <div className="position-relative w-100">
+                  <input
+                    className="form-control pe-5 "
                     id="confirmPassword"
                     type={showConfirmPassword ? 'text' : 'password'}
                     placeholder="Confirm your password"
@@ -146,27 +149,29 @@ export function SignUp({ onSignUp, onSwitchToLogin }: SignUpProps) {
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
                   />
-                  <Button
+                  <button
                     type="button"
-                    variant="outline"
-                    size="sm"
-                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    className="btn btn-sm bg-transparent border-0 position-absolute top-50 end-0 translate-middle-y me-2"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   >
                     {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </Button>
+                  </button>
                 </div>
               </div>
 
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button type="submit" className="w-100 mt-2 bg-dark border-secondary" disabled={isLoading}>
                 {isLoading ? 'Creating account...' : 'Create account'}
               </Button>
             </form>
 
-            <div className="mt-6 text-center">
+            <div className="mt-3 text-center">
               <p className="text-sm text-muted-foreground">
                 Already have an account?{' '}
-                <Button type="button" variant="link" className="p-0 h-auto" onClick={onSwitchToLogin}>
+                <Button 
+                  type="button" 
+                  variant="link" 
+                  className="p-0 text-dark fw-bold text-decoration-none "  
+                  onClick={onSwitchToLogin}>
                   Sign in
                 </Button>
               </p>
@@ -174,10 +179,11 @@ export function SignUp({ onSignUp, onSwitchToLogin }: SignUpProps) {
           </CardContent>
         </Card>
 
-        <div className="text-center text-xs text-muted-foreground">
+        <div className="text-center mt-3">
           <p>By creating an account, you agree to our terms of service</p>
         </div>
       </div>
+      {/* <Toaster richColors position="top-right" style={{zIndex:99, backgroundColor:"wheat"}} /> */}
     </div>
   );
 }

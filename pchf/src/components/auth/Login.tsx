@@ -54,14 +54,14 @@ export function Login({ onLogin, onSwitchToSignUp }: LoginProps) {
             <div className="">
               <CreditCard size={35}/>
             </div>
-            <h3 >Cashier System</h3>
+            <h3 className="fw-bold">Cashier System</h3>
           </div>
           <p className=" text-secondary">Sign in to access your dashboard</p>
         </div>
 
         <Card>
           <CardHeader className="d-flex flex-column text-start ">
-            <CardTitle>Welcome back</CardTitle>
+            <CardTitle className="fw-bold fs-4">Welcome back</CardTitle>
             <CardDescription className="text-secondary">
               Enter your credentials to access the system
             </CardDescription>

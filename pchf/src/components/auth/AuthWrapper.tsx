@@ -10,6 +10,7 @@ interface AuthWrapperProps {
 
 export function AuthWrapper({ onAuthSuccess }: AuthWrapperProps) {
   const [isLoginMode, setIsLoginMode] = useState(true);
+  const [signUpMessage, setSiignUpMessage] = useState ("");
 
   const handleLogin = (email: string, password: string): boolean => {
     const user = AuthService.login(email, password);
@@ -20,6 +21,19 @@ export function AuthWrapper({ onAuthSuccess }: AuthWrapperProps) {
     return false;
   };
 
+  // const handleSignUp = (
+  //   name: string,
+  //   email: string,
+  //   password: string,
+  //   role: "admin" | "cashier"
+  // ): boolean => {
+  //   const user = AuthService.signUp(name, email, password, role);
+  //   if (user) {
+  //     onAuthSuccess(user);
+  //     return true;
+  //   }
+  //   return false;
+  // };
   const handleSignUp = (
     name: string,
     email: string,
@@ -28,7 +42,8 @@ export function AuthWrapper({ onAuthSuccess }: AuthWrapperProps) {
   ): boolean => {
     const user = AuthService.signUp(name, email, password, role);
     if (user) {
-      onAuthSuccess(user);
+      setSiignUpMessage("Account successfully Created! Please Login your account.")
+      setIsLoginMode(true);
       return true;
     }
     return false;
