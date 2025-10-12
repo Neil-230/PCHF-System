@@ -74,7 +74,9 @@ export default function App() {
       case "inventory":
         return <InventoryManagement />;
       case "transactions":
-        return <TransactionHistory transactions={transactions} />;
+        return <TransactionHistory transactions={transactions} onDeleteAll={function (): void {
+          throw new Error("Function not implemented.");
+        } } />;
       case "settings":
         return <Settings onLogout={handleLogout} />;
       default:

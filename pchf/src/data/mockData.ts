@@ -87,7 +87,8 @@ export const mockTransactions: Transaction[] = [
     total: 36.27,
     paymentMethod: 'card',
     timestamp: new Date('2024-01-15T10:30:00'),
-    status: 'completed'
+    status: 'completed',
+    customerName: 'John Doe',
   },
   {
     id: 'TXN002',
@@ -100,7 +101,8 @@ export const mockTransactions: Transaction[] = [
     total: 16.48,
     paymentMethod: 'cash',
     timestamp: new Date('2024-01-15T11:15:00'),
-    status: 'completed'
+    status: 'completed',
+    customerName: 'Jane Smith',
   }
 ];
 

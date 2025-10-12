@@ -20,9 +20,10 @@ export interface Transaction {
   total: number;
   tax: number;
   subtotal: number;
-  paymentMethod: 'card' | 'cash' | 'digital';
+  paymentMethod: 'card' | 'cash' | 'digital' | string;
   timestamp: Date;
   status: 'completed' | 'refunded' | 'pending';
+  customerName?: string;
 }
 
 export interface InventoryAlert {
@@ -32,4 +33,4 @@ export interface InventoryAlert {
   currentStock: number;
   threshold: number;
   type: 'low_stock' | 'out_of_stock';
-}
+} 

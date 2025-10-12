@@ -1,55 +1,99 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { Product, CartItem } from "../types";
-import { mockProducts, categories } from "../data/mockData";
-import { Button } from "./ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
-import { Badge } from "./ui/Badge";
+import { mockProducts, categories, mockTransactions } from "../data/mockData";
+import { Search } from "lucide-react";
+import "./css/PointOfSales.css";
+import { Modal, Button, Card } from "react-bootstrap";
 import { BootstrapSelect } from "./ui/select";
-import { Plus, Minus, Search } from "lucide-react"; // removed DollarSign
-import { Dialog, DialogHeader, DialogTitle } from "./ui/dialog";
-import { toast } from "sonner";
+import { Badge } from "./ui/Badge";
+import { CardTitle, CardHeader, CardContent } from "./ui/card";
 import jsPDF from "jspdf";
-import './css/PointOfSales.css'
+import autoTable from "jspdf-autotable";
+import { toast } from "react-hot-toast";
 
+interface Transaction {
+  id: string;
+  items: CartItem[];
+  subtotal: number;
+  tax: number;
+  total: number;
+  customerName: string;
+  timestamp: Date;
+  status: "completed" | "pending";
+  paymentMethod: string; // ✅ required field
+}
 
 interface PointOfSaleProps {
-  onTransactionComplete: (transaction: any) => void;
+  onTransactionComplete: (transaction: Transaction) => void;
 }
 
 export function PointOfSale({ onTransactionComplete }: PointOfSaleProps) {
+  const [customerName, setCustomerName] = useState("");
+  const [isNameDialogOpen, setIsNameDialogOpen] = useState(true);
+  const [hasEnteredName, setHasEnteredName] = useState(false);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
-  const [showCashInput, setShowCashInput] = useState(false);
-  const [cashAmount, setCashAmount] = useState<number>(0);
+  const [cashAmount, setCashAmount] = useState("");
+  const [storeSettings, setStoreSettings] = useState({
+    storeName: "My Store",
+    storeAddress: "123 Main St, City, State 12345",
+    phone: "+1 (555) 123-4567",
+    email: "store@example.com",
+    footerMessage: "Thank you for your purchase!",
+  });
 
-  // New: Returns state
-  const [isReturnOpen, setIsReturnOpen] = useState(false);
-  const [returnItems, setReturnItems] = useState<CartItem[]>([]);
+  const removeFromCart = (productId: string) => {
+    setCart((prev) => prev.filter((item) => item.product.id !== productId));
+  };
+
+  const clearCart = () => {
+    if (cart.length === 0) return toast.error("Cart is empty");
+    setCart([]);
+    toast.success("Cart successfully cleared");
+  };
+
+  useEffect(() => {
+    const saved = localStorage.getItem("storeSettings");
+    if (saved) setStoreSettings(JSON.parse(saved));
+  }, []);
 
   const filteredProducts = mockProducts.filter((product) => {
-    const matchesCategory = selectedCategory === "All" || product.category === selectedCategory;
+    const matchesCategory =
+      selectedCategory === "All" || product.category === selectedCategory;
     const matchesSearch =
       product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       product.sku.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
 
+  const handleNameSubmit = () => {
+    if (customerName.trim() === "") {
+      toast.error("Please enter customer name");
+      return;
+    }
+    setHasEnteredName(true);
+    setIsNameDialogOpen(false);
+  };
+
   const addToCart = (product: Product) => {
     if (product.stock === 0) {
       toast.error("Product is out of stock");
       return;
     }
+
     setCart((prev) => {
-      const existing = prev.find((item) => item.product.id === product.id);
-      if (existing) {
-        if (existing.quantity >= product.stock) {
+      const existingItem = prev.find((i) => i.product.id === product.id);
+      if (existingItem) {
+        if (existingItem.quantity >= product.stock) {
           toast.error("Not enough stock available");
           return prev;
         }
-        return prev.map((item) =>
-          item.product.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+        return prev.map((i) =>
+          i.product.id === product.id
+            ? { ...i, quantity: i.quantity + 1 }
+            : i
         );
       }
       return [...prev, { product, quantity: 1 }];
@@ -57,10 +101,11 @@ export function PointOfSale({ onTransactionComplete }: PointOfSaleProps) {
   };
 
   const updateQuantity = (productId: string, newQuantity: number) => {
-    if (newQuantity <= 0) {
-      setCart((prev) => prev.filter((item) => item.product.id !== productId));
-      return;
-    }
+    if (newQuantity === 0)
+      return setCart((prev) =>
+        prev.filter((item) => item.product.id !== productId)
+      );
+
     setCart((prev) =>
       prev.map((item) => {
         if (item.product.id === productId) {
@@ -72,147 +117,190 @@ export function PointOfSale({ onTransactionComplete }: PointOfSaleProps) {
     );
   };
 
-  const subtotal = cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+  const subtotal = cart.reduce(
+    (sum, item) => sum + item.product.price * item.quantity,
+    0
+  );
   const tax = subtotal * 0.1;
   const total = subtotal + tax;
 
-  // Handle cash payment
-  const handleCashPayment = () => {
-    if (cashAmount < total) {
-      toast.error("Cash amount is less than total!");
-      return;
-    }
+  const handleConfirmPayment = () => {
+    const cash = parseFloat(cashAmount);
+    if (isNaN(cash) || cash <= 0) return toast.error("Enter valid cash");
+    if (cash < total) return toast.error("Insufficient cash");
 
-    const change = cashAmount - total;
+    const change = cash - total;
 
-    // Generate PDF receipt
-    const doc = new jsPDF();
-    doc.setFontSize(16);
-    doc.text("Official Receipt", 20, 20);
-    doc.setFontSize(12);
-    doc.text(`Date: ${new Date().toLocaleString()}`, 20, 30);
-
-    let y = 40;
-    cart.forEach((item) => {
-      doc.text(
-        `${item.product.name} x ${item.quantity} - ₱${(item.product.price * item.quantity).toFixed(2)}`,
-        20,
-        y
-      );
-      y += 10;
-    });
-
-    doc.text(`Subtotal: ₱${subtotal.toFixed(2)}`, 20, y + 10);
-    doc.text(`Cash Given: ₱${cashAmount.toFixed(2)}`, 20, y + 20);
-    doc.text(`Change: ₱${change.toFixed(2)}`, 20, y + 30);
-    doc.save(`Receipt_${Date.now()}.pdf`);
-
-    const transaction = {
+    const transaction: Transaction = {
       id: `TXN${Date.now()}`,
       items: cart,
       subtotal,
       tax,
       total,
-      paymentMethod: "cash",
+      customerName,
       timestamp: new Date(),
-      status: "completed" as const,
+      status: "completed",
+      paymentMethod: "Cash", // ✅ added field
     };
-    onTransactionComplete(transaction);
 
-    // Reset
-    setCart([]);
-    setCashAmount(0);
-    setShowCashInput(false);
-    setIsCheckoutOpen(false);
-    toast.success("Cash payment completed and receipt generated!");
-  };
+    mockTransactions.push(transaction);
 
-  // -------------------
-  // RETURNS FEATURE
-  // -------------------
-  const handleReturn = () => {
-    if (returnItems.length === 0) {
-      toast.error("No items selected for return");
-      return;
-    }
-
-    const refundAmount = returnItems.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
-
-    // Generate Return Receipt
-    const doc = new jsPDF();
-    doc.setFontSize(16);
-    doc.text("Return Receipt", 20, 20);
-    doc.setFontSize(12);
-    doc.text(`Date: ${new Date().toLocaleString()}`, 20, 30);
-
-    let y = 40;
-    returnItems.forEach((item) => {
-      doc.text(
-        `${item.product.name} x ${item.quantity} - -₱${(item.product.price * item.quantity).toFixed(2)}`,
-        20,
-        y
-      );
-      y += 10;
+    // --- Receipt layout ---
+    const doc = new jsPDF({
+      orientation: "portrait",
+      unit: "mm",
+      format: [80, 200],
     });
 
-    doc.text(`Refund Total: -₱${refundAmount.toFixed(2)}`, 20, y + 10);
-    doc.save(`Return_${Date.now()}.pdf`);
+    const date = new Date();
+    const formattedDate = date.toLocaleString();
 
-    const transaction = {
-      id: `RTN${Date.now()}`,
-      items: returnItems,
-      refund: refundAmount,
-      paymentMethod: "return",
-      timestamp: new Date(),
-      status: "returned" as const,
-    };
+    // Header
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text(storeSettings.storeName, 40, 10, { align: "center" });
 
-    onTransactionComplete(transaction);
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.text(storeSettings.storeAddress, 40, 14, { align: "center" });
+    doc.text(storeSettings.email, 40, 17, { align: "center" });
+    doc.text(storeSettings.phone, 40, 20, { align: "center" });
+    doc.text(
+      "----------------------------------------------------------------------",
+      40,
+      24,
+      { align: "center" }
+    );
+
+    // Customer info
+    doc.setFontSize(9);
+    doc.text(`Customer: ${customerName}`, 10, 29);
+    doc.text(`Date: ${formattedDate}`, 10, 33);
+    doc.text(`Transaction ID: ${transaction.id}`, 10, 37);
+    doc.text(`Payment: ${transaction.paymentMethod}`, 10, 41);
+    doc.text(
+      "----------------------------------------------------------------",
+      40,
+      45,
+      { align: "center" }
+    );
+
+    // Items table
+    const tableData = cart.map((item) => [
+      `${item.quantity} x ${item.product.name}`,
+      `PHP.${(item.product.price * item.quantity).toFixed(2)}`,
+    ]);
+
+    autoTable(doc, {
+      head: [["Item", "Price"]],
+      body: tableData,
+      startY: 47,
+      theme: "plain",
+      styles: { fontSize: 9, cellPadding: 1 },
+      headStyles: { fontStyle: "bold" },
+      columnStyles: {
+        0: { cellWidth: 45, halign: "left" },
+        1: { cellWidth: 20, halign: "right" },
+      },
+      margin: { left: 5 },
+    });
+
+    let finalY = (doc as any).lastAutoTable.finalY + 2;
+
+    doc.text("----------------------------------------------------------------", 40, finalY, { align: "center" });
+    doc.text(`Subtotal: PHP.${subtotal.toFixed(2)}`, 10, finalY + 5);
+    doc.text(`Tax (10%): PHP.${tax.toFixed(2)}`, 10, finalY + 9);
+    doc.setFont("helvetica", "bold");
+    doc.text(`TOTAL: PHP.${total.toFixed(2)}`, 10, finalY + 14);
+    doc.setFont("helvetica", "normal");
+    doc.text("----------------------------------------------------------------", 40, finalY + 17, { align: "center" });
+    doc.text(`Cash Paid: PHP.${cash.toFixed(2)}`, 10, finalY + 22);
+    doc.text(`Change: PHP.${change.toFixed(2)}`, 10, finalY + 26);
+    doc.text("----------------------------------------------------------------", 40, finalY + 29, { align: "center" });
+
+    // Footer
+    const pageHeight = doc.internal.pageSize.height;
+    let footerY = (doc as any).lastAutoTable.finalY + 35;
+    if (footerY > pageHeight - 20) footerY = pageHeight - 15;
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "bold");
+    doc.text(storeSettings.footerMessage, 40, footerY, { align: "center" });
+
+    doc.save(`receipt_${customerName}.pdf`);
 
     // Reset
-    setReturnItems([]);
-    setIsReturnOpen(false);
-    toast.success("Return processed and receipt generated!");
+    onTransactionComplete(transaction);
+    toast.success("Transaction complete and receipt saved");
+    setCart([]);
+    setCashAmount("");
+    setIsCheckoutOpen(false);
+    setCustomerName("");
+    setHasEnteredName(false);
+    setIsNameDialogOpen(true);
   };
 
   return (
-    <div className="d-flex" style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "1rem" }}>
-      <div className="container-fluid">
-        <div className="row">
-          {/* Products Section */}
-          <div className="col-md-8 ps-0">
-            {/* Header */}
-            <div className="d-flex gap-2 align-items-center mb-3">
-              <form className="flex-grow-1">
-                <div className="position-relative w-100">
-                  <input
-                    type="text"
-                    className="form-control ps-5"
-                    placeholder="Search products or SKU..."
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    value={searchQuery}
-                  />
-                  <Search className="position-absolute top-50 start-0 translate-middle-y ms-2 text-secondary" size={18} />
-                </div>
-              </form>
-              <BootstrapSelect
-                options={[{ value: "All", label: "All" }, ...categories.filter((c) => c !== "All").map((c) => ({ value: c, label: c }))]}
-                value={selectedCategory}
-                onChange={setSelectedCategory}
-              />
-            </div>
-            {/* __________ */}
+    <>
+      {/* Customer Name Modal */}
+      <Modal show={isNameDialogOpen} onHide={() => setIsNameDialogOpen(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>Enter Customer Name</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <input
+            type="text"
+            className="form-control mb-3"
+            placeholder="Customer Name..."
+            value={customerName}
+            onChange={(e) => setCustomerName(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleNameSubmit()}
+            autoFocus
+          />
+          <Button variant="dark" className="w-100" onClick={handleNameSubmit}>
+            Continue
+          </Button>
+        </Modal.Body>
+      </Modal>
 
-            {/* Products */}
-            <div
-              className="grid gap-3 flex-grow overflow-y-auto pe-3"
-              style={{ maxHeight: "calc(100vh - 180px)", display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "1rem" }}
-            >
-              {filteredProducts.map((product) => (
+      {/* POS Interface */}
+      {hasEnteredName && (
+        <div className="container-fluid mt-1">
+          <div className="row g-3">
+            {/* Product Section */}
+            <div className="col-lg-8">
+              <div className="d-flex gap-2 mb-3">
+                <form className="flex-grow-1">
+                  <div className="position-relative w-100">
+                    <input
+                      type="text"
+                      className="form-control ps-5"
+                      placeholder="Search products or SKU..."
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      value={searchQuery}
+                    />
+                    <Search className="position-absolute top-50 start-0 translate-middle-y ms-2 text-secondary" size={18} />
+                  </div>
+                </form>
+                <BootstrapSelect
+                  options={[{ value: "All", label: "All" }, ...categories.filter((c) => c !== "All").map((c) => ({ value: c, label: c }))]}
+                  value={selectedCategory}
+                  onChange={setSelectedCategory}
+                />
+              </div>
+
+              <div className=" d-flex alert alert-secondary gap-2 py-2">
+                <strong className="d-flex">Customer:</strong> {customerName}
+              </div>
+
+              <div 
+                className="grid gap-3 flex-grow overflow-y-auto pe-3 ProductList"
+              >
+                {filteredProducts.map((product) => (
                 <Card
                   key={product.id}
-                  className={`cursor-pointer transition-all hover:shadow-md ${product.stock === 0 ? "opacity-50" : ""}`}
+                  className={`cursor-pointer transition-all hover:shadow-md border border-0 ${product.stock === 0 ? "opacity-50" : ""}`}
                   onClick={() => addToCart(product)}
+                  style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)", }}
                 >
                   <CardHeader>
                     <div className="d-flex flex-row">
@@ -231,101 +319,157 @@ export function PointOfSale({ onTransactionComplete }: PointOfSaleProps) {
                   </CardContent>
                 </Card>
               ))}
-            </div>
-            {/* _____________ */}
-          </div>
-
-          {/* Cart Section */}
-          <div className="col-md-4 border-0 rounded-3 p-4 d-flex flex-column"
-            style={{backgroundColor:"white", boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}>
-            <h3 className="fw-bold">Current Order</h3>
-
-            {cart.length === 0 ? (
-              <div className="d-flex align-items-center justify-content-center flex-grow-1 text-muted-foreground" style={{ minHeight: "200px" }}>
-                <div className="text-center">
-                  <p>No items in cart</p>
-                  <p className="text-sm">Select products to add them</p>
-                </div>
               </div>
-            ) : (
-              <>
-                <div className="flex-1 space-y-3 overflow-y-auto" style={{ maxHeight: "300px" }}>
-                  {cart.map((item) => (
-                    <div key={item.product.id} className="d-flex align-items-center justify-content-between mb-2">
-                      <div className="flex-1">
-                        <p className="fw-medium text-sm mb-0">{item.product.name}</p>
-                        <p className="text-xs text-muted-foreground mb-0">₱{item.product.price.toFixed(2)} each</p>
+            </div>
+
+            {/* Cart Section */}
+            <div className="col-lg-4">
+              <Card className="p-3 d-flex flex-column h-100 border border-0"
+                style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)", }}
+              >
+                <h5 className="fw-semibold mb-3">Current Order</h5>
+                {cart.length === 0 ? (
+                  <div className="text-center text-muted mt-5">
+                    <p>No items in cart</p>
+                    <small>Select a product to add</small>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex-grow-1 overflow-auto mb-3">
+                      {cart.map((item) => (
+                        <div
+                          key={item.product.id}
+                          className="d-flex align-items-center justify-content-between border-bottom py-2"
+                        >
+                          <div className="">
+                            <p className="mb-0 fw-medium">{item.product.name}</p>
+                            <small>₱{item.product.price.toFixed(2)} each</small>
+                          </div>
+                          <div className="d-flex align-items-center gap-2">
+                            <input
+                              type="number"
+                              className="form-control form-control-sm text-center"
+                              style={{ width: "60px" }}
+                              min="1"
+                              max={item.product.stock}
+                              value={item.quantity}
+                              onChange={(e) =>
+                                updateQuantity(
+                                  item.product.id,
+                                  parseInt(e.target.value)
+                                )
+                              }
+                            />
+                            <Button
+                              variant="danger"
+                              size="sm"
+                              onClick={() => removeFromCart(item.product.id)}
+                            >
+                              ✕
+                            </Button>
+                          </div>
+                          <p className="mb-0 fw-semibold">
+                            ₱{(item.product.price * item.quantity).toFixed(2)}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="border-top pt-3">
+                      <div className="d-flex justify-content-between">
+                        <span>Subtotal:</span>
+                        <span>₱{subtotal.toFixed(2)}</span>
                       </div>
-                      <div className="d-flex align-items-center gap-2">
-                        <Button size="sm" variant="outline" onClick={() => updateQuantity(item.product.id, item.quantity - 1)}>
-                          <Minus className="size-3" />
-                        </Button>
-                        <span className="w-8 text-center text-sm">{item.quantity}</span>
-                        <Button size="sm" variant="outline" onClick={() => updateQuantity(item.product.id, item.quantity + 1)} disabled={item.quantity >= item.product.stock}>
-                          <Plus className="size-3" />
-                        </Button>
+                      <div className="d-flex justify-content-between">
+                        <span>Tax (10%):</span>
+                        <span>₱{tax.toFixed(2)}</span>
                       </div>
-                      <p className="fw-medium text-sm w-16 text-end mb-0">₱{(item.product.price * item.quantity).toFixed(2)}</p>
-                    </div>
-                  ))}
-                </div>
-
-                <hr className="my-3" />
-
-                <div className="space-y-2">
-                  <div className="d-flex justify-content-between text-sm">
-                    <span>Subtotal:</span>
-                    <span>₱{subtotal.toFixed(2)}</span>
-                  </div>
-                  <div className="d-flex justify-content-between text-sm">
-                    <span>Tax (10%):</span>
-                    <span>₱{tax.toFixed(2)}</span>
-                  </div>
-                  <hr />
-                  <div className="d-flex justify-content-between fw-semibold">
-                    <span>Total:</span>
-                    <span>₱{total.toFixed(2)}</span>
-                  </div>
-                </div>
-
-                {/* Checkout button */}
-                <Button className="w-100 mt-3 bg-dark border-dark" size="lg" onClick={() => setIsCheckoutOpen(true)}>
-                  Checkout
-                </Button>
-
-                {/* Checkout Modal */}
-                <Dialog open={isCheckoutOpen} onClose={() => setIsCheckoutOpen(false)}>
-                  <DialogHeader>
-                    <DialogTitle>Cash Payment</DialogTitle>
-                  </DialogHeader>
-                  <div className="d-flex flex-column gap-1 mt-3" >
-                    <div className="text-center p-1 bg-light rounded">
-                      <p className="fw-semibold">Total: ₱{total.toFixed(2)}</p>
-                    </div>
-                    <div className="flex-grow-1 border-top"></div>
-                    <div className="d-flex flex-column gap-2">
-                      <label>Enter Cash Amount:</label>
-                      <input
-                        type="number"
-                        className="form-control"
-                        value={cashAmount}
-                        onChange={(e) => setCashAmount(parseFloat(e.target.value))}
-                        placeholder="₱"
-                      />
-                      <Button className="mt-2" onClick={handleCashPayment}>
-                        Pay Cash
+                      <hr />
+                      <div className="d-flex justify-content-between fw-bold">
+                        <span>Total:</span>
+                        <span>₱{total.toFixed(2)}</span>
+                      </div>
+                      <Button
+                        variant="dark"
+                        className="w-100 mt-3"
+                        onClick={() => setIsCheckoutOpen(true)}
+                      >
+                        Checkout
                       </Button>
-                      <Button variant="outline" className="mt-2" onClick={() => setIsCheckoutOpen(false)}>
-                        Cancel
+                      <Button
+                        variant="outline-danger"
+                        className="w-100 mt-2"
+                        onClick={clearCart}
+                        disabled={cart.length === 0}
+                      >
+                        Clear Cart
                       </Button>
                     </div>
-                  </div>
-                </Dialog>
-              </>
-            )}
+                  </>
+                )}
+              </Card>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
+      )}
+
+      {/* Checkout Modal */}
+      <Modal show={isCheckoutOpen} onHide={() => setIsCheckoutOpen(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>Cash Payment</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <div className="mb-3 border rounded p-3 bg-light">
+            <h6>Order Summary</h6>
+            {cart.map((item) => (
+              <div
+                key={item.product.id}
+                className="d-flex justify-content-between small"
+              >
+                <span>
+                  {item.product.name} x{item.quantity}
+                </span>
+                <span>₱{(item.product.price * item.quantity).toFixed(2)}</span>
+              </div>
+            ))}
+            <hr />
+            <div className="d-flex justify-content-between fw-bold">
+              <span>Total:</span>
+              <span>₱{total.toFixed(2)}</span>
+            </div>
+          </div>
+
+          <label className="form-label">Cash Received</label>
+          <input
+            type="number"
+            className="form-control mb-3"
+            placeholder="0.00"
+            value={cashAmount}
+            onChange={(e) => setCashAmount(e.target.value)}
+          />
+
+          {cashAmount && parseFloat(cashAmount) >= total && (
+            <div className="alert alert-success">
+              Change: ₱{(parseFloat(cashAmount) - total).toFixed(2)}
+            </div>
+          )}
+          {cashAmount && parseFloat(cashAmount) < total && (
+            <div className="alert alert-danger">
+              Insufficient amount. Need ₱
+              {(total - parseFloat(cashAmount)).toFixed(2)} more.
+            </div>
+          )}
+
+          <Button
+            variant="dark"
+            onClick={handleConfirmPayment}
+            className="w-100 mt-2"
+            disabled={!cashAmount || parseFloat(cashAmount) < total}
+          >
+            Confirm Payment
+          </Button>
+        </Modal.Body>
+      </Modal>
+    </>
   );
 }
