@@ -1,7 +1,5 @@
 import { useState } from "react";
 import { Settings as SettingsIcon, Store, Receipt, Bell, Shield, LogOut } from "lucide-react";
-import { CardContent, CardHeader, Card, CardFooter, CardTitle } from "./ui/card";
-import { Label } from "./ui/label";
 
 interface SettingsProps {
   onLogout?: () => void;

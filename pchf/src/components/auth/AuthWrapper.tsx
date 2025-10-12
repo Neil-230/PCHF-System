@@ -1,63 +1,84 @@
-import { useState } from "react";
+import type { ReactNode } from "react";
+import { createContext, useContext, useState } from "react";
 import { Login } from "./Login";
 import { SignUp } from "./SignUp";
 import type { User } from "../../types/auth";
 import { AuthService } from "../../data/authData";
 
 interface AuthWrapperProps {
-  onAuthSuccess: (user: User) => void;
+  children?: ReactNode; // allow wrapping the whole app
+  onAuthSuccess?: (user: User) => void;
 }
 
-export function AuthWrapper({ onAuthSuccess }: AuthWrapperProps) {
-  const [isLoginMode, setIsLoginMode] = useState(true);
-  const [signUpMessage, setSiignUpMessage] = useState ("");
+// 1. Create AuthContext
+interface AuthContextType {
+  user: User | null;
+  login: (email: string, password: string) => boolean;
+  signUp: (
+    name: string,
+    email: string,
+    password: string,
+    role: "admin" | "cashier"
+  ) => boolean;
+  logout: () => void;
+}
 
-  const handleLogin = (email: string, password: string): boolean => {
-    const user = AuthService.login(email, password);
-    if (user) {
-      onAuthSuccess(user);
+export const AuthContext = createContext<AuthContextType | null>(null);
+
+// 2. Provide context
+export function AuthWrapper({ children, onAuthSuccess }: AuthWrapperProps) {
+  const [isLoginMode, setIsLoginMode] = useState(true);
+  const [user, setUser] = useState<User | null>(null);
+
+  const login = (email: string, password: string): boolean => {
+    const foundUser = AuthService.login(email, password);
+    if (foundUser) {
+      setUser(foundUser);
+      onAuthSuccess?.(foundUser);
       return true;
     }
     return false;
   };
 
-  // const handleSignUp = (
-  //   name: string,
-  //   email: string,
-  //   password: string,
-  //   role: "admin" | "cashier"
-  // ): boolean => {
-  //   const user = AuthService.signUp(name, email, password, role);
-  //   if (user) {
-  //     onAuthSuccess(user);
-  //     return true;
-  //   }
-  //   return false;
-  // };
-  const handleSignUp = (
+  const signUp = (
     name: string,
     email: string,
     password: string,
     role: "admin" | "cashier"
   ): boolean => {
-    const user = AuthService.signUp(name, email, password, role);
-    if (user) {
-      setSiignUpMessage("Account successfully Created! Please Login your account.")
-      setIsLoginMode(true);
+    const newUser = AuthService.signUp(name, email, password, role);
+    if (newUser) {
+      setIsLoginMode(true); // switch to login
       return true;
     }
     return false;
   };
 
-  return isLoginMode ? (
-    <Login
-      onLogin={handleLogin}
-      onSwitchToSignUp={() => setIsLoginMode(false)}
-    />
-  ) : (
-    <SignUp
-      onSignUp={handleSignUp}
-      onSwitchToLogin={() => setIsLoginMode(true)}
-    />
+  const logout = () => {
+    setUser(null);
+    setIsLoginMode(true);
+  };
+
+  // If no user logged in → show login/signup
+  if (!user) {
+    return isLoginMode ? (
+      <Login onLogin={login} onSwitchToSignUp={() => setIsLoginMode(false)} />
+    ) : (
+      <SignUp onSignUp={signUp} onSwitchToLogin={() => setIsLoginMode(true)} />
+    );
+  }
+
+  // If logged in → provide context to children (the app)
+  return (
+    <AuthContext.Provider value={{ user, login, signUp, logout }}>
+      {children}
+    </AuthContext.Provider>
   );
 }
+
+// 3. Helper hook
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) throw new Error("useAuth must be used within AuthWrapper");
+  return context;
+};
