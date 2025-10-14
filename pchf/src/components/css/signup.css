@@ -1,0 +1,70 @@
+.headerMes {
+  border-top-left-radius: 20px !important;
+  border-bottom-left-radius: 20px !important;
+  border-top-right-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+
+}
+
+.bodyLOG {
+  background-color: rgb(239, 252, 255);
+  border-top-right-radius: 20px !important;
+  border-bottom-right-radius: 20px !important;
+  border-top-left-radius: 0 !important;
+  border-bottom-left-radius: 0 !important;
+}
+
+.EmailINT {
+  border-top: none;
+  border-left: none;
+  border-right: none;
+  border-bottom: 2px solid rgb(141, 236, 255) ;
+  outline: none;
+  background: transparent;
+}
+.PassINT {
+  border-top: none;
+  border-left: none;
+  border-right: none;
+  border-bottom: 2px solid rgb(141, 236, 255) ;
+  outline: none;
+  background: transparent;
+}
+.FogPa{
+  border-top: none;
+  border-left: none;
+  border-right: none;
+  border-bottom: 2px solid rgb(141, 236, 255) ;
+  outline: none;
+  background: transparent;
+}
+
+.EmailINT:focus {
+  background-color: transparent; 
+}
+.PassINT:focus {
+  background-color: transparent;
+}
+
+@media (max-width: 768px){
+  .headerMes {
+    border-top-left-radius: 20px !important;
+    border-top-right-radius: 20px !important;
+    border-bottom-left-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+
+  }
+
+  .bodyLOG {
+    background-color: rgb(239, 252, 255);
+    border-bottom-left-radius: 20px !important;
+    border-bottom-right-radius: 20px !important;
+    border-top-left-radius: 0 !important;
+    border-top-right-radius: 0 !important;
+  }
+
+  .FormSign {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+}

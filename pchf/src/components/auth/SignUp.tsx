@@ -5,9 +5,10 @@ import { Label } from "../ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Alert } from "../ui/alert";
 import { Select, SelectItem } from "../ui/select";
-import { Eye, EyeOff, CreditCard, MailCheck } from "lucide-react";
+import { Eye, EyeOff, CreditCard, MailCheck, LogIn } from "lucide-react";
 import { toast } from "sonner";
 import { Modal } from "react-bootstrap"; // ✅ assuming you have bootstrap or react-bootstrap
+import "../css/signup.css"
 
 interface SignUpProps {
   onSignUp: (name: string, email: string, password: string, role: "admin" | "cashier") => boolean;
@@ -88,96 +89,103 @@ export function SignUp({ onSignUp, onSwitchToLogin }: SignUpProps) {
 
   return (
     <div className="d-flex align-items-center justify-content-center p-4" style={{ minHeight: "100vh" }}>
-      <div className="d-flex flex-column" style={{ minWidth: "32%" }}>
-        <div className="text-center d-flex flex-column justify-content-center">
-          <div className="d-flex items-center justify-content-center gap-2">
-            <CreditCard size={35} />
-            <h3 className="fw-bold">Cashier System</h3>
-          </div>
-          <p className="text-secondary">Create your account to get started</p>
-        </div>
-
-        <Card>
-          <CardHeader className="d-flex flex-column text-start">
-            <CardTitle className="fw-bold fs-4">Create account</CardTitle>
-            <CardDescription className="text-secondary">
-              Fill in your information to create a new account
-            </CardDescription>
-          </CardHeader>
-
-          <CardContent>
-            <form className="space-y-4">
-              {error && <Alert variant="destructive">{error}</Alert>}
-
-              <div className="row">
-                <div className="col">
-                  <Label htmlFor="firstName" className="fw-bold">First Name</Label>
-                  <Input
-                    id="firstName"
-                    placeholder="Enter first name"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="col">
-                  <Label htmlFor="lastName" className="fw-bold">Last Name</Label>
-                  <Input
-                    id="lastName"
-                    placeholder="Enter last name"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    required
-                  />
+      <div className="d-flex flex-column" style={{ minWidth: "50%" }}>
+        <div className="container-fluid">
+          <div className="row">
+            <div className="col-md-6 p-0">
+              <div className="headerMes d-flex flex-column p-4 h-100 border border-0 justify-content-center bg-dark">
+                <div className="text-center d-flex flex-column justify-content-center">
+                  <div className="d-flex items-center justify-content-center gap-2">
+                    <h3 className="fw-bold text-light">Hello my friend!</h3>
+                  </div>
+                  <p className="text-secondary text-light">Create your account to get started <br/>Fill in your information to create a new account</p>
                 </div>
               </div>
-
-              <div>
-                <Label htmlFor="email" className="fw-bold">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="Enter your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="role" className="fw-bold">Role</Label>
-                <Select
-                  value={role}
-                  onChange={(value) => setRole(value as "admin" | "cashier")}
-                >
-                  <SelectItem value="cashier">Cashier</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                </Select>
-              </div>
-
-              <Button type="button" className="w-100 mt-3 bg-dark" onClick={handleSendCode}>
-                <MailCheck className="me-2" size={16} /> Send Code
-              </Button>
-            </form>
-
-            <div className="mt-3 text-center">
-              <p className="text-sm text-muted-foreground">
-                Already have an account?{" "}
-                <Button
-                  type="button"
-                  variant="link"
-                  className="p-0 text-dark fw-bold text-decoration-none"
-                  onClick={onSwitchToLogin}
-                >
-                  Sign in
-                </Button>
-              </p>
             </div>
-          </CardContent>
-        </Card>
+            <div className="col-md-6 p-0">
+              <div className="bodyLOG d-flex flex-column justify-content-center p-5 border border-0">
+                <CardHeader className="d-flex flex-column text-start">
+                  <CardTitle className="fw-bold fs-4 mb-3">Create account</CardTitle>
+                </CardHeader>
 
-        <div className="text-center mt-3">
-          <p>By creating an account, you agree to our terms of service</p>
+                <CardContent>
+                  <form className="FormSign space-y-4">
+                    {error && <Alert variant="destructive">{error}</Alert>}
+
+                    <div className="row">
+                      <div className="col">
+                        <Label htmlFor="firstName" className="fw-bold">First Name</Label>
+                        <Input
+                          className="EmailINT"
+                          id="firstName"
+                          placeholder="Enter first name"
+                          value={firstName}
+                          onChange={(e) => setFirstName(e.target.value)}
+                          required
+                        />
+                      </div>
+                      <div className="col">
+                        <Label htmlFor="lastName" className="fw-bold">Last Name</Label>
+                        <Input
+                          className="EmailINT"
+                          id="lastName"
+                          placeholder="Enter last name"
+                          value={lastName}
+                          onChange={(e) => setLastName(e.target.value)}
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="email" className="fw-bold">Email</Label>
+                      <Input
+                        className="EmailINT"
+                        id="email"
+                        type="email"
+                        placeholder="Enter your email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="role" className="fw-bold">Role</Label>
+                      <Select
+                        value={role}
+                        onChange={(value) => setRole(value as "admin" | "cashier")}
+                      >
+                        <SelectItem value="cashier">Cashier</SelectItem>
+                        <SelectItem value="admin">Admin</SelectItem>
+                      </Select>
+                    </div>
+
+                    <Button type="button" className="w-100 mt-3 bg-dark" onClick={handleSendCode}>
+                      <MailCheck className="me-2" size={16} /> Confirm
+                    </Button>
+                  </form>
+
+                  <div className="mt-3 text-center">
+                    <p className="text-sm text-muted-foreground">
+                      Already have an account?{" "}
+                      <Button
+                        type="button"
+                        variant="link"
+                        className="p-0 text-dark fw-bold text-decoration-none"
+                        onClick={onSwitchToLogin}
+                      >
+                        Sign in
+                      </Button>
+                    </p>
+                  </div>
+                </CardContent>
+              </div>
+            </div>
+            <div className="text-center mt-3 text-dark">
+              <p>By creating an account, you agree to our terms of service</p>
+            </div>
+          </div>
         </div>
       </div>
 

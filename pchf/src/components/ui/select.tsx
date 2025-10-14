@@ -2,6 +2,7 @@
 
 import React from "react";
 import { ChevronDown } from "lucide-react";
+import "../css/select.css"
 
 type Option = { value: string; label: string };
 
@@ -31,7 +32,7 @@ export function BootstrapSelect({
     <div className="">
       {label && <label className="form-label fw-semibold ">{label}</label>}
         <select
-          className={`form-select border-muted ${sizeClass}`}
+          className={`form-select border-muted input-clean ${sizeClass}`}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled}

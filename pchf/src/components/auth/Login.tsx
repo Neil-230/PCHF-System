@@ -4,9 +4,10 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Alert, AlertDescription } from "../ui/alert";
-import { Eye, EyeOff, CreditCard } from "lucide-react";
+import { Eye, EyeOff, CreditCard, LogInIcon } from "lucide-react";
 import { AuthService, defaultPasswords } from "../../data/authData";
 import { toast } from "sonner";
+import "../css/login.css";
 
 interface LoginProps {
   onLogin: (email: string, password: string) => boolean;
@@ -127,140 +128,138 @@ export function Login({ onLogin, onSwitchToSignUp }: LoginProps) {
 
   return (
     <div className="d-flex align-items-center justify-content-center p-4" style={{ minHeight: "100vh" }}>
-      <div className="d-flex flex-column" style={{ minWidth: "32%" }}>
-        <div className="text-center d-flex flex-column justify-content-center mb-3">
-          <div className="d-flex items-center justify-content-center gap-2">
-            <CreditCard size={35} />
-            <h3 className="fw-bold">Cashier System</h3>
+      <div className="d-flex flex-column" style={{ minWidth: "50%" }}>
+        <div className="container-fluid">
+          <div className="row">
+            <div className="col-md-6 p-0">
+              <div className="headerMes d-flex flex-column p-5 h-100 border border-0 justify-content-between bg-dark">
+                <div className="text-center d-flex flex-column justify-content-center">
+                  <div className="d-flex items-center justify-content-center">
+                    <h3 className="text-light fw-bold">Welcome back!</h3>
+                  </div>
+                  <p className="text-light">Enter your credentials to access the system</p>
+                </div>
+                <div>
+                  <div className="mt-1">
+                    <div className="d-flex justify-content-center gap-2 mb-3">
+                      <Button className="w-100 bg-white border-secondary text-dark" onClick={() => fillDemoCredentials('admin')}>
+                        Admin Demo
+                      </Button>
+                      <Button className="w-100 bg-white border-secondary text-dark" onClick={() => fillDemoCredentials('cashier')}>
+                        Cashier Demo
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="col-md-6 p-0">
+              <div className="bodyLOG d-flex flex-column justify-content-center p-5 border border-0">
+                <CardContent>
+                  <form onSubmit={handleSubmit}>
+                    {error && (
+                      <Alert variant="destructive">
+                        <AlertDescription>{error}</AlertDescription>
+                      </Alert>
+                    )}
+
+                    <div className="mb-3">
+                      <Label htmlFor="email" className="fw-bold">Email</Label>
+                      <Input
+                        className="EmailINT"
+                        id="email"
+                        type="email"
+                        placeholder="Enter your email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                      />
+                    </div>
+
+                    <div className="mb-2">
+                      <Label htmlFor="password" className="fw-bold">Password</Label>
+                      <div className="position-relative">
+                        <input
+                          className="PassINT form-control pe-5"
+                          id="password"
+                          type={showPassword ? "text" : "password"}
+                          placeholder="Enter your password"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          required
+                        />
+                        <button
+                          type="button"
+                          className="btn btn-sm bg-transparent border-0 position-absolute top-50 end-0 translate-middle-y me-2"
+                          onClick={() => setShowPassword(!showPassword)}
+                        >
+                          {showPassword ? <EyeOff /> : <Eye />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <Button type="submit" className="w-100 mt-3 bg-dark border-secondary" disabled={isLoading}>
+                      <LogInIcon className="me-2" size={16} ></LogInIcon>
+                      {isLoading ? 'Signing in...' : 'Sign in'}
+                    </Button>
+
+                    <div className="text-center mt-5">
+                      <button
+                        type="button"
+                        className="btn btn-link p-0 text-dark fw-bold text-decoration-none"
+                        data-bs-toggle="modal"
+                        data-bs-target="#forgotPasswordModal"
+                        onClick={() => {
+                          setStep("email");
+                          setResetEmail('');
+                          setResetCode('');
+                          setNewPassword('');
+                          setConfirmPassword('');
+                          setResetError('');
+                        }}
+                      >
+                        Forgot Password?
+                      </button>
+                    </div>
+                  </form>
+
+                  <div className="mt-2 text-center">
+                    <p className="text-sm text-muted-foreground">
+                      Don't have an account?{' '}
+                      <Button
+                        type="button"
+                        variant="link"
+                        className="p-0 text-dark fw-bold text-decoration-none"
+                        onClick={onSwitchToSignUp}>
+                        Sign up
+                      </Button>
+                    </p>
+                  </div>
+                </CardContent>
+              </div>
+            </div>
+            <div className="text-center mt-3 text-dark">
+              <p>Demo credentials are provided for testing purposes</p>
+            </div>
           </div>
-          <p className="text-secondary">Sign in to access your dashboard</p>
-        </div>
-
-        <Card>
-          <CardHeader className="text-start">
-            <CardTitle className="fw-bold fs-4">Welcome back</CardTitle>
-            <CardDescription className="text-secondary">
-              Enter your credentials to access the system
-            </CardDescription>
-          </CardHeader>
-
-          <CardContent>
-            <form onSubmit={handleSubmit}>
-              {error && (
-                <Alert variant="destructive">
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-
-              <div className="mb-3">
-                <Label htmlFor="email" className="fw-bold">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="Enter your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="mb-2">
-                <Label htmlFor="password" className="fw-bold">Password</Label>
-                <div className="position-relative">
-                  <input
-                    className="form-control pe-5"
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Enter your password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-                  <button
-                    type="button"
-                    className="btn btn-sm bg-transparent border-0 position-absolute top-50 end-0 translate-middle-y me-2"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? <EyeOff /> : <Eye />}
-                  </button>
-                </div>
-              </div>
-
-              <Button type="submit" className="w-100 mt-3 bg-dark border-secondary" disabled={isLoading}>
-                {isLoading ? 'Signing in...' : 'Sign in'}
-              </Button>
-
-              <div className="text-center mt-3">
-                  <button
-                    type="button"
-                    className="btn btn-link p-0 text-dark fw-bold text-decoration-none"
-                    data-bs-toggle="modal"
-                    data-bs-target="#forgotPasswordModal"
-                    onClick={() => {
-                      setStep("email");
-                      setResetEmail('');
-                      setResetCode('');
-                      setNewPassword('');
-                      setConfirmPassword('');
-                      setResetError('');
-                    }}
-                  >
-                    Forgot Password?
-                  </button>
-                </div>
-            </form>
-
-            <div className="mt-4">
-              <div className="d-flex align-items-center my-3">
-                <div className="flex-grow-1 border-top"></div>
-                <span className="mx-3 text-secondary">DEMO ACCOUNT</span>
-                <div className="flex-grow-1 border-top"></div>
-              </div>
-              <div className="d-flex justify-content-center gap-2 mb-3">
-                <Button className="w-100 bg-dark border-secondary" onClick={() => fillDemoCredentials('admin')}>
-                  Admin Demo
-                </Button>
-                <Button className="w-100 bg-dark border-secondary" onClick={() => fillDemoCredentials('cashier')}>
-                  Cashier Demo
-                </Button>
-              </div>
-            </div>
-
-            <div className="mt-4 text-center">
-              <p className="text-sm text-muted-foreground">
-                Don't have an account?{' '}
-                <Button
-                  type="button"
-                  variant="link"
-                  className="p-0 text-dark fw-bold text-decoration-none"
-                  onClick={onSwitchToSignUp}>
-                  Sign up
-                </Button>
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="text-center mt-3">
-          <p>Demo credentials are provided for testing purposes</p>
         </div>
       </div>
 
       {/* === FORGOT PASSWORD MODAL === */}
-      <div className="modal fade" id="forgotPasswordModal" tabIndex={-1} aria-hidden="true">
+      <div className="modal fade" id="forgotPasswordModal" tabIndex={-1} aria-hidden="true" style={{backgroundColor: "rgba(239, 252, 255, 0.31)"}}>
         <div className="modal-dialog modal-dialog-centered">
-          <div className="modal-content p-3">
-            <div className="modal-header">
+          <div className="modal-content p-3" style={{backgroundColor: "rgb(239, 252, 255)"}}>
+            <div className="modal-header border border-0" >
               <h5 className="modal-title">Forgot Password</h5>
               <button type="button" className="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div className="modal-body">
+            <div className="modal-body ">
               {resetError && <div className="alert alert-danger">{resetError}</div>}
 
               {step === "email" && (
                 <>
-                  <Label>Email</Label>
                   <Input
+                    className="FogPa"
                     type="email"
                     value={resetEmail}
                     onChange={(e) => setResetEmail(e.target.value)}
@@ -271,8 +270,9 @@ export function Login({ onLogin, onSwitchToSignUp }: LoginProps) {
 
               {step === "code" && (
                 <>
-                  <Label>Verification Code</Label>
+
                   <Input
+                    className="FogPa"
                     type="text"
                     value={resetCode}
                     onChange={(e) => setResetCode(e.target.value)}
@@ -283,15 +283,17 @@ export function Login({ onLogin, onSwitchToSignUp }: LoginProps) {
 
               {step === "reset" && (
                 <>
-                  <Label>New Password</Label>
+                  {/* <Label>New Password</Label> */}
                   <Input
+                    className="FogPa mb-4"
                     type="password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="Enter new password"
                   />
-                  <Label className="mt-3">Confirm Password</Label>
+                  {/* <Label className="mt-3">Confirm Password</Label> */}
                   <Input
+                    className="FogPa"
                     type="password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
@@ -301,7 +303,7 @@ export function Login({ onLogin, onSwitchToSignUp }: LoginProps) {
               )}
             </div>
 
-            <div className="modal-footer">
+            <div className="modal-footer border border-0">
               {step === "email" && (
                 <Button className="bg-dark border-0 w-100" onClick={handleSendCode}>Send Code</Button>
               )}
