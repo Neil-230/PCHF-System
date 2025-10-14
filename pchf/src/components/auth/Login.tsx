@@ -184,8 +184,13 @@ export function Login({ onLogin, onSwitchToSignUp }: LoginProps) {
                     {showPassword ? <EyeOff /> : <Eye />}
                   </button>
                 </div>
+              </div>
 
-                <div className="text-end mt-1">
+              <Button type="submit" className="w-100 mt-3 bg-dark border-secondary" disabled={isLoading}>
+                {isLoading ? 'Signing in...' : 'Sign in'}
+              </Button>
+
+              <div className="text-center mt-3">
                   <button
                     type="button"
                     className="btn btn-link p-0 text-dark fw-bold text-decoration-none"
@@ -203,11 +208,6 @@ export function Login({ onLogin, onSwitchToSignUp }: LoginProps) {
                     Forgot Password?
                   </button>
                 </div>
-              </div>
-
-              <Button type="submit" className="w-100 mt-3 bg-dark border-secondary" disabled={isLoading}>
-                {isLoading ? 'Signing in...' : 'Sign in'}
-              </Button>
             </form>
 
             <div className="mt-4">
