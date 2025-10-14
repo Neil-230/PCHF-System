@@ -3,5 +3,8 @@
     "bootstrap": "^5.3.8",
     "rechart": "^0.0.1",
     "recharts": "^3.2.1"
+  },
+  "devDependencies": {
+    "vite": "^7.1.10"
   }
 }
