@@ -3,6 +3,11 @@ import type { Product } from "../types";
 import { mockProducts } from "../data/mockData";
 import { Plus, Edit, Search, Package } from "lucide-react";
 import { toast } from "sonner";
+import jsPDF from "jspdf";
+import { FileDown } from "lucide-react";
+
+import { Modal, Button, Card } from "react-bootstrap";
+
 export function InventoryManagement() {
   const [products, setProducts] = useState<Product[]>(mockProducts);
   const [searchQuery, setSearchQuery] = useState("");
@@ -109,6 +114,48 @@ export function InventoryManagement() {
     return { label: "In Stock", variant: "dark" };
   };
 
+  const handleDownloadPDF = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(16);
+    doc.text("Inventory Report", 14, 15);
+    doc.setFontSize(10);
+    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 22);
+
+    let yPos = 35;
+    const categories = [
+      { title: "Out of Stock", filter: (p: Product) => p.stock === 0 },
+      { title: "Low Stock (1-10)", filter: (p: Product) => p.stock > 0 && p.stock <= 10 },
+      { title: "In Stock (>10)", filter: (p: Product) => p.stock > 10 },
+    ];
+
+    categories.forEach(({ title, filter }) => {
+      const items = products.filter(filter);
+      if (items.length > 0) {
+        doc.setFontSize(12);
+        doc.text(title, 14, yPos);
+        yPos += 6;
+        doc.setFontSize(10);
+
+        items.forEach((p) => {
+          if (yPos > 280) {
+            doc.addPage();
+            yPos = 20;
+          }
+          doc.text(
+            `${p.name} | PHP. ${p.price.toFixed(2)} | Stock: ${p.stock} | SKU: ${p.sku}`,
+            14,
+            yPos
+          );
+          yPos += 6;
+        });
+
+        yPos += 8;
+      }
+    });
+
+    doc.save("Inventory_Report.pdf");
+  };
+
   const totalProducts = products.length;
   const lowStockProducts = products.filter((p) => p.stock <= 10 && p.stock > 0).length;
   const outOfStockProducts = products.filter((p) => p.stock === 0).length;
@@ -168,126 +215,131 @@ export function InventoryManagement() {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-        <button
-          className="btn btn-dark d-flex align-items-center"
-          onClick={() => {
-            resetForm();
-            setIsAddDialogOpen(true);
-          }}
-        >
-          <Plus size={18} className="me-2" />
-          Add Product
-        </button>
+        
+        <div className="d-flex gap-2">
+          <button
+            className="btn btn-dark d-flex align-items-center"
+            onClick={() => {
+              resetForm();
+              setIsAddDialogOpen(true);
+            }}
+          >
+            <Plus size={18} className="me-2" />
+            Add Product
+          </button>
+
+          <button
+            className="btn btn-outline-secondary d-flex align-items-center"
+            onClick={handleDownloadPDF}
+          >
+            <FileDown size={18} className="me-2" />
+            Download PDF
+          </button>
+        </div>
       </div>
 
-      {/* Add/Edit Modal */}
-      {(isAddDialogOpen || editingProduct) && (
-        <div className="modal show d-block" tabIndex={-1}>
-          <div className="modal-dialog modal-lg">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">
-                  {editingProduct ? "Edit Product" : "Add Product"}
-                </h5>
-                <button
-                  type="button"
-                  className="btn-close"
-                  onClick={() => {
-                    setIsAddDialogOpen(false);
-                    setEditingProduct(null);
-                  }}
-                />
-              </div>
-              <div className="modal-body">
-                {/* PRODUCT AND PRICE */}
-                <div className="row">
-                  <div className="col-md-6 d-flex flex-column">
-                    <label className="form-label">Product Name</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    />
-                  </div>
-                  <div className="col-md-6 d-flex flex-column">
-                    <label className="form-label">Price</label>
-                    <input
-                      type="number"
-                      className="form-control"
-                      value={formData.price}
-                      onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                    />
-                  </div>
-                </div>
-                {/* ___ */}
+      <Modal
+        show={!!(isAddDialogOpen || editingProduct)}
+        onHide={() => {
+          setIsAddDialogOpen(false);
+          setEditingProduct(null);
+        }}
+        centered
+        size="lg"
+        style={{ backgroundColor: "rgba(239, 252, 255, 0.31)" }}
+      >
+        <Modal.Header closeButton className="border-0">
+          <Modal.Title>{editingProduct ? "Edit Product" : "Add Product"}</Modal.Title>
+        </Modal.Header>
 
-                <div className="row">
-                  <div className="col-md-6 d-flex flex-column">
-                    <label className="form-label">Category</label>
-                    <select
-                      className="form-select"
-                      value={formData.category}
-                      onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    >
-                      <option value="">Select a category</option>
-                      {categories.map((cat) => (
-                        <option key={cat} value={cat}>
-                          {cat}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="col-md-6 d-flex flex-column">
-                    <label className="form-label">Stock</label>
-                    <input
-                      type="number"
-                      className="form-control"
-                      value={formData.stock}
-                      onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
-                    />
-                  </div>
-                </div>
-                <div className="mb-3">
-                  <label className="form-label">SKU (leave blank for auto)</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={formData.sku}
-                    onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                  />
-                </div>
-                <div className="mb-3">
-                  <label className="form-label">Description</label>
-                  <textarea
-                    className="form-control"
-                    rows={3}
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  />
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button
-                  className="btn btn-secondary"
-                  onClick={() => {
-                    setIsAddDialogOpen(false);
-                    setEditingProduct(null);
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  className="btn btn-primary"
-                  onClick={editingProduct ? handleEditProduct : handleAddProduct}
-                >
-                  {editingProduct ? "Save Changes" : "Add Product"}
-                </button>
-              </div>
+        <Modal.Body>
+          <div className="row">
+            <div className="col-md-6 d-flex flex-column">
+              <label className="form-label">Product Name</label>
+              <input
+                type="text"
+                className="form-control"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              />
+            </div>
+            <div className="col-md-6 d-flex flex-column">
+              <label className="form-label">Price</label>
+              <input
+                type="number"
+                className="form-control"
+                value={formData.price}
+                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+              />
             </div>
           </div>
-        </div>
-      )}
+
+          <div className="row mt-3">
+            <div className="col-md-6 d-flex flex-column">
+              <label className="form-label">Category</label>
+              <select
+                className="form-select"
+                value={formData.category}
+                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+              >
+                <option value="">Select a category</option>
+                {categories.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="col-md-6 d-flex flex-column">
+              <label className="form-label">Stock</label>
+              <input
+                type="number"
+                className="form-control"
+                value={formData.stock}
+                onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <div className="mt-3">
+            <label className="form-label">SKU (leave blank for auto)</label>
+            <input
+              type="text"
+              className="form-control"
+              value={formData.sku}
+              onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+            />
+          </div>
+
+          <div className="mt-3">
+            <label className="form-label">Description</label>
+            <textarea
+              className="form-control"
+              rows={3}
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            />
+          </div>
+        </Modal.Body>
+
+        <Modal.Footer className="border-0">
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setIsAddDialogOpen(false);
+              setEditingProduct(null);
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            onClick={editingProduct ? handleEditProduct : handleAddProduct}
+          >
+            {editingProduct ? "Save Changes" : "Add Product"}
+          </Button>
+        </Modal.Footer>
+      </Modal>
 
       {/* Products Table */}
       <div className="card border-0 rounded-3" style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}>

@@ -43,7 +43,7 @@ export function PointOfSale({ onTransactionComplete }: PointOfSaleProps) {
     email: "store@example.com",
     footerMessage: "Thank you for your purchase!",
   });
-
+  const [taxRate, setTaxRate] = useState("0");
   const removeFromCart = (productId: string) => {
     setCart((prev) => prev.filter((item) => item.product.id !== productId));
   };
@@ -121,7 +121,7 @@ export function PointOfSale({ onTransactionComplete }: PointOfSaleProps) {
     (sum, item) => sum + item.product.price * item.quantity,
     0
   );
-  const tax = subtotal * 0.1;
+  const tax = subtotal * (parseFloat(taxRate) / 100 || 0);
   const total = subtotal + tax;
 
   const handleConfirmPayment = () => {
@@ -242,8 +242,9 @@ export function PointOfSale({ onTransactionComplete }: PointOfSaleProps) {
   return (
     <>
       {/* Customer Name Modal */}
-      <Modal show={isNameDialogOpen} onHide={() => setIsNameDialogOpen(false)} centered>
-        <Modal.Header closeButton>
+      <Modal show={isNameDialogOpen} onHide={() => setIsNameDialogOpen(false)} centered
+        style={{backgroundColor: "rgba(239, 252, 255, 0.31)"}}>
+        <Modal.Header closeButton className="border border-0 d-flex">
           <Modal.Title>Enter Customer Name</Modal.Title>
         </Modal.Header>
         <Modal.Body>
@@ -281,11 +282,20 @@ export function PointOfSale({ onTransactionComplete }: PointOfSaleProps) {
                     <Search className="position-absolute top-50 start-0 translate-middle-y ms-2 text-secondary" size={18} />
                   </div>
                 </form>
-                <BootstrapSelect
-                  options={[{ value: "All", label: "All" }, ...categories.filter((c) => c !== "All").map((c) => ({ value: c, label: c }))]}
+                <select
+                  className="form-select w-25"
                   value={selectedCategory}
-                  onChange={setSelectedCategory}
-                />
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                >
+                  <option value="All">All</option>
+                  {categories
+                    .filter((c) => c !== "All")
+                    .map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                </select>
               </div>
 
               <div className=" d-flex alert alert-secondary gap-2 py-2">
@@ -414,7 +424,8 @@ export function PointOfSale({ onTransactionComplete }: PointOfSaleProps) {
       )}
 
       {/* Checkout Modal */}
-      <Modal show={isCheckoutOpen} onHide={() => setIsCheckoutOpen(false)} centered>
+      <Modal show={isCheckoutOpen} onHide={() => setIsCheckoutOpen(false)} centered 
+        style={{backgroundColor: "rgba(239, 252, 255, 0.31)"}}>
         <Modal.Header closeButton>
           <Modal.Title>Cash Payment</Modal.Title>
         </Modal.Header>
@@ -438,7 +449,20 @@ export function PointOfSale({ onTransactionComplete }: PointOfSaleProps) {
               <span>₱{total.toFixed(2)}</span>
             </div>
           </div>
-
+          <div className="mb-3">
+            <label htmlFor="taxRate" className="form-label fw-semibold">Tax Percentage</label>
+            <input
+              type="number"
+              id="taxRate"
+              min="0"
+              max="100"
+              step="0.01"
+              className="form-control"
+              value={taxRate}
+              onChange={(e) => setTaxRate(e.target.value)}
+              placeholder="Enter tax % (e.g., 12)"
+            />
+          </div>
           <label className="form-label">Cash Received</label>
           <input
             type="number"

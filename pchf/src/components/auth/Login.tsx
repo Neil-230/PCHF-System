@@ -130,7 +130,7 @@ export function Login({ onLogin, onSwitchToSignUp }: LoginProps) {
     <div className="d-flex align-items-center justify-content-center p-4" style={{ minHeight: "100vh" }}>
       <div className="d-flex flex-column" style={{ minWidth: "50%" }}>
         <div className="container-fluid">
-          <div className="row">
+          <div className="row entireLogin">
             <div className="col-md-6 p-0">
               <div className="headerMes d-flex flex-column p-5 h-100 border border-0 justify-content-between bg-dark">
                 <div className="text-center d-flex flex-column justify-content-center">
@@ -248,7 +248,7 @@ export function Login({ onLogin, onSwitchToSignUp }: LoginProps) {
       {/* === FORGOT PASSWORD MODAL === */}
       <div className="modal fade" id="forgotPasswordModal" tabIndex={-1} aria-hidden="true" style={{backgroundColor: "rgba(239, 252, 255, 0.31)"}}>
         <div className="modal-dialog modal-dialog-centered">
-          <div className="modal-content p-3" style={{backgroundColor: "rgb(239, 252, 255)"}}>
+          <div className="modal-content p-3" style={{backgroundColor: "rgba(255, 255, 255, 1)"}}>
             <div className="modal-header border border-0" >
               <h5 className="modal-title">Forgot Password</h5>
               <button type="button" className="btn-close" data-bs-dismiss="modal"></button>

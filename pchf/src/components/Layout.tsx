@@ -1,3 +1,4 @@
+import "./css/layout.css"
 import { useState } from "react";
 import {
   ShoppingCart,
@@ -12,6 +13,7 @@ import {
   Home,
   Menu,
 } from "lucide-react";
+
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -45,32 +47,32 @@ export function Layout({ children, activeTab, onTabChange, user, onLogout }: Lay
     <div className="d-flex min-vh-100">
       {/* Sidebar */}
       {isSidebarOpen && (
-        <div className="border-0 pt-4" 
+        <div className="border-0 pt-4 bg-dark" 
           style={{
             width: "250px",
             height: "100vh",
             position: "sticky",
             top: 0,
             backgroundColor:"white",
-            boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.07)"
+            boxShadow:"2px 4px 8px  rgba(27, 27, 27, 0.26)"
             // background: "linear-gradient(160deg, rgba(26, 51, 152, 1), rgba(105, 107, 117, 1)", 
           }}>
           <div className="d-flex align-items-center mb-5 ms-4">
             <ShoppingCart size={24} className="me-2" />
-            <span className="fw-bold">CashierPro</span>
+            <span className="fw-bold text-light">CashierPro</span>
           </div>
           <ul className="nav flex-column gap-3">
             {allowedNavigation.map((item) => (
               <li key={item.id} className="nav-item d-flex justify-content-center">
                 <button
-                  className="navbutton nav-link d-flex align-items-center text-dark"
+                  className="navbutton nav-link d-flex align-items-center text-light"
                   style={{
                     minWidth: "200px",
-                    backgroundColor: activeTab === item.id ? "rgba(255, 255, 255, 0.17)" : "transparent",
+                    backgroundColor: activeTab === item.id ? "rgba(27, 27, 27, 0.17)" : "transparent",
                     fontWeight: activeTab === item.id ? "bold" : "normal",
                     borderRadius: activeTab === item.id ? "6px" : "0px",
                     boxShadow:
-                    activeTab === item.id ? "2px 4px 8px  rgba(0, 0, 0, 0.10)":"none",
+                    activeTab === item.id ? "2px 4px 8px  rgba(0, 0, 0, 0.27)":"none",
                   }}
                   onClick={() => onTabChange(item.id)}
                 >
@@ -84,20 +86,20 @@ export function Layout({ children, activeTab, onTabChange, user, onLogout }: Lay
       )}
 
       {/* Main content */}
-      <div className="flex-grow-1 d-flex flex-column"
+      <div className=" maincontent flex-grow-1 d-flex flex-column"
         >
         {/* Header */}
-        <header className="border-0 m-2 me-4 ms-4 rounded-3 px-3 py-2 d-flex align-items-center"
-          style={{backgroundColor:"white", boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.07)"}}
+        <header className="border-0 m-1 me-4 ms-4 rounded-3 px-3 py-2 d-flex align-items-center bg-dark"
+          style={{boxShadow:"2px 4px 8px  rgba(27, 27, 27, 0.26)"}}
           >
           <button
             className="btn btn-light me-3 bg-transparent border-0"
             onClick={() => setIsSidebarOpen((prev) => !prev)}
           >
-            <Menu size={20} />
+            <Menu className="text-light" size={20} />
           </button>
 
-          <h5 className="m-0">
+          <h5 className="m-0 text-light">
             {allowedNavigation.find((nav) => nav.id === activeTab)?.label || "Point of Sale"}
           </h5>
 
@@ -105,8 +107,8 @@ export function Layout({ children, activeTab, onTabChange, user, onLogout }: Lay
           <div className="ms-auto d-flex align-items-center gap-3">
             <div className="dropdown">
               <button className="btn position-relative" data-bs-toggle="dropdown">
-                <Bell size={20} />
-                <span className="badge bg-dark position-absolute top-0 start-100 translate-middle p-1">
+                <Bell className="text-light" size={20} />
+                <span className="badge bg-light position-absolute top-0 start-100 translate-middle p-1 text-dark">
                   3
                 </span>
               </button>
@@ -133,14 +135,14 @@ export function Layout({ children, activeTab, onTabChange, user, onLogout }: Lay
             <div className="dropdown">
               <button className="btn d-flex align-items-center gap-2" data-bs-toggle="dropdown">
                 <div
-                  className="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center"
+                  className="rounded-circle bg-light text-dark d-flex align-items-center justify-content-center"
                   style={{ width: "32px", height: "32px" }}
                 >
                   {getUserInitials(user.name)}
                 </div>
                 <div className="text-start d-none d-sm-block">
-                  <div className="small fw-bold">{user.name}</div>
-                  <div className="text-muted small">{user.role}</div>
+                  <div className="small text-light fw-bold">{user.name}</div>
+                  <div className="text-light small">{user.role}</div>
                 </div>
               </button>
               <div className="dropdown-menu dropdown-menu-end">
@@ -149,15 +151,10 @@ export function Layout({ children, activeTab, onTabChange, user, onLogout }: Lay
                   <div className="text-muted small">{user.email}</div>
                 </div>
                 <div className="dropdown-divider"></div>
-                <button className="dropdown-item">
-                  <User size={16} className="me-2" />
-                  Profile Settings
-                </button>
                 <button className="dropdown-item" onClick={() => onTabChange("settings")}>
                   <Settings size={16} className="me-2" />
                   Store Settings
                 </button>
-                <div className="dropdown-divider"></div>
                 <button className="dropdown-item text-danger" onClick={onLogout}>
                   <LogOut size={16} className="me-2" />
                   Sign Out
