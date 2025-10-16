@@ -24,6 +24,12 @@ export interface Transaction {
   timestamp: Date;
   status: 'completed' | 'refunded' | 'pending';
   customerName?: string;
+  
+  handledBy: {
+    name: string;
+    email: string;
+    role: 'admin' | 'cashier' | string;
+  };
 }
 
 export interface InventoryAlert {

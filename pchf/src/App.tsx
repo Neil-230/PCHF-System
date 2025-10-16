@@ -70,7 +70,10 @@ export default function App() {
       case "dashboard":
         return <Dashboard transactions={transactions} />;
       case "pos":
-        return <PointOfSale onTransactionComplete={handleTransactionComplete} />;
+        return <PointOfSale
+          user={user!} 
+          onTransactionComplete={handleTransactionComplete}
+        />
       case "inventory":
         return <InventoryManagement />;
       case "transactions":

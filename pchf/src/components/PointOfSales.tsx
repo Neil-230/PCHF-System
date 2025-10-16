@@ -4,12 +4,20 @@ import { mockProducts, categories, mockTransactions } from "../data/mockData";
 import { Search } from "lucide-react";
 import "./css/PointOfSales.css";
 import { Modal, Button, Card } from "react-bootstrap";
-import { BootstrapSelect } from "./ui/select";
 import { Badge } from "./ui/Badge";
 import { CardTitle, CardHeader, CardContent } from "./ui/card";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { toast } from "react-hot-toast";
+
+//
+// ✅ Added User type and updated Transaction to include processedBy
+//
+interface User {                     // ✅ added
+  name: string;                     // ✅ added
+  email: string;                    // ✅ added
+  role: "admin" | "cashier" | string; // ✅ added
+}
 
 interface Transaction {
   id: string;
@@ -18,17 +26,27 @@ interface Transaction {
   tax: number;
   total: number;
   customerName: string;
+  customerContact: string;   // ✅ added
+  customerAddress: string;   // ✅ added
   timestamp: Date;
   status: "completed" | "pending";
-  paymentMethod: string; // ✅ required field
+  paymentMethod: string;
+  handledBy: {             // ✅ added
+    name: string;
+    email: string;
+    role: string;
+  };
 }
 
 interface PointOfSaleProps {
   onTransactionComplete: (transaction: Transaction) => void;
+  user: User; // ✅ added: who is using the POS (admin/cashier)
 }
 
-export function PointOfSale({ onTransactionComplete }: PointOfSaleProps) {
+export function PointOfSale({ onTransactionComplete, user }: PointOfSaleProps) { // ✅ updated
   const [customerName, setCustomerName] = useState("");
+  const [customerContact, setCustomerContact] = useState("");  // ✅ added
+  const [customerAddress, setCustomerAddress] = useState("");  // ✅ added
   const [isNameDialogOpen, setIsNameDialogOpen] = useState(true);
   const [hasEnteredName, setHasEnteredName] = useState(false);
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -36,6 +54,8 @@ export function PointOfSale({ onTransactionComplete }: PointOfSaleProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [cashAmount, setCashAmount] = useState("");
+  const [taxRate, setTaxRate] = useState("0");
+
   const [storeSettings, setStoreSettings] = useState({
     storeName: "My Store",
     storeAddress: "123 Main St, City, State 12345",
@@ -43,7 +63,12 @@ export function PointOfSale({ onTransactionComplete }: PointOfSaleProps) {
     email: "store@example.com",
     footerMessage: "Thank you for your purchase!",
   });
-  const [taxRate, setTaxRate] = useState("0");
+
+  useEffect(() => {
+    const saved = localStorage.getItem("storeSettings");
+    if (saved) setStoreSettings(JSON.parse(saved));
+  }, []);
+
   const removeFromCart = (productId: string) => {
     setCart((prev) => prev.filter((item) => item.product.id !== productId));
   };
@@ -53,11 +78,6 @@ export function PointOfSale({ onTransactionComplete }: PointOfSaleProps) {
     setCart([]);
     toast.success("Cart successfully cleared");
   };
-
-  useEffect(() => {
-    const saved = localStorage.getItem("storeSettings");
-    if (saved) setStoreSettings(JSON.parse(saved));
-  }, []);
 
   const filteredProducts = mockProducts.filter((product) => {
     const matchesCategory =
@@ -69,8 +89,9 @@ export function PointOfSale({ onTransactionComplete }: PointOfSaleProps) {
   });
 
   const handleNameSubmit = () => {
-    if (customerName.trim() === "") {
-      toast.error("Please enter customer name");
+    // require name, contact, and address per your request
+    if (!customerName.trim() || !customerContact.trim() || !customerAddress.trim()) {
+      toast.error("Please fill out all customer details");
       return;
     }
     setHasEnteredName(true);
@@ -125,6 +146,7 @@ export function PointOfSale({ onTransactionComplete }: PointOfSaleProps) {
   const total = subtotal + tax;
 
   const handleConfirmPayment = () => {
+    if (cart.length === 0) return toast.error("Cart is empty"); // small guard
     const cash = parseFloat(cashAmount);
     if (isNaN(cash) || cash <= 0) return toast.error("Enter valid cash");
     if (cash < total) return toast.error("Insufficient cash");
@@ -138,9 +160,16 @@ export function PointOfSale({ onTransactionComplete }: PointOfSaleProps) {
       tax,
       total,
       customerName,
+      customerContact,   // ✅ added
+      customerAddress,   // ✅ added
       timestamp: new Date(),
       status: "completed",
-      paymentMethod: "Cash", // ✅ added field
+      paymentMethod: "Cash",
+      handledBy: {     // ✅ added active log
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
     };
 
     mockTransactions.push(transaction);
@@ -175,13 +204,16 @@ export function PointOfSale({ onTransactionComplete }: PointOfSaleProps) {
     // Customer info
     doc.setFontSize(9);
     doc.text(`Customer: ${customerName}`, 10, 29);
-    doc.text(`Date: ${formattedDate}`, 10, 33);
-    doc.text(`Transaction ID: ${transaction.id}`, 10, 37);
-    doc.text(`Payment: ${transaction.paymentMethod}`, 10, 41);
+    doc.text(`Contact: ${customerContact}`, 10, 33);
+    doc.text(`Address: ${customerAddress}`, 10, 37);
+    doc.text(`Date: ${formattedDate}`, 10, 41);
+    doc.text(`Transaction ID: ${transaction.id}`, 10, 45);
+    doc.text(`Payment: ${transaction.paymentMethod}`, 10, 49);
+    
     doc.text(
       "----------------------------------------------------------------",
       40,
-      45,
+      52,
       { align: "center" }
     );
 
@@ -194,7 +226,7 @@ export function PointOfSale({ onTransactionComplete }: PointOfSaleProps) {
     autoTable(doc, {
       head: [["Item", "Price"]],
       body: tableData,
-      startY: 47,
+      startY: 54,
       theme: "plain",
       styles: { fontSize: 9, cellPadding: 1 },
       headStyles: { fontStyle: "bold" },
@@ -209,7 +241,7 @@ export function PointOfSale({ onTransactionComplete }: PointOfSaleProps) {
 
     doc.text("----------------------------------------------------------------", 40, finalY, { align: "center" });
     doc.text(`Subtotal: PHP.${subtotal.toFixed(2)}`, 10, finalY + 5);
-    doc.text(`Tax (10%): PHP.${tax.toFixed(2)}`, 10, finalY + 9);
+    doc.text(`Tax (${taxRate}%): PHP.${tax.toFixed(2)}`, 10, finalY + 9);
     doc.setFont("helvetica", "bold");
     doc.text(`TOTAL: PHP.${total.toFixed(2)}`, 10, finalY + 14);
     doc.setFont("helvetica", "normal");
@@ -218,9 +250,15 @@ export function PointOfSale({ onTransactionComplete }: PointOfSaleProps) {
     doc.text(`Change: PHP.${change.toFixed(2)}`, 10, finalY + 26);
     doc.text("----------------------------------------------------------------", 40, finalY + 29, { align: "center" });
 
+    // Active log - who processed the transaction
+    doc.setFontSize(8);
+    doc.text(`Processed by: ${user.name} (${user.role})`, 10, finalY + 34); // ✅ added
+    doc.text(`Email: ${user.email}`, 10, finalY + 38); // ✅ added
+    doc.text("------------------------------------------------------------------------", 40, finalY + 41, { align: "center" });
+
     // Footer
     const pageHeight = doc.internal.pageSize.height;
-    let footerY = (doc as any).lastAutoTable.finalY + 35;
+    let footerY = (doc as any).lastAutoTable.finalY + 55;
     if (footerY > pageHeight - 20) footerY = pageHeight - 15;
     doc.setFontSize(8);
     doc.setFont("helvetica", "bold");
@@ -235,17 +273,19 @@ export function PointOfSale({ onTransactionComplete }: PointOfSaleProps) {
     setCashAmount("");
     setIsCheckoutOpen(false);
     setCustomerName("");
+    setCustomerContact("");
+    setCustomerAddress("");
     setHasEnteredName(false);
     setIsNameDialogOpen(true);
   };
 
   return (
     <>
-      {/* Customer Name Modal */}
+      {/* Customer Details Modal */}
       <Modal show={isNameDialogOpen} onHide={() => setIsNameDialogOpen(false)} centered
-        style={{backgroundColor: "rgba(239, 252, 255, 0.31)"}}>
+        style={{ backgroundColor: "rgba(239, 252, 255, 0.31)" }}>
         <Modal.Header closeButton className="border border-0 d-flex">
-          <Modal.Title>Enter Customer Name</Modal.Title>
+          <Modal.Title>Enter Customer Details</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <input
@@ -254,9 +294,23 @@ export function PointOfSale({ onTransactionComplete }: PointOfSaleProps) {
             placeholder="Customer Name..."
             value={customerName}
             onChange={(e) => setCustomerName(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleNameSubmit()}
+            onKeyDown={(e) => { if (e.key === "Enter") handleNameSubmit(); }}
             autoFocus
           />
+          <input
+            type="text"
+            className="form-control mb-3"
+            placeholder="Contact Number..."
+            value={customerContact}
+            onChange={(e) => setCustomerContact(e.target.value)}
+          />
+          <textarea
+            className="form-control mb-3"
+            placeholder="Address..."
+            value={customerAddress}
+            onChange={(e) => setCustomerAddress(e.target.value)}
+          ></textarea>
+
           <Button variant="dark" className="w-100" onClick={handleNameSubmit}>
             Continue
           </Button>
@@ -299,43 +353,43 @@ export function PointOfSale({ onTransactionComplete }: PointOfSaleProps) {
               </div>
 
               <div className=" d-flex alert alert-secondary gap-2 py-2">
-                <strong className="d-flex">Customer:</strong> {customerName}
+                <strong className="d-flex">Customer:</strong> {customerName} &nbsp;|&nbsp; {customerContact}
               </div>
 
-              <div 
+              <div
                 className="grid gap-3 flex-grow overflow-y-auto pe-3 ProductList"
               >
                 {filteredProducts.map((product) => (
-                <Card
-                  key={product.id}
-                  className={`cursor-pointer transition-all hover:shadow-md border border-0 ${product.stock === 0 ? "opacity-50" : ""}`}
-                  onClick={() => addToCart(product)}
-                  style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)", }}
-                >
-                  <CardHeader>
-                    <div className="d-flex flex-row">
-                      <CardTitle>{product.name}</CardTitle>
-                      <div className="ms-2">
-                        <Badge variant={product.stock > 10 ? "default" : product.stock > 0 ? "secondary" : "destructive"}>
-                          {product.stock > 0 ? `${product.stock}` : "Out"}
-                        </Badge>
+                  <Card
+                    key={product.id}
+                    className={`cursor-pointer transition-all hover:shadow-md border border-0 ${product.stock === 0 ? "opacity-50" : ""}`}
+                    onClick={() => addToCart(product)}
+                    style={{ boxShadow: "2px 4px 8px  rgba(0, 0, 0, 0.10)" }}
+                  >
+                    <CardHeader>
+                      <div className="d-flex flex-row">
+                        <CardTitle>{product.name}</CardTitle>
+                        <div className="ms-2">
+                          <Badge variant={product.stock > 10 ? "default" : product.stock > 0 ? "secondary" : "destructive"}>
+                            {product.stock > 0 ? `${product.stock}` : "Out"}
+                          </Badge>
+                        </div>
                       </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-xs text-muted-foreground">SKU: {product.sku}</p>
-                    <p className="fw-semibold">₱{product.price.toFixed(2)}</p>
-                    <Badge variant="outline" className="">{product.category}</Badge>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-xs text-muted-foreground">SKU: {product.sku}</p>
+                      <p className="fw-semibold">₱{product.price.toFixed(2)}</p>
+                      <Badge variant="outline" className="">{product.category}</Badge>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
             </div>
 
             {/* Cart Section */}
             <div className="col-lg-4">
               <Card className="p-3 d-flex flex-column h-100 border border-0"
-                style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)", }}
+                style={{ boxShadow: "2px 4px 8px  rgba(0, 0, 0, 0.10)", }}
               >
                 <h5 className="fw-semibold mb-3">Current Order</h5>
                 {cart.length === 0 ? (
@@ -391,7 +445,7 @@ export function PointOfSale({ onTransactionComplete }: PointOfSaleProps) {
                         <span>₱{subtotal.toFixed(2)}</span>
                       </div>
                       <div className="d-flex justify-content-between">
-                        <span>Tax (10%):</span>
+                        <span>Tax ({taxRate}%):</span>
                         <span>₱{tax.toFixed(2)}</span>
                       </div>
                       <hr />
@@ -403,6 +457,7 @@ export function PointOfSale({ onTransactionComplete }: PointOfSaleProps) {
                         variant="dark"
                         className="w-100 mt-3"
                         onClick={() => setIsCheckoutOpen(true)}
+                        disabled={cart.length === 0}
                       >
                         Checkout
                       </Button>
@@ -424,8 +479,8 @@ export function PointOfSale({ onTransactionComplete }: PointOfSaleProps) {
       )}
 
       {/* Checkout Modal */}
-      <Modal show={isCheckoutOpen} onHide={() => setIsCheckoutOpen(false)} centered 
-        style={{backgroundColor: "rgba(239, 252, 255, 0.31)"}}>
+      <Modal show={isCheckoutOpen} onHide={() => setIsCheckoutOpen(false)} centered
+        style={{ backgroundColor: "rgba(239, 252, 255, 0.31)" }}>
         <Modal.Header closeButton>
           <Modal.Title>Cash Payment</Modal.Title>
         </Modal.Header>
