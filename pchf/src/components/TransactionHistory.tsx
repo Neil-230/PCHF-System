@@ -29,7 +29,7 @@ export function TransactionHistory({ transactions, onDeleteAll }: TransactionHis
   const completedTransactions = transactions.filter((t) => t.status === "completed").length;
   const averageTransaction = transactions.length > 0 ? totalRevenue / transactions.length : 0;
 
-  // ✅ Updated: includes Processed By info
+  // ✅ Updated: includes Processed By & Delivery info
   const printTransaction = (transaction: Transaction) => {
     const printWindow = window.open("", "_blank", "width=800,height=600");
     if (!printWindow) return;
@@ -52,6 +52,8 @@ export function TransactionHistory({ transactions, onDeleteAll }: TransactionHis
           <p><strong>Customer:</strong> ${transaction.customerName}</p>
           <p><strong>Date:</strong> ${new Date(transaction.timestamp).toLocaleString()}</p>
           <p><strong>Payment Method:</strong> ${transaction.paymentMethod}</p>
+          <p><strong>Delivery:</strong> ${transaction.isDelivery ? "Yes" : "No"}</p>
+          ${transaction.isDelivery ? `<p><strong>Delivery Fee:</strong> $${(transaction.deliveryFee || 0).toFixed(2)}</p>` : ""}
           ${
             transaction.handledBy
               ? `<p><strong>Processed By:</strong> ${transaction.handledBy.name} (${transaction.handledBy.role})<br/>
@@ -77,6 +79,7 @@ export function TransactionHistory({ transactions, onDeleteAll }: TransactionHis
           </table>
           <p><strong>Subtotal:</strong> $${transaction.subtotal.toFixed(2)}</p>
           <p><strong>Tax:</strong> $${transaction.tax.toFixed(2)}</p>
+          ${transaction.isDelivery ? `<p><strong>Delivery Fee:</strong> $${(transaction.deliveryFee || 0).toFixed(2)}</p>` : ""}
           <p><strong>Total:</strong> <b>$${transaction.total.toFixed(2)}</b></p>
         </body>
       </html>
@@ -85,7 +88,7 @@ export function TransactionHistory({ transactions, onDeleteAll }: TransactionHis
     printWindow.print();
   };
 
-  // ✅ Print All updated with Processed By info
+  // ✅ Print All updated with Processed By & Delivery info
   const printAllTransactions = () => {
     const printWindow = window.open("", "_blank", "width=800,height=600");
     if (!printWindow) return;
@@ -115,6 +118,8 @@ export function TransactionHistory({ transactions, onDeleteAll }: TransactionHis
                 <p><strong>Customer:</strong> ${t.customerName}</p>
                 <p><strong>Date:</strong> ${new Date(t.timestamp).toLocaleString()}</p>
                 <p><strong>Payment Method:</strong> ${t.paymentMethod}</p>
+                <p><strong>Delivery:</strong> ${t.isDelivery ? "Yes" : "No"}</p>
+                ${t.isDelivery ? `<p><strong>Delivery Fee:</strong> $${(t.deliveryFee || 0).toFixed(2)}</p>` : ""}
                 ${
                   t.handledBy
                     ? `<p><strong>Processed By:</strong> ${t.handledBy.name} (${t.handledBy.role})<br/>
@@ -139,6 +144,9 @@ export function TransactionHistory({ transactions, onDeleteAll }: TransactionHis
                       .join("")}
                   </tbody>
                 </table>
+                <p><strong>Subtotal:</strong> $${t.subtotal.toFixed(2)}</p>
+                <p><strong>Tax:</strong> $${t.tax.toFixed(2)}</p>
+                ${t.isDelivery ? `<p><strong>Delivery Fee:</strong> $${(t.deliveryFee || 0).toFixed(2)}</p>` : ""}
                 <p><strong>Total:</strong> <b>$${t.total.toFixed(2)}</b></p>
               </div>
             `
@@ -178,7 +186,6 @@ export function TransactionHistory({ transactions, onDeleteAll }: TransactionHis
             </div>
           </div>
         </div>
-
         {/* Total Transactions */}
         <div className="col-md-4 mb-3">
           <div className="card text-center border-0" style={{ boxShadow: "2px 4px 8px rgba(0,0,0,0.10)" }}>
@@ -189,7 +196,6 @@ export function TransactionHistory({ transactions, onDeleteAll }: TransactionHis
             </div>
           </div>
         </div>
-
         {/* Average */}
         <div className="col-md-4 mb-3">
           <div className="card text-center border-0" style={{ boxShadow: "2px 4px 8px rgba(0,0,0,0.10)" }}>
@@ -240,7 +246,8 @@ export function TransactionHistory({ transactions, onDeleteAll }: TransactionHis
               <th>Date & Time</th>
               <th>Items</th>
               <th>Payment</th>
-              <th>Processed By</th> {/* ✅ NEW */}
+              <th>Delivery</th>
+              <th>Processed By</th>
               <th>Total</th>
               <th>Actions</th>
             </tr>
@@ -253,6 +260,7 @@ export function TransactionHistory({ transactions, onDeleteAll }: TransactionHis
                 <td>{new Date(transaction.timestamp).toLocaleString()}</td>
                 <td>{transaction.items.length}</td>
                 <td>{transaction.paymentMethod}</td>
+                <td>{transaction.isDelivery ? "Yes" : "No"}</td>
                 <td>
                   {transaction.handledBy
                     ? `${transaction.handledBy.name} (${transaction.handledBy.role})`
@@ -276,7 +284,7 @@ export function TransactionHistory({ transactions, onDeleteAll }: TransactionHis
         </table>
       </div>
 
-      {/* Modal with Processed By */}
+      {/* Modal */}
       {selectedTransaction && (
         <div className="modal show d-block" tabIndex={-1}>
           <div className="modal-dialog modal-lg">
@@ -290,6 +298,8 @@ export function TransactionHistory({ transactions, onDeleteAll }: TransactionHis
                 <p><strong>ID:</strong> {selectedTransaction.id}</p>
                 <p><strong>Date & Time:</strong> {new Date(selectedTransaction.timestamp).toLocaleString()}</p>
                 <p><strong>Payment Method:</strong> {selectedTransaction.paymentMethod}</p>
+                <p><strong>Delivery:</strong> {selectedTransaction.isDelivery ? "Yes" : "No"}</p>
+                {selectedTransaction.isDelivery && <p><strong>Delivery Fee:</strong> ${selectedTransaction.deliveryFee?.toFixed(2)}</p>}
                 {selectedTransaction.handledBy && (
                   <>
                     <hr />
@@ -302,9 +312,7 @@ export function TransactionHistory({ transactions, onDeleteAll }: TransactionHis
                 <ul className="list-group mb-3">
                   {selectedTransaction.items.map((item, idx) => (
                     <li key={idx} className="list-group-item d-flex justify-content-between">
-                      <span>
-                        {item.product.name} x {item.quantity}
-                      </span>
+                      <span>{item.product.name} x {item.quantity}</span>
                       <span>${(item.product.price * item.quantity).toFixed(2)}</span>
                     </li>
                   ))}
@@ -312,6 +320,7 @@ export function TransactionHistory({ transactions, onDeleteAll }: TransactionHis
 
                 <p><strong>Subtotal:</strong> ${selectedTransaction.subtotal.toFixed(2)}</p>
                 <p><strong>Tax:</strong> ${selectedTransaction.tax.toFixed(2)}</p>
+                {selectedTransaction.isDelivery && <p><strong>Delivery Fee:</strong> ${selectedTransaction.deliveryFee?.toFixed(2)}</p>}
                 <p className="fw-bold"><strong>Total:</strong> ${selectedTransaction.total.toFixed(2)}</p>
               </div>
               <div className="modal-footer">
