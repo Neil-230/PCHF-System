@@ -30,6 +30,8 @@ export interface Transaction {
     email: string;
     role: 'admin' | 'cashier' | string;
   };
+  isDelivery: boolean;
+  deliveryFee?: number;
 }
 
 export interface InventoryAlert {

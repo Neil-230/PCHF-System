@@ -1,4 +1,4 @@
-import "./css/layout.css"
+import "./css/layout.css";
 import { useState } from "react";
 import {
   ShoppingCart,
@@ -8,12 +8,11 @@ import {
   Settings,
   CreditCard,
   Bell,
-  User,
   LogOut,
   Home,
   Menu,
+  User,
 } from "lucide-react";
-
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -22,41 +21,48 @@ interface LayoutProps {
   user: {
     name: string;
     email: string;
-    role: string;
+    role: string; // 'admin' | 'cashier' | 'owner'
   };
   onLogout: () => void;
 }
 
+// ✅ Updated navigation with 'owner' role support
 const navigation = [
-  { id: "dashboard", label: "Dashboard", icon: Home, roles: ["admin"] },
-  { id: "pos", label: "Point of Sale", icon: CreditCard, roles: ["admin", "cashier"] },
-  { id: "inventory", label: "Inventory", icon: Package, roles: ["admin"] },
-  { id: "transactions", label: "Transactions", icon: BarChart3, roles: ["admin", "cashier"] },
-  { id: "settings", label: "Settings", icon: Settings, roles: ["admin", "cashier"] },
+  { id: "dashboard", label: "Dashboard", icon: Home, roles: ["admin", "owner"] },
+  { id: "pos", label: "Point of Sale", icon: CreditCard, roles: ["admin", "cashier", "owner"] },
+  { id: "inventory", label: "Inventory", icon: Package, roles: ["admin", "owner"] },
+  { id: "transactions", label: "Transactions", icon: BarChart3, roles: ["admin", "cashier", "owner"] },
+  { id: "settings", label: "Settings", icon: Settings, roles: ["admin", "cashier", "owner"] },
 ];
 
 export function Layout({ children, activeTab, onTabChange, user, onLogout }: LayoutProps) {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true); // sidebar state
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   const getUserInitials = (name: string) =>
-    name.split(" ").map((n) => n[0]).join("").toUpperCase();
+    name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase();
 
+  // ✅ Filter tabs by user role
   const allowedNavigation = navigation.filter((item) => item.roles.includes(user.role));
 
   return (
     <div className="d-flex min-vh-100">
       {/* Sidebar */}
       {isSidebarOpen && (
-        <div className="border-0 pt-4 bg-dark" 
+        <div
+          className="border-0 pt-4 bg-dark"
           style={{
             width: "250px",
             height: "100vh",
             position: "sticky",
             top: 0,
-            backgroundColor:"white",
-            boxShadow:"2px 4px 8px  rgba(27, 27, 27, 0.26)"
-            // background: "linear-gradient(160deg, rgba(26, 51, 152, 1), rgba(105, 107, 117, 1)", 
-          }}>
+            backgroundColor: "white",
+            boxShadow: "2px 4px 8px  rgba(27, 27, 27, 0.26)",
+          }}
+        >
           <div className="d-flex align-items-center mb-5 ms-4">
             <ShoppingCart size={24} className="me-2" />
             <span className="fw-bold text-light">CashierPro</span>
@@ -68,11 +74,14 @@ export function Layout({ children, activeTab, onTabChange, user, onLogout }: Lay
                   className="navbutton nav-link d-flex align-items-center text-light"
                   style={{
                     minWidth: "200px",
-                    backgroundColor: activeTab === item.id ? "rgba(27, 27, 27, 0.17)" : "transparent",
+                    backgroundColor:
+                      activeTab === item.id ? "rgba(27, 27, 27, 0.17)" : "transparent",
                     fontWeight: activeTab === item.id ? "bold" : "normal",
                     borderRadius: activeTab === item.id ? "6px" : "0px",
                     boxShadow:
-                    activeTab === item.id ? "2px 4px 8px  rgba(0, 0, 0, 0.27)":"none",
+                      activeTab === item.id
+                        ? "2px 4px 8px  rgba(0, 0, 0, 0.27)"
+                        : "none",
                   }}
                   onClick={() => onTabChange(item.id)}
                 >
@@ -86,12 +95,12 @@ export function Layout({ children, activeTab, onTabChange, user, onLogout }: Lay
       )}
 
       {/* Main content */}
-      <div className=" maincontent flex-grow-1 d-flex flex-column"
-        >
+      <div className="maincontent flex-grow-1 d-flex flex-column">
         {/* Header */}
-        <header className="border-0 m-1 me-4 ms-4 rounded-3 px-3 py-2 d-flex align-items-center bg-dark"
-          style={{boxShadow:"2px 4px 8px  rgba(27, 27, 27, 0.26)"}}
-          >
+        <header
+          className="border-0 m-1 me-4 ms-4 rounded-3 px-3 py-2 d-flex align-items-center bg-dark"
+          style={{ boxShadow: "2px 4px 8px  rgba(27, 27, 27, 0.26)" }}
+        >
           <button
             className="btn btn-light me-3 bg-transparent border-0"
             onClick={() => setIsSidebarOpen((prev) => !prev)}
@@ -100,11 +109,13 @@ export function Layout({ children, activeTab, onTabChange, user, onLogout }: Lay
           </button>
 
           <h5 className="m-0 text-light">
-            {allowedNavigation.find((nav) => nav.id === activeTab)?.label || "Point of Sale"}
+            {allowedNavigation.find((nav) => nav.id === activeTab)?.label ||
+              "Point of Sale"}
           </h5>
 
           {/* Right side */}
           <div className="ms-auto d-flex align-items-center gap-3">
+            {/* Notifications */}
             <div className="dropdown">
               <button className="btn position-relative" data-bs-toggle="dropdown">
                 <Bell className="text-light" size={20} />
@@ -133,7 +144,10 @@ export function Layout({ children, activeTab, onTabChange, user, onLogout }: Lay
 
             {/* Account Dropdown */}
             <div className="dropdown">
-              <button className="btn d-flex align-items-center gap-2" data-bs-toggle="dropdown">
+              <button
+                className="btn d-flex align-items-center gap-2"
+                data-bs-toggle="dropdown"
+              >
                 <div
                   className="rounded-circle bg-light text-dark d-flex align-items-center justify-content-center"
                   style={{ width: "32px", height: "32px" }}
@@ -142,7 +156,7 @@ export function Layout({ children, activeTab, onTabChange, user, onLogout }: Lay
                 </div>
                 <div className="text-start d-none d-sm-block">
                   <div className="small text-light fw-bold">{user.name}</div>
-                  <div className="text-light small">{user.role}</div>
+                  <div className="text-light small text-capitalize">{user.role}</div>
                 </div>
               </button>
               <div className="dropdown-menu dropdown-menu-end">
@@ -151,10 +165,18 @@ export function Layout({ children, activeTab, onTabChange, user, onLogout }: Lay
                   <div className="text-muted small">{user.email}</div>
                 </div>
                 <div className="dropdown-divider"></div>
-                <button className="dropdown-item" onClick={() => onTabChange("settings")}>
+                <button className="dropdown-item">
+                  <User size={16} className="me-2" />
+                  Profile Settings
+                </button>
+                <button
+                  className="dropdown-item"
+                  onClick={() => onTabChange("settings")}
+                >
                   <Settings size={16} className="me-2" />
                   Store Settings
                 </button>
+                <div className="dropdown-divider"></div>
                 <button className="dropdown-item text-danger" onClick={onLogout}>
                   <LogOut size={16} className="me-2" />
                   Sign Out
@@ -164,7 +186,7 @@ export function Layout({ children, activeTab, onTabChange, user, onLogout }: Lay
           </div>
         </header>
 
-        {/* MAIN CONTENT */}
+        {/* Main content */}
         <main className="p-4 flex-grow-1">{children}</main>
       </div>
     </div>

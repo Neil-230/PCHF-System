@@ -2,8 +2,17 @@ export interface User {
   id: string;
   email: string;
   name: string;
-  role: 'admin' | 'cashier';
+  role: 'admin' | 'cashier' | 'owner';
   createdAt: string;
+  approved?: boolean;
+}
+
+export interface PendingAdmin {
+  id: string;
+  email: string;
+  name: string;
+  password: string;
+  requestedAt: string;
 }
 
 export interface AuthState {

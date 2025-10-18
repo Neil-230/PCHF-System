@@ -10,13 +10,10 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { toast } from "react-hot-toast";
 
-//
-// ✅ Added User type and updated Transaction to include processedBy
-//
-interface User {                     // ✅ added
-  name: string;                     // ✅ added
-  email: string;                    // ✅ added
-  role: "admin" | "cashier" | string; // ✅ added
+interface User {
+  name: string;
+  email: string;
+  role: "admin" | "cashier" | string;
 }
 
 interface Transaction {
@@ -26,27 +23,30 @@ interface Transaction {
   tax: number;
   total: number;
   customerName: string;
-  customerContact: string;   // ✅ added
-  customerAddress: string;   // ✅ added
+  customerContact: string;
+  customerAddress: string;
   timestamp: Date;
   status: "completed" | "pending";
   paymentMethod: string;
-  handledBy: {             // ✅ added
+  handledBy: {
     name: string;
     email: string;
     role: string;
   };
+  isDelivery: boolean;
+  deliveryFee?: number;
 }
 
 interface PointOfSaleProps {
   onTransactionComplete: (transaction: Transaction) => void;
-  user: User; // ✅ added: who is using the POS (admin/cashier)
+  user: User;
 }
 
-export function PointOfSale({ onTransactionComplete, user }: PointOfSaleProps) { // ✅ updated
+export function PointOfSale({ onTransactionComplete, user }: PointOfSaleProps) {
   const [customerName, setCustomerName] = useState("");
-  const [customerContact, setCustomerContact] = useState("");  // ✅ added
-  const [customerAddress, setCustomerAddress] = useState("");  // ✅ added
+  const [customerContact, setCustomerContact] = useState("");
+  const [customerAddress, setCustomerAddress] = useState("");
+  const [deliveryType, setDeliveryType] = useState<"Delivery" | "Walk-in">("Walk-in");
   const [isNameDialogOpen, setIsNameDialogOpen] = useState(true);
   const [hasEnteredName, setHasEnteredName] = useState(false);
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -55,6 +55,7 @@ export function PointOfSale({ onTransactionComplete, user }: PointOfSaleProps) {
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [cashAmount, setCashAmount] = useState("");
   const [taxRate, setTaxRate] = useState("0");
+  const [deliveryFeeValue, setDeliveryFeeValue] = useState(50); // ✅ Added default delivery fee
 
   const [storeSettings, setStoreSettings] = useState({
     storeName: "My Store",
@@ -89,7 +90,6 @@ export function PointOfSale({ onTransactionComplete, user }: PointOfSaleProps) {
   });
 
   const handleNameSubmit = () => {
-    // require name, contact, and address per your request
     if (!customerName.trim() || !customerContact.trim() || !customerAddress.trim()) {
       toast.error("Please fill out all customer details");
       return;
@@ -143,15 +143,17 @@ export function PointOfSale({ onTransactionComplete, user }: PointOfSaleProps) {
     0
   );
   const tax = subtotal * (parseFloat(taxRate) / 100 || 0);
-  const total = subtotal + tax;
+  const deliveryFee = deliveryType === "Delivery" ? deliveryFeeValue : 0;
+  const total = subtotal + tax + deliveryFee;
 
   const handleConfirmPayment = () => {
-    if (cart.length === 0) return toast.error("Cart is empty"); // small guard
+    if (cart.length === 0) return toast.error("Cart is empty");
     const cash = parseFloat(cashAmount);
     if (isNaN(cash) || cash <= 0) return toast.error("Enter valid cash");
     if (cash < total) return toast.error("Insufficient cash");
 
     const change = cash - total;
+    const isDelivery = deliveryType === "Delivery";
 
     const transaction: Transaction = {
       id: `TXN${Date.now()}`,
@@ -160,21 +162,23 @@ export function PointOfSale({ onTransactionComplete, user }: PointOfSaleProps) {
       tax,
       total,
       customerName,
-      customerContact,   // ✅ added
-      customerAddress,   // ✅ added
+      customerContact,
+      customerAddress,
       timestamp: new Date(),
       status: "completed",
       paymentMethod: "Cash",
-      handledBy: {     // ✅ added active log
+      handledBy: {
         name: user.name,
         email: user.email,
         role: user.role,
       },
+      isDelivery,
+      deliveryFee: isDelivery ? deliveryFeeValue : undefined,
     };
 
     mockTransactions.push(transaction);
 
-    // --- Receipt layout ---
+    // --- PDF Receipt ---
     const doc = new jsPDF({
       orientation: "portrait",
       unit: "mm",
@@ -184,7 +188,6 @@ export function PointOfSale({ onTransactionComplete, user }: PointOfSaleProps) {
     const date = new Date();
     const formattedDate = date.toLocaleString();
 
-    // Header
     doc.setFontSize(12);
     doc.setFont("helvetica", "bold");
     doc.text(storeSettings.storeName, 40, 10, { align: "center" });
@@ -194,30 +197,17 @@ export function PointOfSale({ onTransactionComplete, user }: PointOfSaleProps) {
     doc.text(storeSettings.storeAddress, 40, 14, { align: "center" });
     doc.text(storeSettings.email, 40, 17, { align: "center" });
     doc.text(storeSettings.phone, 40, 20, { align: "center" });
-    doc.text(
-      "----------------------------------------------------------------------",
-      40,
-      24,
-      { align: "center" }
-    );
+    doc.text("----------------------------------------------------------------------", 40, 24, { align: "center" });
 
-    // Customer info
-    doc.setFontSize(9);
     doc.text(`Customer: ${customerName}`, 10, 29);
     doc.text(`Contact: ${customerContact}`, 10, 33);
     doc.text(`Address: ${customerAddress}`, 10, 37);
-    doc.text(`Date: ${formattedDate}`, 10, 41);
-    doc.text(`Transaction ID: ${transaction.id}`, 10, 45);
-    doc.text(`Payment: ${transaction.paymentMethod}`, 10, 49);
-    
-    doc.text(
-      "----------------------------------------------------------------",
-      40,
-      52,
-      { align: "center" }
-    );
+    doc.text(`Type: ${deliveryType}`, 10, 41);
+    doc.text(`Date: ${formattedDate}`, 10, 45);
+    doc.text(`Transaction ID: ${transaction.id}`, 10, 49);
+    doc.text(`Payment: ${transaction.paymentMethod}`, 10, 53);
+    doc.text("----------------------------------------------------------------", 40, 56, { align: "center" });
 
-    // Items table
     const tableData = cart.map((item) => [
       `${item.quantity} x ${item.product.name}`,
       `PHP.${(item.product.price * item.quantity).toFixed(2)}`,
@@ -226,65 +216,53 @@ export function PointOfSale({ onTransactionComplete, user }: PointOfSaleProps) {
     autoTable(doc, {
       head: [["Item", "Price"]],
       body: tableData,
-      startY: 54,
+      startY: 58,
       theme: "plain",
       styles: { fontSize: 9, cellPadding: 1 },
       headStyles: { fontStyle: "bold" },
-      columnStyles: {
-        0: { cellWidth: 45, halign: "left" },
-        1: { cellWidth: 20, halign: "right" },
-      },
+      columnStyles: { 0: { cellWidth: 45 }, 1: { cellWidth: 20, halign: "right" } },
       margin: { left: 5 },
     });
 
     let finalY = (doc as any).lastAutoTable.finalY + 2;
-
     doc.text("----------------------------------------------------------------", 40, finalY, { align: "center" });
     doc.text(`Subtotal: PHP.${subtotal.toFixed(2)}`, 10, finalY + 5);
     doc.text(`Tax (${taxRate}%): PHP.${tax.toFixed(2)}`, 10, finalY + 9);
+    if (isDelivery) doc.text(`Delivery Fee: PHP.${deliveryFeeValue.toFixed(2)}`, 10, finalY + 13);
     doc.setFont("helvetica", "bold");
-    doc.text(`TOTAL: PHP.${total.toFixed(2)}`, 10, finalY + 14);
+    doc.text(`TOTAL: PHP.${total.toFixed(2)}`, 10, finalY + (isDelivery ? 18 : 14));
     doc.setFont("helvetica", "normal");
-    doc.text("----------------------------------------------------------------", 40, finalY + 17, { align: "center" });
-    doc.text(`Cash Paid: PHP.${cash.toFixed(2)}`, 10, finalY + 22);
-    doc.text(`Change: PHP.${change.toFixed(2)}`, 10, finalY + 26);
-    doc.text("----------------------------------------------------------------", 40, finalY + 29, { align: "center" });
+    doc.text(`Cash: PHP.${cash.toFixed(2)}`, 10, finalY + (isDelivery ? 23 : 19));
+    doc.text(`Change: PHP.${change.toFixed(2)}`, 10, finalY + (isDelivery ? 27 : 23));
+    doc.text("----------------------------------------------------------------", 40, finalY + (isDelivery ? 30 : 26), { align: "center" });
 
-    // Active log - who processed the transaction
     doc.setFontSize(8);
-    doc.text(`Processed by: ${user.name} (${user.role})`, 10, finalY + 34); // ✅ added
-    doc.text(`Email: ${user.email}`, 10, finalY + 38); // ✅ added
-    doc.text("------------------------------------------------------------------------", 40, finalY + 41, { align: "center" });
-
-    // Footer
-    const pageHeight = doc.internal.pageSize.height;
-    let footerY = (doc as any).lastAutoTable.finalY + 55;
-    if (footerY > pageHeight - 20) footerY = pageHeight - 15;
+    doc.text(`Processed by: ${user.name} (${user.role})`, 10, finalY + (isDelivery ? 35 : 31));
+    doc.text(`Email: ${user.email}`, 10, finalY + (isDelivery ? 39 : 35));
+    doc.text("----------------------------------------------------------------", 40, finalY + (isDelivery ? 42 : 38), { align: "center" });
     doc.setFontSize(8);
-    doc.setFont("helvetica", "bold");
-    doc.text(storeSettings.footerMessage, 40, footerY, { align: "center" });
-
+    doc.text(storeSettings.footerMessage, 40, finalY + (isDelivery ? 49 : 45), { align: "center" });
     doc.save(`receipt_${customerName}.pdf`);
 
-    // Reset
     onTransactionComplete(transaction);
-    toast.success("Transaction complete and receipt saved");
+    toast.success(`${deliveryType} transaction completed`);
     setCart([]);
     setCashAmount("");
     setIsCheckoutOpen(false);
     setCustomerName("");
     setCustomerContact("");
     setCustomerAddress("");
+    setDeliveryType("Walk-in");
     setHasEnteredName(false);
     setIsNameDialogOpen(true);
   };
 
   return (
     <>
-      {/* Customer Details Modal */}
+      {/* Customer Modal */}
       <Modal show={isNameDialogOpen} onHide={() => setIsNameDialogOpen(false)} centered
         style={{ backgroundColor: "rgba(239, 252, 255, 0.31)" }}>
-        <Modal.Header closeButton className="border border-0 d-flex">
+        <Modal.Header closeButton>
           <Modal.Title>Enter Customer Details</Modal.Title>
         </Modal.Header>
         <Modal.Body>
@@ -294,8 +272,6 @@ export function PointOfSale({ onTransactionComplete, user }: PointOfSaleProps) {
             placeholder="Customer Name..."
             value={customerName}
             onChange={(e) => setCustomerName(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") handleNameSubmit(); }}
-            autoFocus
           />
           <input
             type="text"
@@ -310,6 +286,31 @@ export function PointOfSale({ onTransactionComplete, user }: PointOfSaleProps) {
             value={customerAddress}
             onChange={(e) => setCustomerAddress(e.target.value)}
           ></textarea>
+
+          <div className="mb-3">
+            <label className="form-label fw-semibold">Transaction Type</label>
+            <select
+              className="form-select"
+              value={deliveryType}
+              onChange={(e) => setDeliveryType(e.target.value as "Delivery" | "Walk-in")}
+            >
+              <option value="Walk-in">Walk-in</option>
+              <option value="Delivery">For Delivery</option>
+            </select>
+          </div>
+
+          {deliveryType === "Delivery" && (
+            <div className="mb-3">
+              <label className="form-label fw-semibold">Delivery Fee</label>
+              <input
+                type="number"
+                className="form-control"
+                min="0"
+                value={deliveryFeeValue}
+                onChange={(e) => setDeliveryFeeValue(parseFloat(e.target.value))}
+              />
+            </div>
+          )}
 
           <Button variant="dark" className="w-100" onClick={handleNameSubmit}>
             Continue

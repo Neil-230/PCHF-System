@@ -1,8 +1,8 @@
 // Settings.tsx
 import React, { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { AuthService, defaultPasswords } from "../data/authData"; // adjust path if necessary
-import 'bootstrap/dist/css/bootstrap.min.css';
+import { AuthService, defaultPasswords } from "../data/authData";
+
 
 /* ---------- Types (local) ---------- */
 interface StoreSettings {
@@ -20,7 +20,7 @@ interface ReceiptSettings {
   showDiscounts: boolean;
   showTax: boolean;
   showChange: boolean;
-  customMessage: string;
+  // customMessage: string;
 }
 
 interface NotificationSettings {
@@ -39,6 +39,7 @@ interface SecuritySettings {
 
 interface SettingsProps {
   onLogout: () => void;
+  onTabChange: (tab: string) => void; // add this
 }
 
 /* ---------- Inline SVG icons for modal header (simple) ---------- */
@@ -62,8 +63,9 @@ const KeySVG = () => (
   </svg>
 );
 
+
 /* ---------- Component ---------- */
-export const Settings: React.FC<SettingsProps> = ({ onLogout }) => {
+export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange }) => {
   // existing settings state (kept as you provided)
   const [storeSettings, setStoreSettings] = useState<StoreSettings>(() => {
     const saved = localStorage.getItem("storeSettings");
@@ -89,7 +91,7 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout }) => {
           showDiscounts: true,
           showTax: true,
           showChange: true,
-          customMessage: "Thank you for shopping with us!",
+          // customMessage: "Thank you for shopping with us!",
         };
   });
 
@@ -123,8 +125,9 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout }) => {
     localStorage.setItem("notificationSettings", JSON.stringify(notificationSettings));
     localStorage.setItem("securitySettings", JSON.stringify(securitySettings));
     toast.success("Settings saved successfully");
+
     setTimeout(() => {
-      window.location.href = "";
+    onTabChange("dashboard"); // switch to dashboard tab
     }, 1200);
   };
 
@@ -270,7 +273,7 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout }) => {
 
   /* ---------------- render ---------------- */
   return (
-    <div className="container py-5">
+    <div className="container py-2">
       <h2 className="fw-bold mb-4 text-center">System Settings</h2>
 
       {/* Store info card (kept) */}
@@ -326,24 +329,32 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout }) => {
       </div>
 
       {/* Receipt Settings (kept) */}
-      <div className="card mb-4" style={{ borderRadius: "12px", boxShadow: "2px 4px 8px rgba(0,0,0,0.15)" }}>
+      <div
+        className="card mb-4"
+        style={{ borderRadius: "12px", boxShadow: "2px 4px 8px rgba(0,0,0,0.15)" }}
+      >
         <div className="card-header bg-0 text-dark fw-bold">Receipt Settings</div>
         <div className="card-body">
-          {(Object.entries(receiptSettings) as [keyof ReceiptSettings, boolean | string][]).map(([key, value]) =>
-            typeof value === "boolean" ? (
+          {(Object.entries(receiptSettings) as [keyof ReceiptSettings, boolean | string][])
+            .filter(([key, value]) => typeof value === "boolean") // ✅ show only boolean settings
+            .map(([key, value]) => (
               <div key={key} className="form-check form-switch mb-2">
-                <input className="form-check-input" type="checkbox" checked={value as boolean}
-                  onChange={(e) => setReceiptSettings({ ...receiptSettings, [key]: e.target.checked })} />
-                <label className="form-check-label text-capitalize">{key.replace(/([A-Z])/g, " $1")}</label>
+                <input
+                  className="form-check-input"
+                  type="checkbox"
+                  checked={value as boolean}
+                  onChange={(e) =>
+                    setReceiptSettings({
+                      ...receiptSettings,
+                      [key]: e.target.checked,
+                    })
+                  }
+                />
+                <label className="form-check-label text-capitalize">
+                  {key.replace(/([A-Z])/g, " $1")}
+                </label>
               </div>
-            ) : (
-              <div key={key} className="mb-3">
-                <label className="form-label">Custom Message</label>
-                <textarea className="form-control" rows={2} value={value as string}
-                  onChange={(e) => setReceiptSettings({ ...receiptSettings, customMessage: e.target.value })}></textarea>
-              </div>
-            )
-          )}
+            ))}
         </div>
       </div>
 

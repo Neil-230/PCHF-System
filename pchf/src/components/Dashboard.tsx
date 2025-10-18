@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { mockProducts } from "../data/mockData";
 import {
   TrendingUp,
@@ -8,9 +8,11 @@ import {
   Users,
   BarChart3,
   Clock,
+  Crown,
+  Check,
+  X,
 } from "lucide-react";
-
-// Chart.js
+import { Line, Pie } from "react-chartjs-2";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -21,9 +23,11 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
-import { Line, Pie } from "react-chartjs-2";
+import { AuthService } from "../data/authData";
+import { useAuth } from "./auth/AuthWrapper";
+import { toast } from "sonner";
+import type { User } from "../types/auth";
 
-// Register Chart.js components
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -36,10 +40,35 @@ ChartJS.register(
 
 interface DashboardProps {
   transactions: any[];
+  CurrentUser: User;
 }
 
-export function Dashboard({ transactions }: DashboardProps) {
+export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
   const today = new Date();
+  const [pendingAdmins, setPendingAdmins] = useState<any[]>([]);
+
+  // ✅ Load pending admins (only for owner)
+  useEffect(() => {
+    if (CurrentUser?.role === "owner") {
+      const pending = AuthService.getPendingAdmins();
+      setPendingAdmins(pending);
+    }
+  }, [CurrentUser]);
+
+  // ✅ Approve / Decline Handlers
+  const handleApprove = (id: string) => {
+    AuthService.approveAdmin(id);
+    setPendingAdmins(AuthService.getPendingAdmins());
+    toast.success("Admin approved successfully");
+  };
+
+  const handleDecline = (id: string) => {
+    AuthService.declineAdmin(id);
+    setPendingAdmins(AuthService.getPendingAdmins());
+    toast.error("Admin request declined");
+  };
+
+  // --- Dashboard Data ---
   const todayTransactions = transactions.filter((t) => {
     const transactionDate = new Date(t.timestamp);
     return transactionDate.toDateString() === today.toDateString();
@@ -96,32 +125,43 @@ export function Dashboard({ transactions }: DashboardProps) {
         style={{ borderBottom: "1px solid #ddd", paddingBottom: "10px" }}
       >
         <div className="d-flex flex-column">
-          <div className="d-flex">
-            <h1 className="p-2 ps-3 rounded-3" style={{ 
-              fontSize: "24px", 
-              fontWeight: "bold", 
-              backgroundColor:"white",
-              boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)" }}>
-              Welcome back, John!
+          <div className="d-flex align-items-center">
+            {CurrentUser?.role === "owner" && (
+              <Crown size={20} color="gold" className="me-2" />
+            )}
+            <h1
+              className="p-2 ps-3 rounded-3"
+              style={{
+                fontSize: "24px",
+                fontWeight: "bold",
+                backgroundColor: "white",
+                boxShadow: "2px 4px 8px rgba(0, 0, 0, 0.10)",
+              }}
+            >
+              Welcome back, {CurrentUser?.name || "User"}!
             </h1>
           </div>
           <div className="d-flex">
-            <p className="p-2 ps-3 rounded-3" style={{ 
-              color: "gray",
-              backgroundColor:"white",
-              boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)" }}>
+            <p
+              className="p-2 ps-3 rounded-3"
+              style={{
+                color: "gray",
+                backgroundColor: "white",
+                boxShadow: "2px 4px 8px rgba(0, 0, 0, 0.10)",
+              }}
+            >
               Here's what's happening at your store today.
             </p>
           </div>
         </div>
         <span
           style={{
-            backgroundColor:"white",
+            backgroundColor: "white",
             border: "1px solid #ccc",
             borderRadius: "8px",
             padding: "5px 10px",
             fontSize: "14px",
-            boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"
+            boxShadow: "2px 4px 8px rgba(0, 0, 0, 0.10)",
           }}
         >
           {today.toLocaleDateString("en-US", {
@@ -132,6 +172,51 @@ export function Dashboard({ transactions }: DashboardProps) {
           })}
         </span>
       </div>
+
+      {/* ✅ Owner Only - Pending Admin Approvals */}
+      {CurrentUser?.role === "owner" && (
+        <div
+          className="card p-3 mb-4 border-0"
+          style={{ boxShadow: "2px 4px 8px rgba(0, 0, 0, 0.10)" }}
+        >
+          <h6 className="mb-3">
+            Pending Admin Approvals ({pendingAdmins.length})
+          </h6>
+          {pendingAdmins.length === 0 ? (
+            <p className="text-muted">No pending admin requests.</p>
+          ) : (
+            pendingAdmins.map((admin) => (
+              <div
+                key={admin.id}
+                className="d-flex justify-content-between align-items-center mb-2"
+                style={{
+                  borderBottom: "1px solid #eee",
+                  paddingBottom: "5px",
+                }}
+              >
+                <div>
+                  <p style={{ margin: 0, fontWeight: "500" }}>{admin.name}</p>
+                  <small style={{ color: "gray" }}>{admin.email}</small>
+                </div>
+                <div>
+                  <button
+                    onClick={() => handleApprove(admin.id)}
+                    className="btn btn-sm btn-success me-2"
+                  >
+                    <Check size={14} /> Approve
+                  </button>
+                  <button
+                    onClick={() => handleDecline(admin.id)}
+                    className="btn btn-sm btn-danger"
+                  >
+                    <X size={14} /> Decline
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
 
       {/* Quick analysis */}
       <div className="row g-3">

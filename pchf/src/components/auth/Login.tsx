@@ -43,24 +43,24 @@ export function Login({ onLogin, onSwitchToSignUp }: LoginProps) {
 
     try {
       const success = onLogin(email, password);
-      if (!success) setError('Invalid email or password. Please try again.');
+      if (!success) toast.error('Invalid email or password. Please try again.');
     } catch {
-      setError('An error occurred. Please try again.');
+      toast.error('An error occurred. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const fillDemoCredentials = (role: 'admin' | 'cashier') => {
-    if (role === 'admin') {
-      setEmail('admin@demo.com');
-      setPassword('admin123');
-    } else {
-      setEmail('cashier@demo.com');
-      setPassword('cashier123');
-    }
-    setError('');
-  };
+  // const fillDemoCredentials = (role: 'admin' | 'cashier') => {
+  //   if (role === 'admin') {
+  //     setEmail('admin@demo.com');
+  //     setPassword('admin123');
+  //   } else {
+  //     setEmail('cashier@demo.com');
+  //     setPassword('cashier123');
+  //   }
+  //   setError('');
+  // };
 
   const handleSendCode = () => {
     const users = AuthService.getUsers();
@@ -132,14 +132,15 @@ export function Login({ onLogin, onSwitchToSignUp }: LoginProps) {
         <div className="container-fluid">
           <div className="row entireLogin">
             <div className="col-md-6 p-0">
-              <div className="headerMes d-flex flex-column p-5 h-100 border border-0 justify-content-between bg-dark">
-                <div className="text-center d-flex flex-column justify-content-center">
-                  <div className="d-flex items-center justify-content-center">
-                    <h3 className="text-light fw-bold">Welcome back!</h3>
+              <div className="headerMes d-flex flex-column p-5 h-100 justify-content-center border border-0 bg-dark">
+                <div className="text-center">
+                  <div className="">
+                    <h3 className="text-secondary">Welcome back!</h3>
                   </div>
-                  <p className="text-light">Enter your credentials to access the system</p>
+                  <h1 className="text-light">PCH - Hardware Store</h1>
+                  {/* <p className="text-secondary  ">Enter your credentials to access the system</p> */}
                 </div>
-                <div>
+                {/* <div>
                   <div className="mt-1">
                     <div className="d-flex justify-content-center gap-2 mb-3">
                       <Button className="w-100 bg-white border-secondary text-dark" onClick={() => fillDemoCredentials('admin')}>
@@ -150,7 +151,7 @@ export function Login({ onLogin, onSwitchToSignUp }: LoginProps) {
                       </Button>
                     </div>
                   </div>
-                </div>
+                </div> */}
               </div>
             </div>
             <div className="col-md-6 p-0">
@@ -193,7 +194,7 @@ export function Login({ onLogin, onSwitchToSignUp }: LoginProps) {
                           className="btn btn-sm bg-transparent border-0 position-absolute top-50 end-0 translate-middle-y me-2"
                           onClick={() => setShowPassword(!showPassword)}
                         >
-                          {showPassword ? <EyeOff /> : <Eye />}
+                          {showPassword ? <Eye /> : <EyeOff />}
                         </button>
                       </div>
                     </div>
@@ -238,8 +239,8 @@ export function Login({ onLogin, onSwitchToSignUp }: LoginProps) {
                 </CardContent>
               </div>
             </div>
-            <div className="text-center mt-3 text-dark">
-              <p>Demo credentials are provided for testing purposes</p>
+            <div className="text-center mt-3 text">
+              <p className="  ">Enter your credentials to access the system</p>
             </div>
           </div>
         </div>

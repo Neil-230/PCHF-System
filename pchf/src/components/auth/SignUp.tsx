@@ -2,13 +2,13 @@ import { useState } from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
+import { CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Alert } from "../ui/alert";
 import { Select, SelectItem } from "../ui/select";
-import { Eye, EyeOff, CreditCard, MailCheck, LogIn } from "lucide-react";
+import { Eye, EyeOff, MailCheck } from "lucide-react";
 import { toast } from "sonner";
-import { Modal } from "react-bootstrap"; // ✅ assuming you have bootstrap or react-bootstrap
-import "../css/signup.css"
+import { Modal } from "react-bootstrap";
+import "../css/signup.css";
 
 interface SignUpProps {
   onSignUp: (name: string, email: string, password: string, role: "admin" | "cashier") => boolean;
@@ -35,7 +35,7 @@ export function SignUp({ onSignUp, onSwitchToLogin }: SignUpProps) {
 
   // Verification
   const [enteredCode, setEnteredCode] = useState("");
-  const demoCode = "123456"; // static for demo
+  const demoCode = "123456"; // demo code
 
   const handleSendCode = () => {
     if (!firstName || !lastName || !email) {
@@ -60,25 +60,44 @@ export function SignUp({ onSignUp, onSwitchToLogin }: SignUpProps) {
     e.preventDefault();
     setError("");
 
-    if (password !== confirmPassword) {
-      setError("Passwords do not match");
-      return;
-    }
-
+    // 🧱 Validation first
     if (password.length < 6) {
       toast.error("Password must be at least 6 characters long");
-      return;
+      return; // 🚫 Don't close modal
+    }
+
+    if (password !== confirmPassword) {
+      toast.error("Passwords do not match");
+      return; // 🚫 Don't close modal
     }
 
     setIsLoading(true);
     try {
       const name = `${firstName} ${lastName}`;
-      const success = onSignUp(name, email, password, role);
-      if (!success) {
-        toast.error("An account with this email already exists");
-      } else {
-        toast.success("Account successfully created!");
+      const result = onSignUp(name, email, password, role);
+
+      if (result === true) {
+        // ✅ Created successfully (first admin → owner or cashier)
+        toast.success(
+          role === "admin"
+            ? "First admin account created — you are now the system owner!"
+            : "Account successfully created!"
+        );
         setShowPasswordModal(false);
+        resetForm();
+      } 
+      else if (result === null) {
+        // 🕓 Pending approval for admin
+        toast.success(
+          "Admin account request submitted! Please wait for the Owner to approve your request."
+        );
+        setShowPasswordModal(false);
+        resetForm();
+      } 
+      else {
+        toast.error("An account with this email already exists or is pending approval.");
+        setShowPasswordModal(false); 
+        resetForm();
       }
     } catch {
       toast.error("An error occurred. Please try again.");
@@ -87,23 +106,37 @@ export function SignUp({ onSignUp, onSwitchToLogin }: SignUpProps) {
     }
   };
 
+  const resetForm = () => {
+    setFirstName("");
+    setLastName("");
+    setEmail("");
+    setPassword("");
+    setConfirmPassword("");
+    setEnteredCode("");
+    setRole("cashier");
+  };
+
   return (
     <div className="d-flex align-items-center justify-content-center p-4" style={{ minHeight: "100vh" }}>
       <div className="d-flex flex-column" style={{ minWidth: "50%" }}>
         <div className="container-fluid">
           <div className="row">
+            {/* LEFT SIDE */}
             <div className="col-md-6 p-0">
-              <div className="headerMes d-flex flex-column p-4 h-100 border border-0 justify-content-center bg-dark">
-                <div className="text-center d-flex flex-column justify-content-center">
-                  <div className="d-flex items-center justify-content-center gap-2">
-                    <h3 className="fw-bold text-light">Hello my friend!</h3>
-                  </div>
-                  <p className="text-secondary text-light">Create your account to get started <br/>Fill in your information to create a new account</p>
+              <div className="headerMes d-flex flex-column p-4 h-100 justify-content-center bg-dark">
+                <div className="text-center">
+                  <h3 className="fw-bold text-light">Hello my friend!</h3>
+                  <p className="text-secondary text-light">
+                    Create your account to get started <br />
+                    Fill in your information to create a new account
+                  </p>
                 </div>
               </div>
             </div>
+
+            {/* RIGHT SIDE */}
             <div className="col-md-6 p-0">
-              <div className="bodyLOG d-flex flex-column justify-content-center p-5 border border-0">
+              <div className="bodyLOG d-flex flex-column justify-content-center p-5 border-0">
                 <CardHeader className="d-flex flex-column text-start">
                   <CardTitle className="fw-bold fs-4 mb-3">Create account</CardTitle>
                 </CardHeader>
@@ -116,7 +149,6 @@ export function SignUp({ onSignUp, onSwitchToLogin }: SignUpProps) {
                       <div className="col">
                         <Label htmlFor="firstName" className="fw-bold">First Name</Label>
                         <Input
-                          className="EmailINT"
                           id="firstName"
                           placeholder="Enter first name"
                           value={firstName}
@@ -127,7 +159,6 @@ export function SignUp({ onSignUp, onSwitchToLogin }: SignUpProps) {
                       <div className="col">
                         <Label htmlFor="lastName" className="fw-bold">Last Name</Label>
                         <Input
-                          className="EmailINT"
                           id="lastName"
                           placeholder="Enter last name"
                           value={lastName}
@@ -140,7 +171,6 @@ export function SignUp({ onSignUp, onSwitchToLogin }: SignUpProps) {
                     <div>
                       <Label htmlFor="email" className="fw-bold">Email</Label>
                       <Input
-                        className="EmailINT"
                         id="email"
                         type="email"
                         placeholder="Enter your email"
@@ -150,7 +180,7 @@ export function SignUp({ onSignUp, onSwitchToLogin }: SignUpProps) {
                       />
                     </div>
 
-                    <div className="space-y-2">
+                    <div>
                       <Label htmlFor="role" className="fw-bold">Role</Label>
                       <Select
                         value={role}
@@ -182,6 +212,7 @@ export function SignUp({ onSignUp, onSwitchToLogin }: SignUpProps) {
                 </CardContent>
               </div>
             </div>
+
             <div className="text-center mt-3 text-dark">
               <p>By creating an account, you agree to our terms of service</p>
             </div>
@@ -189,7 +220,7 @@ export function SignUp({ onSignUp, onSwitchToLogin }: SignUpProps) {
         </div>
       </div>
 
-      {/* ✅ Modal 1: Enter verification code */}
+      {/* 🟢 Modal 1: Verification */}
       <Modal show={showCodeModal} onHide={() => setShowCodeModal(false)} centered>
         <Modal.Header closeButton>
           <Modal.Title>Email Verification</Modal.Title>
@@ -210,7 +241,7 @@ export function SignUp({ onSignUp, onSwitchToLogin }: SignUpProps) {
         </Modal.Footer>
       </Modal>
 
-      {/* ✅ Modal 2: Create password */}
+      {/* 🟢 Modal 2: Create password */}
       <Modal show={showPasswordModal} onHide={() => setShowPasswordModal(false)} centered>
         <Modal.Header closeButton>
           <Modal.Title>Create Password</Modal.Title>
