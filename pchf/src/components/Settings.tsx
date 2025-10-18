@@ -3,8 +3,7 @@ import React, { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { AuthService, defaultPasswords } from "../data/authData";
 
-
-/* ---------- Types (local) ---------- */
+/* ---------- Types ---------- */
 interface StoreSettings {
   storeName: string;
   storeAddress: string;
@@ -20,7 +19,6 @@ interface ReceiptSettings {
   showDiscounts: boolean;
   showTax: boolean;
   showChange: boolean;
-  // customMessage: string;
 }
 
 interface NotificationSettings {
@@ -39,10 +37,15 @@ interface SecuritySettings {
 
 interface SettingsProps {
   onLogout: () => void;
-  onTabChange: (tab: string) => void; // add this
+  onTabChange: (tab: string) => void;
+  user?: {
+    name: string;
+    email: string;
+    role: "owner" | "admin" | "cashier";
+  };
 }
 
-/* ---------- Inline SVG icons for modal header (simple) ---------- */
+/* ---------- Inline SVGs ---------- */
 const LockSVG = () => (
   <svg width="96" height="96" viewBox="0 0 24 24" fill="none" aria-hidden>
     <rect x="3" y="10" width="18" height="11" rx="2" stroke="#111" strokeWidth="1.5" fill="#f5f5f5"/>
@@ -63,10 +66,12 @@ const KeySVG = () => (
   </svg>
 );
 
-
 /* ---------- Component ---------- */
-export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange }) => {
-  // existing settings state (kept as you provided)
+export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user }) => {
+  const currentRole = user?.role ?? "unknown";
+  const isCashier = currentRole === "cashier";
+  const canAccessStoreSettings = currentRole === "admin" || currentRole === "owner";
+  /* ---------- States ---------- */
   const [storeSettings, setStoreSettings] = useState<StoreSettings>(() => {
     const saved = localStorage.getItem("storeSettings");
     return saved
@@ -82,31 +87,6 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange }) => 
         };
   });
 
-  const [receiptSettings, setReceiptSettings] = useState<ReceiptSettings>(() => {
-    const saved = localStorage.getItem("receiptSettings");
-    return saved
-      ? JSON.parse(saved)
-      : {
-          includeLogo: true,
-          showDiscounts: true,
-          showTax: true,
-          showChange: true,
-          // customMessage: "Thank you for shopping with us!",
-        };
-  });
-
-  const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>(() => {
-    const saved = localStorage.getItem("notificationSettings");
-    return saved
-      ? JSON.parse(saved)
-      : {
-          lowStock: true,
-          newSale: true,
-          dailySummary: false,
-          sound: true,
-        };
-  });
-
   const [securitySettings, setSecuritySettings] = useState<SecuritySettings>(() => {
     const saved = localStorage.getItem("securitySettings");
     return saved
@@ -119,42 +99,37 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange }) => 
         };
   });
 
+  /* ---------- Save Settings ---------- */
   const handleSaveSettings = () => {
-    localStorage.setItem("storeSettings", JSON.stringify(storeSettings));
-    localStorage.setItem("receiptSettings", JSON.stringify(receiptSettings));
-    localStorage.setItem("notificationSettings", JSON.stringify(notificationSettings));
-    localStorage.setItem("securitySettings", JSON.stringify(securitySettings));
-    toast.success("Settings saved successfully");
+    if (isCashier) {
+      localStorage.setItem("securitySettings", JSON.stringify(securitySettings));
+      toast.info("Only Security Settings were updated (Cashier mode).");
+    } else {
+      localStorage.setItem("storeSettings", JSON.stringify(storeSettings));
+      localStorage.setItem("securitySettings", JSON.stringify(securitySettings));
+      toast.success("All settings saved successfully!");
+    }
 
     setTimeout(() => {
-    onTabChange("dashboard"); // switch to dashboard tab
+      onTabChange("dashboard");
     }, 1200);
   };
 
-  /* ---------------- Change Password modal state ---------------- */
+  /* ---------- Modal State ---------- */
   const [modalOpen, setModalOpen] = useState(false);
   const [cpStep, setCpStep] = useState<"verify" | "code" | "new">("verify");
-
-  // step: verify
   const [cpEmail, setCpEmail] = useState("");
   const [cpOldPassword, setCpOldPassword] = useState("");
-
-  // step: code
   const [cpCodeInput, setCpCodeInput] = useState("");
   const [generatedCode, setGeneratedCode] = useState("");
-
-  // step: new password
   const [cpNewPassword, setCpNewPassword] = useState("");
   const [cpConfirmPassword, setCpConfirmPassword] = useState("");
-
   const [cpMessage, setCpMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    // ensure AuthService users initialized (demo)
     AuthService.initializeUsers();
   }, []);
 
-  // open modal and reset state
   const openChangePasswordModal = () => {
     setModalOpen(true);
     setCpStep("verify");
@@ -172,207 +147,167 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange }) => 
     setCpMessage(null);
   };
 
-  // Step 1: verify email + old password
+  /* ---------- Password Handling ---------- */
   const handleSendCode = () => {
     setCpMessage(null);
-
     const currentUser = AuthService.getCurrentUser();
     if (!currentUser) {
       setCpMessage("No current user is logged in.");
       return;
     }
-
-    if (!cpEmail.trim()) {
-      setCpMessage("Please enter your email.");
+    if (!cpEmail.trim() || cpEmail.trim() !== currentUser.email) {
+      setCpMessage("Invalid email.");
       return;
     }
-
-    if (cpEmail.trim() !== currentUser.email) {
-      setCpMessage("Email does not match the current user.");
+    if (!cpOldPassword || !AuthService.login(cpEmail.trim(), cpOldPassword)) {
+      setCpMessage("Incorrect password.");
       return;
     }
-
-    if (!cpOldPassword) {
-      setCpMessage("Please enter your current/old password to verify.");
-      return;
-    }
-
-    // validate old password using AuthService.login
-    const valid = AuthService.login(cpEmail.trim(), cpOldPassword);
-    if (!valid) {
-      setCpMessage("Old password is incorrect.");
-      return;
-    }
-
-    // generate 6-digit code and move to code step
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     setGeneratedCode(code);
-    // In a real app you'd send via email; here we show hint for demo
     setCpMessage(`Verification code sent to ${cpEmail} (demo code: ${code})`);
     setCpStep("code");
   };
 
-  // Step 2: verify code
   const handleVerifyCode = () => {
-    setCpMessage(null);
-    if (!cpCodeInput.trim()) {
-      setCpMessage("Please enter the verification code.");
-      return;
-    }
     if (cpCodeInput.trim() !== generatedCode) {
       setCpMessage("Verification code is incorrect.");
       return;
     }
     setCpStep("new");
-    setCpMessage(null);
   };
 
-  // simple password policy check
-  const isStrongPassword = (pw: string) => {
-    if (pw.length < 8) return false;
-    if (!/[A-Z]/.test(pw)) return false;
-    if (!/[0-9]/.test(pw)) return false;
-    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pw)) return false;
-    return true;
-  };
-
-  // Step 3: change password
   const handleChangePassword = () => {
-    setCpMessage(null);
-    if (!cpNewPassword || !cpConfirmPassword) {
-      setCpMessage("Please fill both password fields.");
-      return;
-    }
     if (cpNewPassword !== cpConfirmPassword) {
       setCpMessage("Passwords do not match.");
       return;
     }
-    if (!isStrongPassword(cpNewPassword)) {
-      setCpMessage("Password must be at least 8 characters with an uppercase letter, a number and a symbol.");
+    if (cpNewPassword.length < 8) {
+      setCpMessage("Password too short.");
       return;
     }
-
     const currentUser = AuthService.getCurrentUser();
-    if (!currentUser) {
-      setCpMessage("No current user.");
-      return;
+    if (currentUser) {
+      (defaultPasswords as Record<string, string>)[currentUser.email] = cpNewPassword;
+      toast.success("Password changed successfully (demo).");
+      setTimeout(() => closeChangePasswordModal(), 800);
     }
-
-    // Update demo password storage: defaultPasswords is exported from authData.ts
-    // This mutates the demo password record (acceptable for demo). In real app, call backend.
-    (defaultPasswords as Record<string, string>)[currentUser.email] = cpNewPassword;
-
-    // success feedback
-    toast.success("Password changed successfully (demo).");
-    setCpMessage(null);
-    // close modal after short delay
-    setTimeout(() => {
-      closeChangePasswordModal();
-    }, 800);
   };
 
-  /* ---------------- render ---------------- */
+  /* ---------- Render ---------- */
   return (
     <div className="container py-2">
       <h2 className="fw-bold mb-4 text-center">System Settings</h2>
 
-      {/* Store info card (kept) */}
-      <div className="card mb-4" style={{ borderRadius: "12px", boxShadow: "2px 4px 8px rgba(0,0,0,0.15)" }}>
-        <div className="card-header bg-0 text-dark fw-bold">Store Information</div>
-        <div className="card-body">
-          <div className="mb-3">
-            <label className="form-label">Store Name</label>
-            <input type="text" className="form-control" value={storeSettings.storeName}
-              onChange={(e) => setStoreSettings({ ...storeSettings, storeName: e.target.value })} />
-          </div>
-          <div className="mb-3">
-            <label className="form-label">Address</label>
-            <textarea className="form-control" rows={2} value={storeSettings.storeAddress}
-              onChange={(e) => setStoreSettings({ ...storeSettings, storeAddress: e.target.value })}></textarea>
-          </div>
-          <div className="row">
-            <div className="col-md-6 mb-3">
-              <label className="form-label">Phone</label>
-              <input type="text" className="form-control" value={storeSettings.phone}
-                onChange={(e) => setStoreSettings({ ...storeSettings, phone: e.target.value })} />
+      {/* ---------- Store Settings ---------- */}
+      <div className="position-relative mb-4">
+        <div className="card" style={{ borderRadius: "12px", boxShadow: "2px 4px 8px rgba(0,0,0,0.15)" }}>
+          <div className="card-header bg-0 text-dark fw-bold">Store Information</div>
+          <div className="card-body">
+            {/* store info form */}
+            <div className="mb-3">
+              <label className="form-label">Store Name</label>
+              <input
+                type="text"
+                className="form-control"
+                value={storeSettings.storeName}
+                onChange={(e) => setStoreSettings({ ...storeSettings, storeName: e.target.value })}
+                disabled={!canAccessStoreSettings}
+              />
             </div>
-            <div className="col-md-6 mb-3">
-              <label className="form-label">Email</label>
-              <input type="email" className="form-control" value={storeSettings.email}
-                onChange={(e) => setStoreSettings({ ...storeSettings, email: e.target.value })} />
+            <div className="mb-3">
+              <label className="form-label">Address</label>
+              <textarea
+                className="form-control"
+                rows={2}
+                value={storeSettings.storeAddress}
+                onChange={(e) => setStoreSettings({ ...storeSettings, storeAddress: e.target.value })}
+                disabled={!canAccessStoreSettings}
+              ></textarea>
             </div>
-          </div>
-          <div className="row">
-            <div className="col-md-6 mb-3">
-              <label className="form-label">Tax Rate (%)</label>
-              <input type="number" className="form-control" value={storeSettings.taxRate}
-                onChange={(e) => setStoreSettings({ ...storeSettings, taxRate: e.target.value })} />
-            </div>
-            <div className="col-md-6 mb-3">
-              <label className="form-label">Currency</label>
-              <select className="form-select" value={storeSettings.currency}
-                onChange={(e) => setStoreSettings({ ...storeSettings, currency: e.target.value })}>
-                <option value="PHP">PHP</option>
-                <option value="USD">USD</option>
-                <option value="EUR">EUR</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="mb-3">
-            <label className="form-label">Receipt Footer Message</label>
-            <textarea className="form-control" rows={2} value={storeSettings.footerMessage}
-              onChange={(e) => setStoreSettings({ ...storeSettings, footerMessage: e.target.value })}></textarea>
-            <small className="text-muted">This message will appear at the bottom of each printed receipt.</small>
-          </div>
-        </div>
-      </div>
-
-      {/* Receipt Settings (kept) */}
-      <div
-        className="card mb-4"
-        style={{ borderRadius: "12px", boxShadow: "2px 4px 8px rgba(0,0,0,0.15)" }}
-      >
-        <div className="card-header bg-0 text-dark fw-bold">Receipt Settings</div>
-        <div className="card-body">
-          {(Object.entries(receiptSettings) as [keyof ReceiptSettings, boolean | string][])
-            .filter(([key, value]) => typeof value === "boolean") // ✅ show only boolean settings
-            .map(([key, value]) => (
-              <div key={key} className="form-check form-switch mb-2">
+            <div className="row">
+              <div className="col-md-6 mb-3">
+                <label className="form-label">Phone</label>
                 <input
-                  className="form-check-input"
-                  type="checkbox"
-                  checked={value as boolean}
-                  onChange={(e) =>
-                    setReceiptSettings({
-                      ...receiptSettings,
-                      [key]: e.target.checked,
-                    })
-                  }
+                  type="text"
+                  className="form-control"
+                  value={storeSettings.phone}
+                  onChange={(e) => setStoreSettings({ ...storeSettings, phone: e.target.value })}
+                  disabled={!canAccessStoreSettings}
                 />
-                <label className="form-check-label text-capitalize">
-                  {key.replace(/([A-Z])/g, " $1")}
-                </label>
               </div>
-            ))}
-        </div>
-      </div>
-
-      {/* Notification Settings */}
-      <div className="card mb-4" style={{ borderRadius: "12px", boxShadow: "2px 4px 8px rgba(0,0,0,0.15)" }}>
-        <div className="card-header bg-0 text-dark fw-bold">Notification Settings</div>
-        <div className="card-body">
-          {(Object.entries(notificationSettings) as [keyof NotificationSettings, boolean][]).map(([key, value]) => (
-            <div key={key} className="form-check form-switch mb-2">
-              <input className="form-check-input" type="checkbox" checked={value as boolean}
-                onChange={(e) => setNotificationSettings({ ...notificationSettings, [key]: e.target.checked })} />
-              <label className="form-check-label text-capitalize">{key.replace(/([A-Z])/g, " $1")}</label>
+              <div className="col-md-6 mb-3">
+                <label className="form-label">Email</label>
+                <input
+                  type="email"
+                  className="form-control"
+                  value={storeSettings.email}
+                  onChange={(e) => setStoreSettings({ ...storeSettings, email: e.target.value })}
+                  disabled={!canAccessStoreSettings}
+                />
+              </div>
             </div>
-          ))}
+            <div className="row">
+              <div className="col-md-6 mb-3">
+                <label className="form-label">Tax Rate (%)</label>
+                <input
+                  type="number"
+                  className="form-control"
+                  value={storeSettings.taxRate}
+                  onChange={(e) => setStoreSettings({ ...storeSettings, taxRate: e.target.value })}
+                  disabled={!canAccessStoreSettings}
+                />
+              </div>
+              <div className="col-md-6 mb-3">
+                <label className="form-label">Currency</label>
+                <select
+                  className="form-select"
+                  value={storeSettings.currency}
+                  onChange={(e) => setStoreSettings({ ...storeSettings, currency: e.target.value })}
+                  disabled={!canAccessStoreSettings}
+                >
+                  <option value="PHP">PHP</option>
+                  <option value="USD">USD</option>
+                  <option value="EUR">EUR</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="mb-3">
+              <label className="form-label">Receipt Footer Message</label>
+              <textarea
+                className="form-control"
+                rows={2}
+                value={storeSettings.footerMessage}
+                onChange={(e) => setStoreSettings({ ...storeSettings, footerMessage: e.target.value })}
+                disabled={!canAccessStoreSettings}
+              ></textarea>
+              <small className="text-muted">
+                This message will appear at the bottom of each printed receipt.
+              </small>
+            </div>
+          </div>
         </div>
+
+        {/* Block overlay for Cashier */}
+        {isCashier && (
+          <div
+            className="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
+            style={{
+              backgroundColor: "rgba(255,255,255,0.7)",
+              borderRadius: "12px",
+              backdropFilter: "blur(3px)",
+            }}
+          >
+            <div className="text-center text-dark fw-bold">
+              <i className="bi bi-lock-fill fs-3 d-block mb-2"></i>
+              Store Settings Locked for Cashiers
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Security Settings */}
+      {/* ---------- Security Settings ---------- */}
       <div className="card mb-4" style={{ borderRadius: "12px", boxShadow: "2px 4px 8px rgba(0,0,0,0.15)" }}>
         <div className="card-header bg-0 text-dark fw-bold">Security Settings</div>
         <div className="card-body">
@@ -402,80 +337,87 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange }) => 
             <label className="form-check-label">Automatic Data Backup</label>
           </div>
 
-          <hr className="my-4" style={{ borderTop: "2px solid #000" }} />
-          <label className="mb-3 text-dark fw-bold">Change your account password</label>
+          <hr className="my-4" />
+          <label className="fw-bold mb-3">Change your account password</label>
           <div>
             <button className="btn btn-dark" onClick={openChangePasswordModal}>Change password</button>
           </div>
         </div>
       </div>
 
-      {/* Buttons */}
-      <div className="text-center">
-        <button className="btn btn-dark px-4 py-2 me-2" onClick={handleSaveSettings}>Save Settings</button>
-        <button className="btn btn-danger px-4 py-2" onClick={onLogout}>Logout</button>
+      {/* ---------- Buttons ---------- */}
+      <div className="text-center mb-4">
+        <button className="btn btn-dark px-4 py-2 me-2" onClick={handleSaveSettings}>
+          Save Settings
+        </button>
+        <button className="btn btn-danger px-4 py-2" onClick={onLogout}>
+          Logout
+        </button>
       </div>
 
-      {/* ---------------- Change Password Modal (controlled) ---------------- */}
+      {/* ---------- Modal ---------- */}
       {modalOpen && (
         <>
-          {/* backdrop */}
           <div className="modal-backdrop fade show"></div>
-
           <div className="modal d-block" role="dialog" aria-modal="true">
             <div className="modal-dialog modal-dialog-centered">
               <div className="modal-content rounded-4 shadow-lg border-0">
                 <div className="modal-body p-4 text-center">
                   <div className="mb-3">
-                    {/* icon per step */}
                     {cpStep === "verify" && <LockSVG />}
                     {cpStep === "code" && <CodeSVG />}
                     {cpStep === "new" && <KeySVG />}
                   </div>
-
                   <h4 className="mb-2">
-                    {cpStep === "verify" ? "Change password" : cpStep === "code" ? "Verification" : "Set New Password"}
+                    {cpStep === "verify" ? "Change Password" : cpStep === "code" ? "Verification" : "Set New Password"}
                   </h4>
-
                   <div className="border-top my-3"></div>
 
-                  {/* Step content */}
                   {cpStep === "verify" && (
                     <>
-                      <p className="text-muted small">A verification code will be sent to your email to confirm your identity. Enter your email and current password.</p>
-
+                      <p className="text-muted small">
+                        Enter your email and old password to receive a verification code.
+                      </p>
                       <div className="mb-2 text-start">
-                        <label className="form-label">Enter Email</label>
-                        <input type="email" className="form-control" value={cpEmail} onChange={(e) => setCpEmail(e.target.value)} />
+                        <label className="form-label">Email</label>
+                        <input type="email" className="form-control" value={cpEmail}
+                          onChange={(e) => setCpEmail(e.target.value)} />
                       </div>
-
                       <div className="mb-3 text-start">
                         <label className="form-label">Current Password</label>
-                        <input type="password" className="form-control" value={cpOldPassword} onChange={(e) => setCpOldPassword(e.target.value)} />
+                        <input type="password" className="form-control" value={cpOldPassword}
+                          onChange={(e) => setCpOldPassword(e.target.value)} />
                       </div>
                     </>
                   )}
 
                   {cpStep === "code" && (
                     <>
-                      <p className="text-muted small">We sent a verification code to your email. Enter it below.</p>
+                      <p className="text-muted small">
+                        Enter the verification code sent to your email.
+                      </p>
                       <div className="mb-3 text-start">
-                        <label className="form-label">Enter Code</label>
-                        <input type="text" className="form-control" value={cpCodeInput} onChange={(e) => setCpCodeInput(e.target.value)} />
+                        <label className="form-label">Code</label>
+                        <input type="text" className="form-control" value={cpCodeInput}
+                          onChange={(e) => setCpCodeInput(e.target.value)} />
                       </div>
                     </>
                   )}
 
                   {cpStep === "new" && (
                     <>
-                      <p className="text-muted small">Enter your new password. Must be 8+ chars, include a capital letter, number, and symbol.</p>
+                      <p className="text-muted small">
+                        Enter your new password (8+ chars, one uppercase, one number, one symbol).
+                      </p>
                       <div className="mb-2 text-start">
-                        <label className="form-label">Password</label>
-                        <input type="password" className="form-control" value={cpNewPassword} onChange={(e) => setCpNewPassword(e.target.value)} />
+                        <label className="form-label">New Password</label>
+                        <input type="password" className="form-control" value={cpNewPassword}
+                          onChange={(e) => setCpNewPassword(e.target.value)} />
                       </div>
                       <div className="mb-3 text-start">
                         <label className="form-label">Confirm Password</label>
-                        <input type="password" className="form-control" value={cpConfirmPassword} onChange={(e) => setCpConfirmPassword(e.target.value)} />
+                        <input type="password" className="form-control" value={cpConfirmPassword}
+                          onChange={(e) => setCpConfirmPassword(e.target.value)} />
                       </div>
                     </>
                   )}
@@ -486,25 +428,21 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange }) => 
                 <div className="modal-footer border-0 justify-content-center pb-4">
                   <div className="w-100 px-4">
                     {cpStep === "verify" && (
-                      <>
-                        <div className="d-grid gap-2">
-                          <button className="btn btn-dark" onClick={handleSendCode}>Send code</button>
-                          <button className="btn btn-outline-secondary" onClick={closeChangePasswordModal}>Cancel</button>
-                        </div>
-                      </>
+                      <div className="d-grid gap-2">
+                        <button className="btn btn-dark" onClick={handleSendCode}>Send code</button>
+                        <button className="btn btn-outline-secondary" onClick={closeChangePasswordModal}>Cancel</button>
+                      </div>
                     )}
-
                     {cpStep === "code" && (
                       <div className="d-grid gap-2">
                         <button className="btn btn-dark" onClick={handleVerifyCode}>Confirm</button>
-                        <button className="btn btn-outline-secondary" onClick={() => { setCpStep("verify"); setCpMessage(null); }}>Back</button>
+                        <button className="btn btn-outline-secondary" onClick={() => setCpStep("verify")}>Back</button>
                       </div>
                     )}
-
                     {cpStep === "new" && (
                       <div className="d-grid gap-2">
                         <button className="btn btn-dark" onClick={handleChangePassword}>Change Password</button>
-                        <button className="btn btn-outline-secondary" onClick={() => { setCpStep("verify"); setCpMessage(null); }}>Cancel</button>
+                        <button className="btn btn-outline-secondary" onClick={() => setCpStep("verify")}>Cancel</button>
                       </div>
                     )}
                   </div>

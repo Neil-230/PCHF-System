@@ -64,8 +64,7 @@ export function Layout({ children, activeTab, onTabChange, user, onLogout }: Lay
           }}
         >
           <div className="d-flex align-items-center mb-5 ms-4">
-            <ShoppingCart size={24} className="me-2" />
-            <span className="fw-bold text-light">CashierPro</span>
+            <span className="fw-bold text-light">PCH Hardware Store</span>
           </div>
           <ul className="nav flex-column gap-3">
             {allowedNavigation.map((item) => (
@@ -117,9 +116,9 @@ export function Layout({ children, activeTab, onTabChange, user, onLogout }: Lay
           <div className="ms-auto d-flex align-items-center gap-3">
             {/* Notifications */}
             <div className="dropdown">
-              <button className="btn position-relative" data-bs-toggle="dropdown">
+              <button className="btn position-relative mt-2" data-bs-toggle="dropdown">
                 <Bell className="text-light" size={20} />
-                <span className="badge bg-light position-absolute top-0 start-100 translate-middle p-1 text-dark">
+                <span className="badge bg-light position-absolute top-0 start-100 translate-middle text-dark">
                   3
                 </span>
               </button>

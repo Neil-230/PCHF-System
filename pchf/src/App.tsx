@@ -1,5 +1,3 @@
-import reactLogo from "./assets/react.svg";
-import viteLogo from "/vite.svg";
 import "./App.css";
 import { useState, useEffect } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
@@ -10,7 +8,6 @@ import { InventoryManagement } from "./components/InventoryManagement";
 import { TransactionHistory } from "./components/TransactionHistory";
 import { Settings } from "./components/Settings";
 import { PointOfSale } from "./components/PointOfSales";
-import { Toaster } from "sonner";
 import { AuthService } from "./data/authData";
 import { AuthWrapper } from "./components/auth/AuthWrapper";
 import type { Transaction } from "./types";
@@ -24,15 +21,10 @@ export default function App() {
   const [transactions, setTransactions] = useState<Transaction[]>(mockTransactions);
 
   useEffect(() => {
-    // Initialize default users in localStorage
     AuthService.initializeUsers();
-
-    // Restore login session if available
     const CurrentUser = AuthService.getCurrentUser();
     if (CurrentUser) {
       setUser(CurrentUser);
-
-      // Default landing tab depending on role
       if (["admin", "owner"].includes(CurrentUser.role)) {
         setActiveTab("dashboard");
       } else {
@@ -44,8 +36,6 @@ export default function App() {
 
   const handleAuthSuccess = (authenticatedUser: User) => {
     setUser(authenticatedUser);
-
-    // Set initial tab after successful login
     if (["admin", "owner"].includes(authenticatedUser.role)) {
       setActiveTab("dashboard");
     } else {
@@ -63,42 +53,46 @@ export default function App() {
     setTransactions((prev) => [...prev, transaction]);
   };
 
-  // Role-based access control for sidebar tabs
   const handleTabChange = (tab: string) => {
     if (!user) return;
-
     const allowedTabs: Record<string, string[]> = {
       admin: ["dashboard", "pos", "inventory", "transactions", "alerts", "settings"],
       cashier: ["pos", "transactions", "settings"],
       owner: ["dashboard", "pos", "inventory", "transactions", "alerts", "settings"],
     };
-
     if (allowedTabs[user.role]?.includes(tab)) {
       setActiveTab(tab);
     }
   };
 
   const renderContent = () => {
+    if (!user) return null;
+
     switch (activeTab) {
       case "dashboard":
-        return <Dashboard transactions={transactions} CurrentUser={user!} />;
+        return <Dashboard transactions={transactions} CurrentUser={user} />;
       case "pos":
-        return <PointOfSale user={user!} onTransactionComplete={handleTransactionComplete} />;
+        return <PointOfSale user={user} onTransactionComplete={handleTransactionComplete} />;
       case "inventory":
         return <InventoryManagement />;
       case "transactions":
         return (
           <TransactionHistory
             transactions={transactions}
-            onDeleteAll={function (): void {
-              throw new Error("Function not implemented.");
-            }}
+            onDeleteAll={() => {}}
           />
         );
       case "settings":
-        return <Settings onLogout={handleLogout} onTabChange={handleTabChange} />;
+        // ✅ FIX: Pass user prop here
+        return (
+          <Settings
+            onLogout={handleLogout}
+            onTabChange={handleTabChange}
+            user={user}
+          />
+        );
       default:
-        return <Dashboard transactions={transactions} CurrentUser={user!} />;
+        return <Dashboard transactions={transactions} CurrentUser={user} />;
     }
   };
 
@@ -118,10 +112,8 @@ export default function App() {
   }
 
   return (
-    <>
-      <Layout activeTab={activeTab} onTabChange={handleTabChange} user={user} onLogout={handleLogout}>
-        {renderContent()}
-      </Layout>
-    </>
+    <Layout activeTab={activeTab} onTabChange={handleTabChange} user={user} onLogout={handleLogout}>
+      {renderContent()}
+    </Layout>
   );
 }
