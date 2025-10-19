@@ -8,7 +8,9 @@ import { Badge } from "./ui/Badge";
 import { CardTitle, CardHeader, CardContent } from "./ui/card";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { toast } from "react-hot-toast";
+import { toast } from "react-hot-toast"; //toasterrrrrrr
+
+
 
 interface User {
   name: string;
@@ -54,8 +56,8 @@ export function PointOfSale({ onTransactionComplete, user }: PointOfSaleProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [cashAmount, setCashAmount] = useState("");
-  const [taxRate, setTaxRate] = useState("0");
-  const [deliveryFeeValue, setDeliveryFeeValue] = useState(50); // ✅ Added default delivery fee
+  const [taxRate, setTaxRate] = useState("0"); //tax rate 0 for default
+  const [deliveryFeeValue, setDeliveryFeeValue] = useState(50); //Default fee 50php
 
   const [storeSettings, setStoreSettings] = useState({
     storeName: "My Store",
@@ -78,6 +80,8 @@ export function PointOfSale({ onTransactionComplete, user }: PointOfSaleProps) {
     if (cart.length === 0) return toast.error("Cart is empty");
     setCart([]);
     toast.success("Cart successfully cleared");
+
+
   };
 
   const filteredProducts = mockProducts.filter((product) => {
@@ -150,7 +154,7 @@ export function PointOfSale({ onTransactionComplete, user }: PointOfSaleProps) {
     if (cart.length === 0) return toast.error("Cart is empty");
     const cash = parseFloat(cashAmount);
     if (isNaN(cash) || cash <= 0) return toast.error("Enter valid cash");
-    if (cash < total) return toast.error("Insufficient cash");
+    if (cash < total) return toast.error("Insufficient cash"); //error bellow than total
 
     const change = cash - total;
     const isDelivery = deliveryType === "Delivery";
@@ -178,7 +182,7 @@ export function PointOfSale({ onTransactionComplete, user }: PointOfSaleProps) {
 
     mockTransactions.push(transaction);
 
-    // --- PDF Receipt ---
+    // --- PDF receipt ---
     const doc = new jsPDF({
       orientation: "portrait",
       unit: "mm",
@@ -318,7 +322,7 @@ export function PointOfSale({ onTransactionComplete, user }: PointOfSaleProps) {
         </Modal.Body>
       </Modal>
 
-      {/* POS Interface */}
+      {/* POS Interface NK<ADHJSKJADKJ */}
       {hasEnteredName && (
         <div className="container-fluid mt-1">
           <div className="row g-3">

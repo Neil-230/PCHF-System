@@ -13,7 +13,7 @@ type SelectProps = {
   value: string;
   onChange: (value: string) => void;
   disabled?: boolean;
-  children?: React.ReactNode; // optional (Radix style)
+  children?: React.ReactNode; // optional (Radix style) 
 };
 
 export function BootstrapSelect({

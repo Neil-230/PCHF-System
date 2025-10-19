@@ -24,7 +24,7 @@ import {
   Legend,
 } from "chart.js";
 import { AuthService } from "../data/authData";
-import { useAuth } from "./auth/AuthWrapper";
+import { useAuth } from "./auth/AuthWrapper"; //ayaw ni ninyo i delete for future updates ni
 import { toast } from "sonner";
 import type { User } from "../types/auth";
 
@@ -47,7 +47,7 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
   const today = new Date();
   const [pendingAdmins, setPendingAdmins] = useState<any[]>([]);
 
-  // ✅ Load pending admins (only for owner)
+  // Load pending admins (only for owner)
   useEffect(() => {
     if (CurrentUser?.role === "owner") {
       const pending = AuthService.getPendingAdmins();
@@ -55,7 +55,7 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
     }
   }, [CurrentUser]);
 
-  // ✅ Approve / Decline Handlers
+  // Approve / Decline Handlers
   const handleApprove = (id: string) => {
     AuthService.approveAdmin(id);
     setPendingAdmins(AuthService.getPendingAdmins());
@@ -173,7 +173,7 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
         </span>
       </div>
 
-      {/* ✅ Owner Only - Pending Admin Approvals */}
+      {/* Owner Only pending admin approvals  */}
       {CurrentUser?.role === "owner" && (
         <div
           className="card p-3 mb-4 border-0"
@@ -218,7 +218,7 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
         </div>
       )}
 
-      {/* Quick analysis */}
+      {/* Quick fucking analysis */}
       <div className="row g-3">
         <div className="col-md-3">
           <div className="card p-3 border-0"
@@ -279,7 +279,7 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
         </div>
       </div>
 
-      {/* Charts */}
+      {/* Charts yeahhhhhhhhh  */}
       <div className="row mt-4">
         <div className="col-lg-6">
           <div className="card p-3 border-0"
@@ -306,7 +306,7 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
           </div>
         </div>
       </div>
-      {/* Top Products */}
+      {/* Top Products hapit najud mahuman */}
       <div className="row g-3 mt-1">
         <div className="col-md-6">
           <div className="card p-3 border-0"
@@ -373,14 +373,14 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
           <div className="card p-3 border-0 h-100"
           style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}
           >
-            {/* Header (fixed) */}
+            {/* Header */}
             <div className="card-header">
               <h6>
                 <Clock size={18} /> Recent Transactions
               </h6>
             </div>
 
-            {/* Scrollable Body */}
+            {/* Scrollable body for better user experience 😗😗*/}
             <div
               className="card-body"
               style={{ maxHeight: "255px", overflowY: "auto" }}
@@ -424,7 +424,7 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
         </div>
       </div>
 
-      {/* Inventory Status */}
+      {/* Inventory Status ? wamani pulos unta pero naa naman sa user requirement 😶‍🌫️😶‍🌫️😶‍🌫️ */}
       <div className="mt-4">
         <div className="card p-3 border-0"
           style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}
@@ -455,3 +455,7 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
     </div>
   );
 }
+
+//joker kaayo na emoji i backspace gali kausa mawala ang bula,
+//ma reveal iyang nawong hahahha
+//😶‍🌫️😶‍🌫️😶‍🌫️😶‍🌫️😶‍🌫️

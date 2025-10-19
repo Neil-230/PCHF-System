@@ -1,6 +1,6 @@
 import "./css/layout.css";
 import { useState } from "react";
-import {
+import { // Iconssssssssss 
   ShoppingCart,
   Package,
   BarChart3,
@@ -21,12 +21,12 @@ interface LayoutProps {
   user: {
     name: string;
     email: string;
-    role: string; // 'admin' | 'cashier' | 'owner'
+    role: string; // any, owner, admin, cashier. NOTE. String ni sya
   };
   onLogout: () => void;
 }
 
-// ✅ Updated navigation with 'owner' role support
+//Upadetes navigation bar dependi sa owner
 const navigation = [
   { id: "dashboard", label: "Dashboard", icon: Home, roles: ["admin", "owner"] },
   { id: "pos", label: "Point of Sale", icon: CreditCard, roles: ["admin", "cashier", "owner"] },
@@ -45,7 +45,7 @@ export function Layout({ children, activeTab, onTabChange, user, onLogout }: Lay
       .join("")
       .toUpperCase();
 
-  // ✅ Filter tabs by user role
+  // Filter tabs dependi sa Roles
   const allowedNavigation = navigation.filter((item) => item.roles.includes(user.role));
 
   return (

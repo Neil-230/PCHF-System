@@ -1,5 +1,7 @@
 import * as React from "react";
 
+//samot nani wajudni pulos, pero if ever mag tailwind ta, aw puslan kaayo ni
+
 // Sidebar wrapper
 function Sidebar({ children }: { children: React.ReactNode }) {
   return (

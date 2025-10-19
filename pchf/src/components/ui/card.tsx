@@ -1,5 +1,7 @@
 import * as React from "react";
 
+//card import ni, for more scallable card,
+
 function Card({ className="", ...props }: React.ComponentProps<"div">){
   return(
     <div className={`card p-3 rounded-3 border border-0 ${className}`} {...props} style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)", }}/>

@@ -1,5 +1,7 @@
 import type React from "react";
 
+
+//pwedi namanjud unta wala ni, wamani pulos
 function Skeleton({className, ...props }: React.ComponentProps<"div">) {
   return(
     <div

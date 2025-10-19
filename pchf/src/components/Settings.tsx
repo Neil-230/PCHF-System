@@ -14,19 +14,21 @@ interface StoreSettings {
   footerMessage: string;
 }
 
-interface ReceiptSettings {
-  includeLogo: boolean;
-  showDiscounts: boolean;
-  showTax: boolean;
-  showChange: boolean;
-}
+//For future updatess. pero pwedi nani i delete
+// interface ReceiptSettings {
+//   includeLogo: boolean;
+//   showDiscounts: boolean;
+//   showTax: boolean;
+//   showChange: boolean;
+// }
 
-interface NotificationSettings {
-  lowStock: boolean;
-  newSale: boolean;
-  dailySummary: boolean;
-  sound: boolean;
-}
+//kani pwedi nani i delete wamani pulos
+// interface NotificationSettings {
+//   lowStock: boolean;
+//   newSale: boolean;
+//   dailySummary: boolean;
+//   sound: boolean;
+// }
 
 interface SecuritySettings {
   requirePin: boolean;
@@ -148,6 +150,7 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user 
   };
 
   /* ---------- Password Handling ---------- */
+  //kamo na bahala modify sa combination sa password
   const handleSendCode = () => {
     setCpMessage(null);
     const currentUser = AuthService.getCurrentUser();
@@ -168,6 +171,7 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user 
     setCpMessage(`Verification code sent to ${cpEmail} (demo code: ${code})`);
     setCpStep("code");
   };
+
 
   const handleVerifyCode = () => {
     if (cpCodeInput.trim() !== generatedCode) {
@@ -204,7 +208,8 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user 
         <div className="card" style={{ borderRadius: "12px", boxShadow: "2px 4px 8px rgba(0,0,0,0.15)" }}>
           <div className="card-header bg-0 text-dark fw-bold">Store Information</div>
           <div className="card-body">
-            {/* store info form */}
+            {/* store info form para nis receipt */}
+            {/* store langnis DATAbase para dimag cge kawala */}
             <div className="mb-3">
               <label className="form-label">Store Name</label>
               <input
@@ -321,6 +326,8 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user 
               onChange={(e) => setSecuritySettings({ ...securitySettings, autoLogout: e.target.checked })} />
             <label className="form-check-label">Auto Logout on Inactivity</label>
           </div>
+
+          {/* kani bay pwedi ni ninyo i implement na mag logout ang account depending on time */}
           <div className="mb-3">
             <label className="form-label">Session Timeout (minutes)</label>
             <select className="form-select" value={securitySettings.sessionTimeout}
@@ -331,6 +338,9 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user 
               <option value="30">30</option>
             </select>
           </div>
+          {/* you can delete the logout mechanism kong feel ninyo dina needed */}
+
+
           <div className="form-check form-switch mb-2">
             <input className="form-check-input" type="checkbox" checked={securitySettings.dataBackup}
               onChange={(e) => setSecuritySettings({ ...securitySettings, dataBackup: e.target.checked })} />
@@ -355,7 +365,7 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user 
         </button>
       </div>
 
-      {/* ---------- Modal ---------- */}
+      {/* ---------- Modal hasola sa modal uy, pwedi mani himoun og object pero ngano mag bout mankag ako ning i individual ---------- */}
       {modalOpen && (
         <>
           <div className="modal-backdrop fade show"></div>
@@ -456,4 +466,6 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user 
   );
 };
 
+
+//export bushit
 export default Settings;

@@ -1,5 +1,7 @@
 "use client";
 
+
+
 import * as React from "react";
 import { XIcon } from "lucide-react";
 
@@ -53,7 +55,7 @@ export function Dialog({ open, onClose, children }: DialogProps) {
   );
 }
 
-// Header
+// Header for dialog
 export function DialogHeader({ children }: DialogHeaderProps) {
   return <div className="mb-3">{children}</div>;
 }

@@ -43,7 +43,7 @@ export function InventoryManagement() {
     });
   };
 
-  // SKU Generator (e.g., COF001, SNA123)
+  // SKU Generator (e.g., COF001, SNA123) pwedi ni ninyo i Module
   const generateSKU = (category: string) => {
     const prefix = category.substring(0, 3).toUpperCase(); // First 3 letters
     const randomNum = Math.floor(100 + Math.random() * 900); // Random 3-digit number
@@ -107,7 +107,7 @@ export function InventoryManagement() {
     });
   };
 
-  // Stocks color coding
+  // color codes. aypag bout bout sa color ako rabay UI 
   const getStockStatus = (stock: number) => {
     if (stock === 0) return { label: "Out of Stock", variant: "danger"};
     if (stock <= 10) return { label: "Low Stock", variant: "secondary" };
@@ -200,6 +200,7 @@ export function InventoryManagement() {
           </div>
         </div>
       </div>
+
       {/* Controls */}
       <div className="d-flex align-items-center gap-3 my-3">
         <div className="flex-grow-1 position-relative border-0">
@@ -396,3 +397,5 @@ export function InventoryManagement() {
     </div>
   );
 }
+
+//BUSHIT!

@@ -1,3 +1,4 @@
+//TransactionHistory.tsx ngano mag bout kag mag typscript ko
 import { useState, useRef } from "react";
 import type { Transaction } from "../types";
 import { Eye, Search, CreditCard, DollarSign, Receipt, Printer, Trash2 } from "lucide-react";
@@ -29,7 +30,7 @@ export function TransactionHistory({ transactions, onDeleteAll }: TransactionHis
   const completedTransactions = transactions.filter((t) => t.status === "completed").length;
   const averageTransaction = transactions.length > 0 ? totalRevenue / transactions.length : 0;
 
-  // ✅ Updated: includes Processed By & Delivery info
+  //Updated: includes Processed By & Delivery info
   const printTransaction = (transaction: Transaction) => {
     const printWindow = window.open("", "_blank", "width=800,height=600");
     if (!printWindow) return;
@@ -88,11 +89,14 @@ export function TransactionHistory({ transactions, onDeleteAll }: TransactionHis
     printWindow.print();
   };
 
-  // ✅ Print All updated with Processed By & Delivery info
+  // PRINT TANAN APILA IMONG MAMAG PRINT
+  //print for all the transactionssssit
   const printAllTransactions = () => {
     const printWindow = window.open("", "_blank", "width=800,height=600");
     if (!printWindow) return;
+    
 
+    //chat gpt nani atay kapuy naman
     printWindow.document.write(`
       <html>
         <head>
@@ -160,6 +164,7 @@ export function TransactionHistory({ transactions, onDeleteAll }: TransactionHis
   };
 
   // Delete all confirmation
+  // ga bug rabani, dili ma delete kamo na debug ani uy for backend bitaw ang method ani
   const handleDeleteAll = () => {
     const confirmMessage = prompt(
       'Do you want to delete the entire transaction?\nCopy this message to confirm:\n\n"Delete Transaction"\n\nOr press Cancel to abort.'
@@ -236,7 +241,7 @@ export function TransactionHistory({ transactions, onDeleteAll }: TransactionHis
         </div>
       </div>
 
-      {/* Table */}
+      {/* table pwedi mani i object unta pero dilagi mag bout kay ako nag buhat */}
       <div className="table-responsive d-flex rounded-2" ref={printAreaRef}>
         <table className="table table-striped table-bordered rounded-2" style={{ boxShadow: "2px 4px 8px rgba(0,0,0,0.10)" }}>
           <thead>
@@ -284,7 +289,7 @@ export function TransactionHistory({ transactions, onDeleteAll }: TransactionHis
         </table>
       </div>
 
-      {/* Modal */}
+      {/* bushit na modal*/}
       {selectedTransaction && (
         <div className="modal show d-block" tabIndex={-1}>
           <div className="modal-dialog modal-lg">
