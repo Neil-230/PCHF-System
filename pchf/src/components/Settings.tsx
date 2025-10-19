@@ -369,7 +369,9 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user 
       {modalOpen && (
         <>
           <div className="modal-backdrop fade show"></div>
-          <div className="modal d-block" role="dialog" aria-modal="true">
+          <div className="modal d-block" role="dialog" aria-modal="true"
+            style={{ backgroundColor: "rgba(239, 252, 255, 0.31)" }}
+          >
             <div className="modal-dialog modal-dialog-centered">
               <div className="modal-content rounded-4 shadow-lg border-0">
                 <div className="modal-body p-4 text-center">

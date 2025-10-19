@@ -2,6 +2,7 @@
 import { useState, useRef } from "react";
 import type { Transaction } from "../types";
 import { Eye, Search, CreditCard, DollarSign, Receipt, Printer, Trash2 } from "lucide-react";
+import { Button, Modal } from "react-bootstrap";
 
 interface TransactionHistoryProps {
   transactions: Transaction[];
@@ -176,6 +177,7 @@ export function TransactionHistory({ transactions, onDeleteAll }: TransactionHis
       alert("Confirmation text did not match. Deletion cancelled.");
     }
   };
+  //kapuy nag modal tistingan taning prompt HAHA bati kaayo
 
   return (
     <div className="container my-4">
@@ -291,50 +293,60 @@ export function TransactionHistory({ transactions, onDeleteAll }: TransactionHis
 
       {/* bushit na modal*/}
       {selectedTransaction && (
-        <div className="modal show d-block" tabIndex={-1}>
-          <div className="modal-dialog modal-lg">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">Transaction Details</h5>
-                <button type="button" className="btn-close" onClick={() => setSelectedTransaction(null)}></button>
-              </div>
-              <div className="modal-body">
-                <p><strong>Customer:</strong> {selectedTransaction.customerName}</p>
-                <p><strong>ID:</strong> {selectedTransaction.id}</p>
-                <p><strong>Date & Time:</strong> {new Date(selectedTransaction.timestamp).toLocaleString()}</p>
-                <p><strong>Payment Method:</strong> {selectedTransaction.paymentMethod}</p>
-                <p><strong>Delivery:</strong> {selectedTransaction.isDelivery ? "Yes" : "No"}</p>
-                {selectedTransaction.isDelivery && <p><strong>Delivery Fee:</strong> ${selectedTransaction.deliveryFee?.toFixed(2)}</p>}
-                {selectedTransaction.handledBy && (
-                  <>
-                    <hr />
-                    <p><strong>Processed By:</strong> {selectedTransaction.handledBy.name} ({selectedTransaction.handledBy.role})</p>
-                    <p><strong>Email:</strong> {selectedTransaction.handledBy.email}</p>
-                  </>
-                )}
+        <Modal show={true} onHide={() => setSelectedTransaction(null)} 
+          size="lg" centered
+          style={{ backgroundColor: "rgba(239, 252, 255, 0.31)" }}
+        >
+          <Modal.Header closeButton>
+            <Modal.Title>Transaction Details</Modal.Title>
+          </Modal.Header>
 
-                <h6>Items:</h6>
-                <ul className="list-group mb-3">
-                  {selectedTransaction.items.map((item, idx) => (
-                    <li key={idx} className="list-group-item d-flex justify-content-between">
-                      <span>{item.product.name} x {item.quantity}</span>
-                      <span>${(item.product.price * item.quantity).toFixed(2)}</span>
-                    </li>
-                  ))}
-                </ul>
+          <Modal.Body>
+            <p><strong>Customer:</strong> {selectedTransaction.customerName}</p>
+            <p><strong>ID:</strong> {selectedTransaction.id}</p>
+            <p><strong>Date & Time:</strong> {new Date(selectedTransaction.timestamp).toLocaleString()}</p>
+            <p><strong>Payment Method:</strong> {selectedTransaction.paymentMethod}</p>
+            <p><strong>Delivery:</strong> {selectedTransaction.isDelivery ? "Yes" : "No"}</p>
+            {selectedTransaction.isDelivery && (
+              <p><strong>Delivery Fee:</strong> ${selectedTransaction.deliveryFee?.toFixed(2)}</p>
+            )}
 
-                <p><strong>Subtotal:</strong> ${selectedTransaction.subtotal.toFixed(2)}</p>
-                <p><strong>Tax:</strong> ${selectedTransaction.tax.toFixed(2)}</p>
-                {selectedTransaction.isDelivery && <p><strong>Delivery Fee:</strong> ${selectedTransaction.deliveryFee?.toFixed(2)}</p>}
-                <p className="fw-bold"><strong>Total:</strong> ${selectedTransaction.total.toFixed(2)}</p>
-              </div>
-              <div className="modal-footer">
-                <button className="btn btn-secondary" onClick={() => setSelectedTransaction(null)}>Close</button>
-                <button className="btn btn-primary" onClick={() => printTransaction(selectedTransaction)}>🖨️ Print</button>
-              </div>
-            </div>
-          </div>
-        </div>
+            {selectedTransaction.handledBy && (
+              <>
+                <hr />
+                <p><strong>Processed By:</strong> {selectedTransaction.handledBy.name} ({selectedTransaction.handledBy.role})</p>
+                <p><strong>Email:</strong> {selectedTransaction.handledBy.email}</p>
+              </>
+            )}
+
+            <h6>Items:</h6>
+            <ul className="list-group mb-3">
+              {selectedTransaction.items.map((item, idx) => (
+                <li key={idx} className="list-group-item d-flex justify-content-between">
+                  <span>{item.product.name} x {item.quantity}</span>
+                  <span>${(item.product.price * item.quantity).toFixed(2)}</span>
+                </li>
+              ))}
+            </ul>
+
+            <p><strong>Subtotal:</strong> ${selectedTransaction.subtotal.toFixed(2)}</p>
+            <p><strong>Tax:</strong> ${selectedTransaction.tax.toFixed(2)}</p>
+            {selectedTransaction.isDelivery && (
+              <p><strong>Delivery Fee:</strong> ${selectedTransaction.deliveryFee?.toFixed(2)}</p>
+            )}
+            <p className="fw-bold"><strong>Total:</strong> ${selectedTransaction.total.toFixed(2)}</p>
+          </Modal.Body>
+
+          <Modal.Footer>
+            <Button variant="secondary" onClick={() => setSelectedTransaction(null)}>
+              Close
+            </Button>
+            <Button variant="primary" onClick={() => printTransaction(selectedTransaction)}>
+              🖨️ Print 
+              {/* yaga pwedi man diay Emoji ang i icon ba HHAAHHAHA */}
+            </Button>
+          </Modal.Footer>
+        </Modal>
       )}
     </div>
   );
