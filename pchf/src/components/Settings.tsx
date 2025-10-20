@@ -316,11 +316,11 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user 
       <div className="card mb-4" style={{ borderRadius: "12px", boxShadow: "2px 4px 8px rgba(0,0,0,0.15)" }}>
         <div className="card-header bg-0 text-dark fw-bold">Security Settings</div>
         <div className="card-body">
-          <div className="form-check form-switch mb-2">
+          {/* <div className="form-check form-switch mb-2">
             <input className="form-check-input" type="checkbox" checked={securitySettings.requirePin}
               onChange={(e) => setSecuritySettings({ ...securitySettings, requirePin: e.target.checked })} />
             <label className="form-check-label">Require PIN at Login</label>
-          </div>
+          </div> */}
           <div className="form-check form-switch mb-2">
             <input className="form-check-input" type="checkbox" checked={securitySettings.autoLogout}
               onChange={(e) => setSecuritySettings({ ...securitySettings, autoLogout: e.target.checked })} />

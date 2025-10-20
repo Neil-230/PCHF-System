@@ -4,10 +4,12 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Alert, AlertDescription } from "../ui/alert";
-import { Eye, EyeOff, CreditCard, LogInIcon } from "lucide-react";
+import { Eye, EyeOff, CreditCard, LogInIcon, MailCheck } from "lucide-react";
 import { AuthService, defaultPasswords } from "../../data/authData";
 import { toast } from "sonner";
 import "../css/login.css";
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"></link>
+import { FcGoogle } from "react-icons/fc";
 
 interface LoginProps {
   onLogin: (email: string, password: string) => boolean;
@@ -156,7 +158,9 @@ export function Login({ onLogin, onSwitchToSignUp }: LoginProps) {
             </div>
             <div className="col-md-6 p-0">
               <div className="bodyLOG d-flex flex-column justify-content-center p-5 border border-0">
-                <CardContent>
+                <CardContent
+                  className=""
+                >
                   <form onSubmit={handleSubmit}>
                     {error && (
                       <Alert variant="destructive">
@@ -204,7 +208,7 @@ export function Login({ onLogin, onSwitchToSignUp }: LoginProps) {
                       {isLoading ? 'Signing in...' : 'Sign in'}
                     </Button>
 
-                    <div className="text-center mt-5">
+                    <div className="text-center mt-3">
                       <button
                         type="button"
                         className="btn btn-link p-0 text-dark fw-bold text-decoration-none"
@@ -224,8 +228,8 @@ export function Login({ onLogin, onSwitchToSignUp }: LoginProps) {
                     </div>
                   </form>
 
-                  <div className="mt-2 text-center">
-                    <p className="text-sm text-muted-foreground">
+                  <div className="mt-2 text-center mt-3">
+                    <p className="text-sm text-muted-foreground mb-0">
                       Don't have an account?{' '}
                       <Button
                         type="button"

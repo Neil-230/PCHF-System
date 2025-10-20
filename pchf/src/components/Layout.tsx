@@ -12,6 +12,7 @@ import { // Iconssssssssss
   Home,
   Menu,
   User,
+  ShieldIcon,
 } from "lucide-react";
 
 interface LayoutProps {
@@ -165,8 +166,8 @@ export function Layout({ children, activeTab, onTabChange, user, onLogout }: Lay
                 </div>
                 <div className="dropdown-divider"></div>
                 <button className="dropdown-item">
-                  <User size={16} className="me-2" />
-                  Profile Settings
+                  <ShieldIcon size={16} className="me-2" />
+                  Security Settings
                 </button>
                 <button
                   className="dropdown-item"

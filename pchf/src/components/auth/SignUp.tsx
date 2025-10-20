@@ -5,10 +5,12 @@ import { Label } from "../ui/label";
 import { CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Alert } from "../ui/alert";
 import { Select, SelectItem } from "../ui/select";
-import { Eye, EyeOff, MailCheck } from "lucide-react";
+import { Eye, EyeOff, MailCheck, Check} from "lucide-react";
 import { toast } from "sonner";
 import { Modal } from "react-bootstrap";
 import "../css/signup.css";
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"></link>
+import { FcGoogle } from "react-icons/fc";
 
 interface SignUpProps {
   onSignUp: (name: string, email: string, password: string, role: "admin" | "cashier") => boolean;
@@ -142,7 +144,7 @@ export function SignUp({ onSignUp, onSwitchToLogin }: SignUpProps) {
                 </CardHeader>
 
                 <CardContent>
-                  <form className="FormSign space-y-4">
+                  <form className="FormSign">
                     {error && <Alert variant="destructive">{error}</Alert>}
 
                     <div className="row">
@@ -192,9 +194,22 @@ export function SignUp({ onSignUp, onSwitchToLogin }: SignUpProps) {
                     </div>
 
                     <Button type="button" className="w-100 mt-3 bg-dark" onClick={handleSendCode}>
-                      <MailCheck className="me-2" size={16} /> Confirm
+                      <Check className="me-2" size={16} /> Confirm
                     </Button>
                   </form>
+                    <div className=" text-center mt-1 mb-0">
+                      <button
+                        className="border border-0 bg-dark rounded-2 w-100 text-light text-sm"
+                        style={{
+                          border: "1px solid #dadce0",
+                          backgroundColor: "#fff",
+                          cursor: "pointer",
+                        }}
+                      >
+                        <FcGoogle size={20} className="me-2" />
+                        Sign in with Google
+                      </button>
+                    </div>
 
                   <div className="mt-3 text-center">
                     <p className="text-sm text-muted-foreground">
@@ -220,7 +235,7 @@ export function SignUp({ onSignUp, onSwitchToLogin }: SignUpProps) {
         </div>
       </div>
 
-      {/* 🟢 Modal 1: Verification */}
+      {/*Modal 1 Verification */}
       <Modal show={showCodeModal} onHide={() => setShowCodeModal(false)} centered>
         <Modal.Header closeButton>
           <Modal.Title>Email Verification</Modal.Title>
