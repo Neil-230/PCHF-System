@@ -1,0 +1,28 @@
+
+input.form-control:focus {
+  box-shadow: none;
+  outline: none;
+}
+
+select.form-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: none !important;
+}
+
+
+.lucide-chevron-down {
+  display: none;
+}
+
+.CloseBtn {
+  display: none !important;
+}
+
+.ProductList {
+  max-height: calc(100vh - 180px);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}

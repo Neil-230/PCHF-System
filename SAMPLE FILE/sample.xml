@@ -1,0 +1,41 @@
+<assignments>
+  <assignment>
+    <empID>E001</empID>
+    <empName>Alice</empName>
+    <proID>P001</proID>
+    <proName>Website Redesign</proName>
+    <workH>20</workH>
+  </assignment>
+
+  <assignment>
+    <empID>E001</empID>
+    <empName>Alice</empName>
+    <proID>P002</proID>
+    <proName>Database Upgrade</proName>
+    <workH>15</workH>
+  </assignment>
+
+  <assignment>
+    <empID>E002</empID>
+    <empName>Bob</empName>
+    <proID>P003</proID>
+    <proName>Mobile App</proName>
+    <workH>25</workH>
+  </assignment>
+
+  <assignment>
+    <empID>E002</empID>
+    <empName>Bob</empName>
+    <proID>P001</proID>
+    <proName>Website Redesign</proName>
+    <workH>10</workH>
+  </assignment>
+
+  <assignment>
+    <empID>E003</empID>
+    <empName>Carol</empName>
+    <proID>P004</proID>
+    <proName>AI Research</proName>
+    <workH>30</workH>
+  </assignment>
+</assignments>

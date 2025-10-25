@@ -1,0 +1,39 @@
+{
+  "assignments": [
+    {
+      "empID": "E001",
+      "empName": "Alice",
+      "proID": "P001",
+      "proName": "Website Redesign",
+      "workH": 20
+    },
+    {
+      "empID": "E001",
+      "empName": "Alice",
+      "proID": "P002",
+      "proName": "Database Upgrade",
+      "workH": 15
+    },
+    {
+      "empID": "E002",
+      "empName": "Bob",
+      "proID": "P003",
+      "proName": "Mobile App",
+      "workH": 25
+    },
+    {
+      "empID": "E002",
+      "empName": "Bob",
+      "proID": "P001",
+      "proName": "Website Redesign",
+      "workH": 10
+    },
+    {
+      "empID": "E003",
+      "empName": "Carol",
+      "proID": "P004",
+      "proName": "AI Research",
+      "workH": 30
+    }
+  ]
+}

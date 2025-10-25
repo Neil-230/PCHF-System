@@ -1,0 +1,67 @@
+.headerMes {
+  border-top-left-radius: 20px !important;
+  border-bottom-left-radius: 20px !important;
+  border-top-right-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+
+}
+
+.bodyLOG {
+  background-color: rgb(255, 255, 255);
+  border-top-right-radius: 20px !important;
+  border-bottom-right-radius: 20px !important;
+  border-top-left-radius: 0 !important;
+  border-bottom-left-radius: 0 !important;
+  box-shadow: 2px 4px 8px  rgba(123, 123, 123, 0.26);
+}
+
+.EmailINT {
+  border-top: none;
+  border-left: none;
+  border-right: none;
+  border-bottom: 2px solid rgba(78, 78, 78, 0.486) ;
+  outline: none;
+  background: transparent;
+}
+.PassINT {
+  border-top: none;
+  border-left: none;
+  border-right: none;
+  border-bottom: 2px solid rgba(78, 78, 78, 0.486) ;
+  outline: none;
+  background: transparent;
+}
+.FogPa{
+  border-top: none;
+  border-left: none;
+  border-right: none;
+  border-bottom: 2px solid rgba(78, 78, 78, 0.486) ;
+  outline: none;
+  background: transparent;
+}
+
+.EmailINT:focus {
+  background-color: transparent; 
+}
+.PassINT:focus {
+  background-color: transparent;
+}
+
+@media (max-width: 768px){
+  .headerMes {
+    border-top-left-radius: 20px !important;
+    border-top-right-radius: 20px !important;
+    border-bottom-left-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .bodyLOG {
+    background-color: rgb(239, 252, 255);
+    border-bottom-left-radius: 20px !important;
+    border-bottom-right-radius: 20px !important;
+    border-top-left-radius: 0 !important;
+    border-top-right-radius: 0 !important;
+    box-shadow: none !important;
+  }
+}
