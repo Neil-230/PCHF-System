@@ -1,14 +1,15 @@
 import { useState } from "react";
 import type { Product } from "../types";
+import type { User } from "../types/auth";
 import { mockProducts } from "../data/mockData";
-import { Plus, Edit, Search, Package } from "lucide-react";
+import { Plus, Edit, Search, Package, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 import { FileDown } from "lucide-react";
 
-import { Modal, Button, Card } from "react-bootstrap";
+import { Modal, Button } from "react-bootstrap";
 
-export function InventoryManagement() {
+export function InventoryManagement({ user }: { user?: User }) {
   const [products, setProducts] = useState<Product[]>(mockProducts);
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -105,6 +106,17 @@ export function InventoryManagement() {
       sku: product.sku,
       description: product.description || "",
     });
+  };
+
+  const handleDeleteProduct = (productId: string) => {
+    if (!user || user.role !== "owner") {
+      toast.error("Only the owner can delete products");
+      return;
+    }
+    const confirmed = window.confirm("Are you sure you want to delete this product?");
+    if (!confirmed) return;
+    setProducts((prev) => prev.filter((p) => p.id !== productId));
+    toast.success("Product deleted");
   };
 
   // color codes. aypag bout bout sa color ako rabay UI 
@@ -386,6 +398,14 @@ export function InventoryManagement() {
                       >
                         <Edit size={16} />
                       </button>
+                      {user?.role === "owner" && (
+                        <button
+                          className="btn btn-outline-danger btn-sm ms-2"
+                          onClick={() => handleDeleteProduct(product.id)}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
                     </td>
                   </tr>
                 );

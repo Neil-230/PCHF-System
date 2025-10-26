@@ -207,7 +207,7 @@ export function SignUp({ onSignUp, onSwitchToLogin }: SignUpProps) {
                         }}
                       >
                         <FcGoogle size={20} className="me-2" />
-                        Sign in with Google
+                        Sign up with Google
                       </button>
                     </div>
 

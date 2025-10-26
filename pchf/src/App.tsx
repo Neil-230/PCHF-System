@@ -8,11 +8,11 @@ import { InventoryManagement } from "./components/InventoryManagement";
 import { TransactionHistory } from "./components/TransactionHistory";
 import { Settings } from "./components/Settings";
 import { PointOfSale } from "./components/PointOfSales";
-import { AuthService } from "./data/authData";
 import { AuthWrapper } from "./components/auth/AuthWrapper";
 import type { Transaction } from "./types";
 import type { User } from "./types/auth";
 import { mockTransactions } from "./data/mockData";
+import apiService from "./services/api";
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -21,30 +21,27 @@ export default function App() {
   const [transactions, setTransactions] = useState<Transaction[]>(mockTransactions);
 
   useEffect(() => {
-    AuthService.initializeUsers();
-    const CurrentUser = AuthService.getCurrentUser();
-    if (CurrentUser) {
-      setUser(CurrentUser);
-      if (["admin", "owner"].includes(CurrentUser.role)) {
-        setActiveTab("dashboard");
-      } else {
-        setActiveTab("pos");
-      }
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+      setIsLoading(false);
+      return;
     }
-    setIsLoading(false);
+    apiService
+      .getCurrentUser()
+      .then(({ user }) => {
+        setUser(user);
+        setActiveTab("dashboard");
+      })
+      .finally(() => setIsLoading(false));
   }, []);
 
   const handleAuthSuccess = (authenticatedUser: User) => {
     setUser(authenticatedUser);
-    if (["admin", "owner"].includes(authenticatedUser.role)) {
-      setActiveTab("dashboard");
-    } else {
-      setActiveTab("pos");
-    }
+    setActiveTab("dashboard");
   };
 
   const handleLogout = () => {
-    AuthService.logout();
+    apiService.clearToken();
     setUser(null);
     setActiveTab("pos");
   };
@@ -74,7 +71,7 @@ export default function App() {
       case "pos":
         return <PointOfSale user={user} onTransactionComplete={handleTransactionComplete} />;
       case "inventory":
-        return <InventoryManagement />;
+        return <InventoryManagement user={user} />;
       case "transactions":
         return (
           <TransactionHistory

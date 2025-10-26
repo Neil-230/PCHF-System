@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 import { createContext, useContext, useState } from "react";
-import { Login } from "./Login";
-import { SignUp } from "./SignUp";
+import { LoginUpdated } from "./LoginUpdated";
+import { SignUpUpdated } from "./SignUpUpdated";
 import type { User } from "../../types/auth";
-import { AuthService } from "../../data/authData";
+import apiService from "../../services/api";
 
 interface AuthWrapperProps {
   children?: ReactNode; // allow wrapping the whole app
@@ -31,13 +31,15 @@ export function AuthWrapper({ children, onAuthSuccess }: AuthWrapperProps) {
   const [user, setUser] = useState<User | null>(null);
 
   const login = (email: string, password: string): boolean => {
-    const foundUser = AuthService.login(email, password);
-    if (foundUser) {
-      setUser(foundUser);
-      onAuthSuccess?.(foundUser);
-      return true;
-    }
-    return false;
+    // Token is set by LoginUpdated on successful login; fetch current user from backend
+    apiService
+      .getCurrentUser()
+      .then(({ user }) => {
+        setUser(user);
+        onAuthSuccess?.(user);
+      })
+      .catch(() => {});
+    return true;
   };
 
   const signUp = (
@@ -46,12 +48,9 @@ export function AuthWrapper({ children, onAuthSuccess }: AuthWrapperProps) {
     password: string,
     role: "admin" | "cashier"
   ): boolean => {
-    const newUser = AuthService.signUp(name, email, password, role);
-    if (newUser) {
-      setIsLoginMode(true); // switch to login
-      return true;
-    }
-    return false;
+    // API-based signup handled inside SignUpUpdated; keep interface compatibility
+    setIsLoginMode(true);
+    return true;
   };
 
   const logout = () => {
@@ -62,9 +61,9 @@ export function AuthWrapper({ children, onAuthSuccess }: AuthWrapperProps) {
   // If no user logged in → show login/signup
   if (!user) {
     return isLoginMode ? (
-      <Login onLogin={login} onSwitchToSignUp={() => setIsLoginMode(false)} />
+      <LoginUpdated onLogin={login} onSwitchToSignUp={() => setIsLoginMode(false)} />
     ) : (
-      <SignUp onSignUp={signUp} onSwitchToLogin={() => setIsLoginMode(true)} />
+      <SignUpUpdated onSignUp={signUp} onSwitchToLogin={() => setIsLoginMode(true)} />
     );
   }
 

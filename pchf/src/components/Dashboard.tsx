@@ -27,6 +27,7 @@ import { AuthService } from "../data/authData";
 import { useAuth } from "./auth/AuthWrapper"; //ayaw ni ninyo i delete for future updates ni
 import { toast } from "sonner";
 import type { User } from "../types/auth";
+import apiService from "../services/api";
 
 ChartJS.register(
   CategoryScale,
@@ -46,27 +47,56 @@ interface DashboardProps {
 export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
   const today = new Date();
   const [pendingAdmins, setPendingAdmins] = useState<any[]>([]);
+  const [metrics, setMetrics] = useState<any | null>(null);
 
   // Load pending admins (only for owner)
   useEffect(() => {
     if (CurrentUser?.role === "owner") {
-      const pending = AuthService.getPendingAdmins();
-      setPendingAdmins(pending);
+      // Try backend, fallback to local AuthService
+      apiService
+        .getPendingAdmins()
+        .then(({ pending }) => setPendingAdmins(pending))
+        .catch(() => {
+          const pending = AuthService.getPendingAdmins();
+          setPendingAdmins(pending);
+        });
     }
   }, [CurrentUser]);
 
   // Approve / Decline Handlers
-  const handleApprove = (id: string) => {
-    AuthService.approveAdmin(id);
-    setPendingAdmins(AuthService.getPendingAdmins());
-    toast.success("Admin approved successfully");
+  const handleApprove = async (email: string) => {
+    try {
+      await apiService.approveAdmin(email);
+      const { pending } = await apiService.getPendingAdmins();
+      setPendingAdmins(pending);
+      toast.success("Admin approved successfully");
+    } catch {
+      AuthService.approveAdmin(email);
+      setPendingAdmins(AuthService.getPendingAdmins());
+      toast.success("Admin approved successfully");
+    }
   };
 
-  const handleDecline = (id: string) => {
-    AuthService.declineAdmin(id);
-    setPendingAdmins(AuthService.getPendingAdmins());
-    toast.error("Admin request declined");
+  const handleDecline = async (email: string) => {
+    try {
+      await apiService.declineAdmin(email);
+      const { pending } = await apiService.getPendingAdmins();
+      setPendingAdmins(pending);
+      toast.error("Admin request declined");
+    } catch {
+      AuthService.declineAdmin(email);
+      setPendingAdmins(AuthService.getPendingAdmins());
+      toast.error("Admin request declined");
+    }
   };
+
+  // Fetch metrics from backend, fallback to local computations
+  useEffect(() => {
+    apiService
+      .getDashboardMetrics()
+      .then((data) => setMetrics(data))
+      .catch(() => setMetrics(null));
+  }, [transactions]);
 
   // --- Dashboard Data ---
   const todayTransactions = transactions.filter((t) => {
@@ -74,8 +104,8 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
     return transactionDate.toDateString() === today.toDateString();
   });
 
-  const todaySales = todayTransactions.reduce((sum, t) => sum + t.total, 0);
-  const todayItemsSold = todayTransactions.reduce(
+  const todaySalesCalc = todayTransactions.reduce((sum, t) => sum + t.total, 0);
+  const todayItemsSoldCalc = todayTransactions.reduce(
     (sum, t) =>
       sum +
       t.items.reduce((itemSum: number, item: any) => itemSum + item.quantity, 0),
@@ -92,6 +122,16 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
     (sum, p) => sum + p.price * p.stock,
     0
   );
+
+  const displayTodaySales = (metrics?.todaySales ?? todaySalesCalc);
+  const displayTodayTransactions = (metrics?.todayTransactions ?? todayTransactions.length);
+  const displayTodayItemsSold = (metrics?.todayItemsSold ?? todayItemsSoldCalc);
+  const displayTotalProducts = (metrics?.totalProducts ?? totalProducts);
+  const displayTotalStock = (metrics?.totalStock ?? totalStock);
+  const displayLowStockItems = (metrics?.lowStockItems ?? lowStockItems);
+  const displayOutOfStockItems = (metrics?.outOfStockItems ?? outOfStockItems);
+  const displayInventoryValue = (metrics?.inventoryValue ?? inventoryValue);
+  const recentTransactions = (metrics?.recentTransactions?.length ? metrics.recentTransactions : transactions);
 
   const salesData = {
     labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
@@ -200,13 +240,13 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
                 </div>
                 <div>
                   <button
-                    onClick={() => handleApprove(admin.id)}
+                    onClick={() => handleApprove(admin.email)}
                     className="btn btn-sm btn-success me-2"
                   >
                     <Check size={14} /> Approve
                   </button>
                   <button
-                    onClick={() => handleDecline(admin.id)}
+                    onClick={() => handleDecline(admin.email)}
                     className="btn btn-sm btn-danger"
                   >
                     <X size={14} /> Decline
@@ -228,7 +268,7 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
               <h6>Today's Sales</h6>
               <TrendingUp size={18} />
             </div>
-            <h3>₱{todaySales.toFixed(2)}</h3>
+            <h3>₱{displayTodaySales.toFixed(2)}</h3>
             <small>
               <TrendingUp size={14} /> +12% from yesterday
             </small>
@@ -243,9 +283,9 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
               <h6>Transactions</h6>
               <ShoppingCart size={18} />
             </div>
-            <h3>{todayTransactions.length}</h3>
+            <h3>{displayTodayTransactions}</h3>
             <small>
-              <Users size={14} /> {todayItemsSold} items sold
+              <Users size={14} /> {displayTodayItemsSold} items sold
             </small>
           </div>
         </div>
@@ -258,8 +298,8 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
               <h6>Inventory Value</h6>
               <Package size={18} />
             </div>
-            <h3>₱{inventoryValue.toFixed(2)}</h3>
-            <small>{totalStock} items in stock</small>
+            <h3>₱{displayInventoryValue.toFixed(2)}</h3>
+            <small>{displayTotalStock} items in stock</small>
           </div>
         </div>
 
@@ -272,9 +312,9 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
               <AlertTriangle size={18} color="orange" />
             </div>
             <h3 style={{ color: "orange" }}>
-              {lowStockItems + outOfStockItems}
+              {displayLowStockItems + displayOutOfStockItems}
             </h3>
-            <small>{outOfStockItems} out of stock</small>
+            <small>{displayOutOfStockItems} out of stock</small>
           </div>
         </div>
       </div>
@@ -385,7 +425,7 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
               className="card-body"
               style={{ maxHeight: "255px", overflowY: "auto" }}
             >
-              {transactions.map((transaction) => (
+              {recentTransactions.map((transaction: any) => (
                 <div
                   key={transaction.id}
                   className="d-flex justify-content-between align-items-center mb-2"
@@ -400,12 +440,12 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
                     </p>
                     <small style={{ color: "gray" }}>
                       {new Date(transaction.timestamp).toLocaleTimeString()} •{" "}
-                      {transaction.items.length} items
+                      {(transaction.items || []).length} items
                     </small>
                   </div>
                   <div style={{ textAlign: "right" }}>
                     <p style={{ margin: 0, fontWeight: "500" }}>
-                      ₱{transaction.total.toFixed(2)}
+                      ₱{Number(transaction.total).toFixed(2)}
                     </p>
                     <small
                       style={{

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import type { Product, CartItem } from "../types";
-import { mockProducts, categories, mockTransactions } from "../data/mockData";
+import { mockProducts, categories } from "../data/mockData";
 import { Search } from "lucide-react";
 import "./css/PointOfSales.css";
 import { Modal, Button, Card } from "react-bootstrap";
@@ -9,6 +9,7 @@ import { CardTitle, CardHeader, CardContent } from "./ui/card";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { toast } from "react-hot-toast"; //toasterrrrrrr
+import apiService from "../services/api";
 
 
 
@@ -52,6 +53,7 @@ export function PointOfSale({ onTransactionComplete, user }: PointOfSaleProps) {
   const [isNameDialogOpen, setIsNameDialogOpen] = useState(true);
   const [hasEnteredName, setHasEnteredName] = useState(false);
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [products, setProducts] = useState<Product[]>(mockProducts);
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
@@ -72,6 +74,17 @@ export function PointOfSale({ onTransactionComplete, user }: PointOfSaleProps) {
     if (saved) setStoreSettings(JSON.parse(saved));
   }, []);
 
+  useEffect(() => {
+    apiService
+      .getProducts()
+      .then(({ products }) => {
+        setProducts(products);
+      })
+      .catch(() => {
+        // keep mockProducts if backend not available
+      });
+  }, []);
+
   const removeFromCart = (productId: string) => {
     setCart((prev) => prev.filter((item) => item.product.id !== productId));
   };
@@ -84,7 +97,7 @@ export function PointOfSale({ onTransactionComplete, user }: PointOfSaleProps) {
 
   };
 
-  const filteredProducts = mockProducts.filter((product) => {
+  const filteredProducts = products.filter((product) => {
     const matchesCategory =
       selectedCategory === "All" || product.category === selectedCategory;
     const matchesSearch =
@@ -150,7 +163,7 @@ export function PointOfSale({ onTransactionComplete, user }: PointOfSaleProps) {
   const deliveryFee = deliveryType === "Delivery" ? deliveryFeeValue : 0;
   const total = subtotal + tax + deliveryFee;
 
-  const handleConfirmPayment = () => {
+  const handleConfirmPayment = async () => {
     if (cart.length === 0) return toast.error("Cart is empty");
     const cash = parseFloat(cashAmount);
     if (isNaN(cash) || cash <= 0) return toast.error("Enter valid cash");
@@ -159,28 +172,27 @@ export function PointOfSale({ onTransactionComplete, user }: PointOfSaleProps) {
     const change = cash - total;
     const isDelivery = deliveryType === "Delivery";
 
-    const transaction: Transaction = {
-      id: `TXN${Date.now()}`,
-      items: cart,
+    const payload = {
+      items: cart.map((i) => ({ productId: i.product.id, quantity: i.quantity })),
       subtotal,
       tax,
+      deliveryFee: isDelivery ? deliveryFeeValue : 0,
       total,
       customerName,
       customerContact,
       customerAddress,
-      timestamp: new Date(),
-      status: "completed",
       paymentMethod: "Cash",
-      handledBy: {
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
       isDelivery,
-      deliveryFee: isDelivery ? deliveryFeeValue : undefined,
     };
 
-    mockTransactions.push(transaction);
+    let saved: any | null = null;
+    try {
+      const res = await apiService.createTransaction(payload);
+      saved = res.transaction;
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to save transaction");
+      return;
+    }
 
     // --- PDF receipt ---
     const doc = new jsPDF({
@@ -208,8 +220,8 @@ export function PointOfSale({ onTransactionComplete, user }: PointOfSaleProps) {
     doc.text(`Address: ${customerAddress}`, 10, 37);
     doc.text(`Type: ${deliveryType}`, 10, 41);
     doc.text(`Date: ${formattedDate}`, 10, 45);
-    doc.text(`Transaction ID: ${transaction.id}`, 10, 49);
-    doc.text(`Payment: ${transaction.paymentMethod}`, 10, 53);
+    doc.text(`Transaction ID: ${saved.id}`, 10, 49);
+    doc.text(`Payment: Cash`, 10, 53);
     doc.text("----------------------------------------------------------------", 40, 56, { align: "center" });
 
     const tableData = cart.map((item) => [
@@ -248,7 +260,34 @@ export function PointOfSale({ onTransactionComplete, user }: PointOfSaleProps) {
     doc.text(storeSettings.footerMessage, 40, finalY + (isDelivery ? 49 : 45), { align: "center" });
     doc.save(`receipt_${customerName}.pdf`);
 
-    onTransactionComplete(transaction);
+    const uiTransaction: Transaction = {
+      id: saved.id,
+      items: (saved.items || []).map((i: any) => ({
+        product: {
+          id: i.productId,
+          name: i.name,
+          price: i.price,
+          category: "",
+          stock: 0,
+          sku: i.sku,
+        },
+        quantity: i.quantity,
+      })),
+      subtotal: saved.subtotal,
+      tax: saved.tax,
+      total: saved.total,
+      customerName: saved.customerName,
+      customerContact: saved.customerContact,
+      customerAddress: saved.customerAddress,
+      timestamp: new Date(saved.timestamp),
+      status: saved.status || "completed",
+      paymentMethod: saved.paymentMethod || "Cash",
+      handledBy: saved.handledBy || { name: user.name, email: user.email, role: user.role },
+      isDelivery: !!saved.isDelivery,
+      deliveryFee: saved.deliveryFee,
+    };
+
+    onTransactionComplete(uiTransaction);
     toast.success(`${deliveryType} transaction completed`);
     setCart([]);
     setCashAmount("");
@@ -259,6 +298,11 @@ export function PointOfSale({ onTransactionComplete, user }: PointOfSaleProps) {
     setDeliveryType("Walk-in");
     setHasEnteredName(false);
     setIsNameDialogOpen(true);
+
+    try {
+      const { products } = await apiService.getProducts();
+      setProducts(products);
+    } catch {}
   };
 
   return (

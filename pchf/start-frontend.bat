@@ -1,0 +1,3 @@
+@echo off
+echo Starting frontend development server...
+node node_modules/vite/bin/vite.js

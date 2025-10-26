@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { AuthService, defaultPasswords } from "../data/authData";
+import apiService from "../services/api";
 
 /* ---------- Types ---------- */
 interface StoreSettings {
@@ -100,6 +101,14 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user 
           dataBackup: false,
         };
   });
+
+  const [deletion, setDeletion] = useState<{ scheduledFor: string | null; daysRemaining: number | null } | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState("");
+  const [loadingDeletion, setLoadingDeletion] = useState(false);
+
+  useEffect(() => {
+    apiService.getDeletionStatus().then(setDeletion).catch(() => setDeletion(null));
+  }, []);
 
   /* ---------- Save Settings ---------- */
   const handleSaveSettings = () => {
@@ -352,6 +361,69 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user 
           <div>
             <button className="btn btn-dark" onClick={openChangePasswordModal}>Change password</button>
           </div>
+        </div>
+      </div>
+
+      <div className="card mb-4" style={{ borderRadius: "12px", boxShadow: "2px 4px 8px rgba(0,0,0,0.15)" }}>
+        <div className="card-header bg-0 text-dark fw-bold">Account Deletion</div>
+        <div className="card-body">
+          {deletion && deletion.scheduledFor ? (
+            <div className="d-flex flex-column gap-2">
+              <div>
+                <strong>Scheduled for:</strong> {new Date(deletion.scheduledFor).toLocaleString()}
+              </div>
+              <div>
+                <strong>Days remaining:</strong> {deletion.daysRemaining}
+              </div>
+              <button
+                className="btn btn-outline-secondary"
+                disabled={loadingDeletion}
+                onClick={async () => {
+                  setLoadingDeletion(true);
+                  try {
+                    const res = await apiService.cancelDeletion();
+                    setDeletion(res);
+                    toast.success("Deletion canceled");
+                  } catch (e: any) {
+                    toast.error(e?.message || "Failed to cancel");
+                  } finally {
+                    setLoadingDeletion(false);
+                  }
+                }}
+              >
+                Cancel Deletion
+              </button>
+            </div>
+          ) : (
+            <div className="d-flex flex-column gap-2">
+              <small className="text-muted">Type DELETE to confirm scheduling account deletion in 30 days.</small>
+              <input
+                type="text"
+                className="form-control"
+                value={confirmDelete}
+                onChange={(e) => setConfirmDelete(e.target.value)}
+                placeholder="Type DELETE"
+              />
+              <button
+                className="btn btn-danger"
+                disabled={loadingDeletion || confirmDelete !== "DELETE"}
+                onClick={async () => {
+                  setLoadingDeletion(true);
+                  try {
+                    const res = await apiService.requestDeletion();
+                    setDeletion(res);
+                    toast.success("Deletion scheduled in 30 days");
+                  } catch (e: any) {
+                    toast.error(e?.message || "Failed to schedule");
+                  } finally {
+                    setLoadingDeletion(false);
+                  }
+                }}
+              >
+                Delete Account
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
