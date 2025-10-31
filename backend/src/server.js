@@ -58,6 +58,7 @@ const setupRoutes = async () => {
     const { default: productRoutes } = await import('./routes/products.js');
     const { default: transactionRoutes } = await import('./routes/transactions.js');
     const { default: dashboardRoutes } = await import('./routes/dashboard.js');
+    const { default: settingsRoutes } = await import('./routes/settings.js');
     
     // Setup routes
     app.use('/api/auth', authRoutes);
@@ -65,6 +66,7 @@ const setupRoutes = async () => {
     app.use('/api/products', productRoutes);
     app.use('/api/transactions', transactionRoutes);
     app.use('/api/dashboard', dashboardRoutes);
+    app.use('/api/settings', settingsRoutes);
   } catch (error) {
     console.error('Error setting up routes:', error);
     throw error;

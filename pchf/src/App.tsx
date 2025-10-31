@@ -40,7 +40,10 @@ export default function App() {
     setActiveTab("dashboard");
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await apiService.logout();
+    } catch {}
     apiService.clearToken();
     setUser(null);
     setActiveTab("pos");

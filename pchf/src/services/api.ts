@@ -48,6 +48,7 @@ class ApiService {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       ...options,
       headers,
+      credentials: 'include',
     });
 
     if (!response.ok) {
@@ -122,6 +123,10 @@ class ApiService {
     return this.request('/auth/me');
   }
 
+  async logout(): Promise<{ message: string }> {
+    return this.request('/auth/logout', { method: 'POST' });
+  }
+
   // ============ USER ENDPOINTS ============
 
   async getAllUsers(): Promise<{ users: User[] }> {
@@ -193,6 +198,18 @@ class ApiService {
 
   async cancelDeletion(): Promise<{ scheduledFor: null; daysRemaining: null }> {
     return this.request('/users/me/deletion-cancel', { method: 'POST' });
+  }
+
+  // ============ SYSTEM SETTINGS ============
+  async getSystemSettings(): Promise<{ id: string; signupsOpen: boolean; updatedAt: string }> {
+    return this.request('/settings');
+  }
+
+  async setSignupsOpen(signupsOpen: boolean): Promise<{ id: string; signupsOpen: boolean; updatedAt: string }> {
+    return this.request('/settings/signups-open', {
+      method: 'POST',
+      body: JSON.stringify({ signupsOpen })
+    });
   }
 }
 

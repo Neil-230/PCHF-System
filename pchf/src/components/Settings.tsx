@@ -75,6 +75,7 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user 
   const isCashier = currentRole === "cashier";
   const canAccessStoreSettings = currentRole === "admin" || currentRole === "owner";
   /* ---------- States ---------- */
+  const [signupsOpen, setSignupsOpen] = useState<boolean | null>(null);
   const [storeSettings, setStoreSettings] = useState<StoreSettings>(() => {
     const saved = localStorage.getItem("storeSettings");
     return saved
@@ -109,6 +110,14 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user 
   useEffect(() => {
     apiService.getDeletionStatus().then(setDeletion).catch(() => setDeletion(null));
   }, []);
+
+  useEffect(() => {
+    if (currentRole === "owner") {
+      apiService.getSystemSettings()
+        .then((s) => setSignupsOpen(!!s.signupsOpen))
+        .catch(() => setSignupsOpen(false));
+    }
+  }, [currentRole]);
 
   /* ---------- Save Settings ---------- */
   const handleSaveSettings = () => {
@@ -325,6 +334,27 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user 
       <div className="card mb-4" style={{ borderRadius: "12px", boxShadow: "2px 4px 8px rgba(0,0,0,0.15)" }}>
         <div className="card-header bg-0 text-dark fw-bold">Security Settings</div>
         <div className="card-body">
+          {currentRole === "owner" && (
+            <div className="form-check form-switch mb-2">
+              <input
+                className="form-check-input"
+                type="checkbox"
+                checked={!!signupsOpen}
+                onChange={async (e) => {
+                  const next = e.target.checked;
+                  try {
+                    const res = await apiService.setSignupsOpen(next);
+                    setSignupsOpen(res.signupsOpen);
+                    toast.success(res.signupsOpen ? "Sign-ups opened" : "Sign-ups closed");
+                  } catch (err: any) {
+                    toast.error(err?.message || "Failed to update setting");
+                  }
+                }}
+                disabled={signupsOpen === null}
+              />
+              <label className="form-check-label">Allow new sign-ups</label>
+            </div>
+          )}
           {/* <div className="form-check form-switch mb-2">
             <input className="form-check-input" type="checkbox" checked={securitySettings.requirePin}
               onChange={(e) => setSecuritySettings({ ...securitySettings, requirePin: e.target.checked })} />

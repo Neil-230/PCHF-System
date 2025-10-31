@@ -86,11 +86,19 @@ const transactionSchema = new mongoose.Schema({
   deliveryFee: { type: Number },
 });
 
+// System Settings Schema (singleton)
+const systemSettingsSchema = new mongoose.Schema({
+  id: { type: String, unique: true, default: 'system' },
+  signupsOpen: { type: Boolean, default: false },
+  updatedAt: { type: Date, default: Date.now }
+});
+
 export const User = mongoose.model('User', userSchema);
 export const PasswordReset = mongoose.model('PasswordReset', passwordResetSchema);
 export const PendingAdmin = mongoose.model('PendingAdmin', pendingAdminSchema);
 export const Product = mongoose.model('Product', productSchema);
 export const Transaction = mongoose.model('Transaction', transactionSchema);
+export const SystemSettings = mongoose.model('SystemSettings', systemSettingsSchema);
 
 export const connectDB = async () => {
   try {

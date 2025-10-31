@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import passport from 'passport';
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
-import { User, PasswordReset, PendingAdmin } from '../database/mongodb.js';
+import { User, PasswordReset, PendingAdmin, SystemSettings } from '../database/mongodb.js';
 import { sendVerificationEmail, sendPasswordResetEmail, sendAdminApprovalEmail } from '../services/emailService.js';
 import { verifyRecaptcha, verifyToken } from '../middleware/auth.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
@@ -33,6 +33,23 @@ router.post('/signup', asyncHandler(async (req, res) => {
 
   if (password.length < 6) {
     return res.status(400).json({ error: 'Password must be at least 6 characters' });
+  }
+
+  // Gate signups unless owner doesn't exist
+  const ownerExists = await User.findOne({ role: 'owner' });
+  if (ownerExists) {
+    const settings = await SystemSettings.findOne({ id: 'system' });
+    if (!settings || !settings.signupsOpen) {
+      return res.status(403).json({ error: 'Sign-ups are currently closed by the owner.' });
+    }
+  }
+
+  // If admin role and already pending approval, block duplicate signup
+  if (role === 'admin') {
+    const existingPending = await PendingAdmin.findOne({ email });
+    if (existingPending) {
+      return res.status(409).json({ error: 'This account is already pending approval. Please wait for owner approval.' });
+    }
   }
 
   // Check if user exists
@@ -148,11 +165,20 @@ router.post('/login', verifyRecaptcha, asyncHandler(async (req, res) => {
     return res.status(403).json({ error: 'Please verify your email before logging in.' });
   }
 
-  // If admin is pending owner approval, block login
+  // Handle admin role depending on owner presence
   if (user.role === 'admin') {
-    const pending = await PendingAdmin.findOne({ email: user.email });
-    if (pending) {
-      return res.status(403).json({ error: 'Please wait for the owner to approve your account.' });
+    const hasOwner = await User.findOne({ role: 'owner' });
+    if (!hasOwner) {
+      // No owner — promote this admin to owner and clear any pending record
+      user.role = 'owner';
+      await user.save();
+      await PendingAdmin.deleteOne({ email: user.email });
+    } else {
+      // Owner exists — if pending, block login
+      const pending = await PendingAdmin.findOne({ email: user.email });
+      if (pending) {
+        return res.status(403).json({ error: 'Please wait for the owner to approve your account.' });
+      }
     }
   }
 
@@ -166,11 +192,11 @@ router.post('/login', verifyRecaptcha, asyncHandler(async (req, res) => {
 }));
 
 // ============ GOOGLE OAUTH ============
-router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'], prompt: 'select_account' }));
 
 router.get('/google/callback', (req, res, next) => {
   const FRONTEND = process.env.FRONTEND_URL || 'http://localhost:5173';
-  passport.authenticate('google', (err, user, info) => {
+  passport.authenticate('google', async (err, user, info) => {
     if (err) {
       return res.redirect(`${FRONTEND}/login?error=oauth_failed`);
     }
@@ -178,6 +204,17 @@ router.get('/google/callback', (req, res, next) => {
       // If user not found, pass minimal profile data to frontend to complete signup (role selection)
       const profile = info && info.profile ? encodeURIComponent(JSON.stringify(info.profile)) : '';
       return res.redirect(`${FRONTEND}/auth/google-callback?signup=required&user=${profile}`);
+    }
+    // If no owner exists, promote admin to owner at login time
+    try {
+      const hasOwner = await User.findOne({ role: 'owner' });
+      if (!hasOwner && user.role === 'admin') {
+        user.role = 'owner';
+        await user.save();
+        await PendingAdmin.deleteOne({ email: user.email });
+      }
+    } catch (e) {
+      console.error('Google callback owner promotion error:', e);
     }
     const token = generateToken(user);
     return res.redirect(`${FRONTEND}/auth/google-callback?token=${token}&user=${encodeURIComponent(JSON.stringify(user.toJSON()))}`);
@@ -190,6 +227,14 @@ router.post('/google-signup-role', asyncHandler(async (req, res) => {
 
   if (!googleId || !name || !email || !role) {
     return res.status(400).json({ error: 'Missing required fields' });
+  }
+
+  // If admin role and already pending approval, block duplicate google signup
+  if (role === 'admin') {
+    const alreadyPending = await PendingAdmin.findOne({ email });
+    if (alreadyPending) {
+      return res.status(409).json({ error: 'This account is already pending approval. Please wait for owner approval.' });
+    }
   }
 
   // Try to find user by Google ID first
@@ -223,6 +268,14 @@ router.post('/google-signup-role', asyncHandler(async (req, res) => {
         user = byEmail;
       }
     } else {
+      // Gate new Google-based signups unless owner doesn't exist
+      const hasOwner = await User.findOne({ role: 'owner' });
+      if (hasOwner) {
+        const settings = await SystemSettings.findOne({ id: 'system' });
+        if (!settings || !settings.signupsOpen) {
+          return res.status(403).json({ error: 'Sign-ups are currently closed by the owner.' });
+        }
+      }
       // Create new user for Google signup
       user = new User({
         id: uuidv4(),
@@ -412,5 +465,22 @@ router.get('/me', verifyToken, asyncHandler(async (req, res) => {
 
   res.json({ user: user.toJSON() });
 }));
+
+// ============ LOGOUT (CLEAR SESSION) ============
+router.post('/logout', (req, res) => {
+  try {
+    if (typeof req.logout === 'function') {
+      // passport 0.6+ requires callback
+      req.logout(() => {});
+    }
+    if (req.session) {
+      req.session.destroy(() => {});
+    }
+    res.clearCookie('connect.sid');
+  } catch (e) {
+    // ignore errors to keep logout idempotent
+  }
+  return res.json({ message: 'Logged out' });
+});
 
 export default router;
