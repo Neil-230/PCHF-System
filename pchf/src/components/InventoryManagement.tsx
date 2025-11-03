@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { Product } from "../types";
 import type { User } from "../types/auth";
 import { mockProducts } from "../data/mockData";
@@ -6,11 +6,13 @@ import { Plus, Edit, Search, Package, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 import { FileDown } from "lucide-react";
+import apiService from "../services/api";
 
 import { Modal, Button } from "react-bootstrap";
 
 export function InventoryManagement({ user }: { user?: User }) {
   const [products, setProducts] = useState<Product[]>(mockProducts);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -44,6 +46,13 @@ export function InventoryManagement({ user }: { user?: User }) {
     });
   };
 
+  useEffect(() => {
+    apiService
+      .getProducts()
+      .then(({ products }) => setProducts(products))
+      .catch(() => {});
+  }, []);
+
   // SKU Generator (e.g., COF001, SNA123) pwedi ni ninyo i Module
   const generateSKU = (category: string) => {
     const prefix = category.substring(0, 3).toUpperCase(); // First 3 letters
@@ -51,7 +60,7 @@ export function InventoryManagement({ user }: { user?: User }) {
     return `${prefix}${randomNum}`;
   };
 
-  const handleAddProduct = () => {
+  const handleAddProduct = async () => {
     if (!formData.name || !formData.price || !formData.category || !formData.stock) {
       toast.error("Please fill in all required fields");
       return;
@@ -59,41 +68,64 @@ export function InventoryManagement({ user }: { user?: User }) {
 
     const skuValue = formData.sku.trim() || generateSKU(formData.category);
 
-    const newProduct: Product = {
-      id: Date.now().toString(),
-      name: formData.name,
-      price: parseFloat(formData.price),
-      category: formData.category,
-      stock: parseInt(formData.stock),
-      sku: skuValue,
-      description: formData.description,
-    };
-
-    setProducts((prev) => [...prev, newProduct]);
-    resetForm();
-    setIsAddDialogOpen(false);
-    toast.success("Product added successfully");
+    try {
+      const created = await apiService.createProduct({
+        name: formData.name,
+        sku: skuValue,
+        category: formData.category,
+        price: parseFloat(formData.price),
+        stock: parseInt(formData.stock),
+        description: formData.description,
+      });
+      setProducts((prev) => [...prev, created.product]);
+      resetForm();
+      setIsAddDialogOpen(false);
+      toast.success("Product added successfully");
+    } catch (e: any) {
+      const newProduct: Product = {
+        id: Date.now().toString(),
+        name: formData.name,
+        price: parseFloat(formData.price),
+        category: formData.category,
+        stock: parseInt(formData.stock),
+        sku: skuValue,
+        description: formData.description,
+      };
+      setProducts((prev) => [...prev, newProduct]);
+      resetForm();
+      setIsAddDialogOpen(false);
+      toast.success("Product added locally");
+    }
   };
 
-  const handleEditProduct = () => {
+  const handleEditProduct = async () => {
     if (!editingProduct) return;
 
-    const updatedProduct: Product = {
-      ...editingProduct,
+    const updates = {
       name: formData.name,
       price: parseFloat(formData.price),
       category: formData.category,
       stock: parseInt(formData.stock),
       sku: formData.sku.trim() || generateSKU(formData.category),
       description: formData.description,
-    };
+    } as any;
 
-    setProducts((prev) =>
-      prev.map((p) => (p.id === editingProduct.id ? updatedProduct : p))
-    );
-    resetForm();
-    setEditingProduct(null);
-    toast.success("Product updated successfully");
+    try {
+      const { product } = await apiService.updateProduct(editingProduct.id, updates);
+      setProducts((prev) => prev.map((p) => (p.id === editingProduct.id ? product : p)));
+      resetForm();
+      setEditingProduct(null);
+      toast.success("Product updated successfully");
+    } catch {
+      const updatedProduct: Product = {
+        ...editingProduct,
+        ...updates,
+      } as Product;
+      setProducts((prev) => prev.map((p) => (p.id === editingProduct.id ? updatedProduct : p)));
+      resetForm();
+      setEditingProduct(null);
+      toast.success("Product updated locally");
+    }
   };
 
   const openEditDialog = (product: Product) => {
@@ -108,15 +140,21 @@ export function InventoryManagement({ user }: { user?: User }) {
     });
   };
 
-  const handleDeleteProduct = (productId: string) => {
+  const handleDeleteProduct = async (productId: string) => {
     if (!user || user.role !== "owner") {
       toast.error("Only the owner can delete products");
       return;
     }
     const confirmed = window.confirm("Are you sure you want to delete this product?");
     if (!confirmed) return;
-    setProducts((prev) => prev.filter((p) => p.id !== productId));
-    toast.success("Product deleted");
+    try {
+      await apiService.deleteProduct(productId);
+      setProducts((prev) => prev.filter((p) => p.id !== productId));
+      toast.success("Product deleted");
+    } catch {
+      setProducts((prev) => prev.filter((p) => p.id !== productId));
+      toast.success("Product deleted locally");
+    }
   };
 
   // color codes. aypag bout bout sa color ako rabay UI 

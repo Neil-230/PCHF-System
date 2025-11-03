@@ -49,9 +49,9 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
   const [pendingAdmins, setPendingAdmins] = useState<any[]>([]);
   const [metrics, setMetrics] = useState<any | null>(null);
 
-  // Load pending admins (only for owner)
+  // Load pending sign-ups (owner or admin)
   useEffect(() => {
-    if (CurrentUser?.role === "owner") {
+    if (CurrentUser?.role === "owner" || CurrentUser?.role === "admin") {
       // Try backend, fallback to local AuthService
       apiService
         .getPendingAdmins()
@@ -69,11 +69,11 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
       await apiService.approveAdmin(email);
       const { pending } = await apiService.getPendingAdmins();
       setPendingAdmins(pending);
-      toast.success("Admin approved successfully");
+      toast.success("Sign-up approved successfully");
     } catch {
       AuthService.approveAdmin(email);
       setPendingAdmins(AuthService.getPendingAdmins());
-      toast.success("Admin approved successfully");
+      toast.success("Sign-up approved successfully");
     }
   };
 
@@ -82,11 +82,11 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
       await apiService.declineAdmin(email);
       const { pending } = await apiService.getPendingAdmins();
       setPendingAdmins(pending);
-      toast.error("Admin request declined");
+      toast.error("Sign-up request declined");
     } catch {
       AuthService.declineAdmin(email);
       setPendingAdmins(AuthService.getPendingAdmins());
-      toast.error("Admin request declined");
+      toast.error("Sign-up request declined");
     }
   };
 
@@ -132,13 +132,16 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
   const displayOutOfStockItems = (metrics?.outOfStockItems ?? outOfStockItems);
   const displayInventoryValue = (metrics?.inventoryValue ?? inventoryValue);
   const recentTransactions = (metrics?.recentTransactions?.length ? metrics.recentTransactions : transactions);
+  const topProducts = metrics?.topProductsByInventoryValue?.length
+    ? metrics.topProductsByInventoryValue
+    : [...mockProducts].sort((a, b) => b.price * b.stock - a.price * a.stock).slice(0, 5);
 
   const salesData = {
-    labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+    labels: metrics?.weeklySales?.labels ?? ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
     datasets: [
       {
         label: "Sales",
-        data: [240, 320, 180, 410, 560, 680, 420],
+        data: metrics?.weeklySales?.data ?? [240, 320, 180, 410, 560, 680, 420],
         borderColor: "#8884d8",
         backgroundColor: "#8884d8",
         fill: false,
@@ -148,10 +151,10 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
   };
 
   const categoryData = {
-    labels: ["Beverages", "Snacks", "Dairy", "Bakery"],
+    labels: metrics?.salesByCategory?.labels ?? ["Beverages", "Snacks", "Dairy", "Bakery"],
     datasets: [
       {
-        data: [35, 25, 20, 20],
+        data: metrics?.salesByCategory?.data ?? [35, 25, 20, 20],
         backgroundColor: ["#8884d8", "#82ca9d", "#ffc658", "#ff7c7c"],
       },
     ],
@@ -181,6 +184,16 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
               Welcome back, {CurrentUser?.name || "User"}!
             </h1>
           </div>
+
+      {Array.isArray(metrics?.notifications) && metrics.notifications.length > 0 && (
+        <div className="alert alert-warning border-0" style={{ boxShadow: "2px 4px 8px rgba(0, 0, 0, 0.10)" }}>
+          <ul style={{ marginBottom: 0 }}>
+            {metrics.notifications.map((n: string, i: number) => (
+              <li key={i}>{n}</li>
+            ))}
+          </ul>
+        </div>
+      )}
           <div className="d-flex">
             <p
               className="p-2 ps-3 rounded-3"
@@ -213,17 +226,17 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
         </span>
       </div>
 
-      {/* Owner Only pending admin approvals  */}
-      {CurrentUser?.role === "owner" && (
+      {/* Pending sign-up approvals (Owner or Admin) */}
+      { (CurrentUser?.role === "owner" || CurrentUser?.role === "admin") && (
         <div
           className="card p-3 mb-4 border-0"
           style={{ boxShadow: "2px 4px 8px rgba(0, 0, 0, 0.10)" }}
         >
           <h6 className="mb-3">
-            Pending Admin Approvals ({pendingAdmins.length})
+            Pending Sign-up Approvals ({pendingAdmins.length})
           </h6>
           {pendingAdmins.length === 0 ? (
-            <p className="text-muted">No pending admin requests.</p>
+            <p className="text-muted">No pending sign-up requests.</p>
           ) : (
             pendingAdmins.map((admin) => (
               <div
@@ -353,12 +366,9 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
           style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}
           >
             <h6>Top Products by Value</h6>
-            {mockProducts
-              .sort((a, b) => b.price * b.stock - a.price * a.stock)
-              .slice(0, 5)
-              .map((product, index) => (
+            {topProducts.map((product: any, index: number) => (
                 <div
-                  key={product.id}
+                  key={product.id || index}
                   className="d-flex justify-content-between align-items-center mb-2"
                   style={{
                     borderBottom: "1px solid #eee",
@@ -386,13 +396,13 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
                         {product.name}
                       </p>
                       <small style={{ color: "gray" }}>
-                        {product.stock} in stock • ₱{product.price.toFixed(2)}
+                        {product.stock} in stock • ₱{Number(product.price).toFixed(2)}
                       </small>
                     </div>
                   </div>
                   <div style={{ textAlign: "right" }}>
                     <p style={{ margin: 0, fontWeight: "500" }}>
-                      ₱{(product.price * product.stock).toFixed(2)}
+                      ₱{(Number(product.price) * Number(product.stock)).toFixed(2)}
                     </p>
                     <small
                       style={{
@@ -401,7 +411,7 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
                         padding: "2px 6px",
                       }}
                     >
-                      {product.category}
+                      {product.category || "Uncategorized"}
                     </small>
                   </div>
                 </div>
@@ -473,20 +483,20 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
           <div className="d-flex justify-content-between text-center">
             <div style={{ flex: 1 }}>
               <h3 style={{ color: "green" }}>
-                {totalProducts - lowStockItems - outOfStockItems}
+                {(displayTotalProducts ?? totalProducts) - (displayLowStockItems ?? lowStockItems) - (displayOutOfStockItems ?? outOfStockItems)}
               </h3>
               <small>Well Stocked</small>
             </div>
             <div style={{ flex: 1 }}>
-              <h3 style={{ color: "orange" }}>{lowStockItems}</h3>
+              <h3 style={{ color: "orange" }}>{displayLowStockItems ?? lowStockItems}</h3>
               <small>Low Stock</small>
             </div>
             <div style={{ flex: 1 }}>
-              <h3 style={{ color: "red" }}>{outOfStockItems}</h3>
+              <h3 style={{ color: "red" }}>{displayOutOfStockItems ?? outOfStockItems}</h3>
               <small>Out of Stock</small>
             </div>
             <div style={{ flex: 1 }}>
-              <h3>{totalProducts}</h3>
+              <h3>{displayTotalProducts ?? totalProducts}</h3>
               <small>Total Products</small>
             </div>
           </div>

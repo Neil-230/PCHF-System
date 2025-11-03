@@ -169,6 +169,26 @@ class ApiService {
     return this.request(`/products${qs ? `?${qs}` : ''}`);
   }
 
+  async createProduct(product: { name: string; sku: string; category?: string; price: number; stock?: number; description?: string }): Promise<{ product: any; message: string }>{
+    return this.request('/products', {
+      method: 'POST',
+      body: JSON.stringify(product),
+    });
+  }
+
+  async updateProduct(id: string, updates: Partial<{ name: string; sku: string; category: string; price: number; stock: number; description: string }>): Promise<{ product: any; message: string }>{
+    return this.request(`/products/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+  }
+
+  async deleteProduct(id: string): Promise<{ message: string }>{
+    return this.request(`/products/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
   // ============ TRANSACTIONS ENDPOINTS ============
   async getTransactions(limit = 50): Promise<{ transactions: any[] }> {
     const qs = `?limit=${encodeURIComponent(String(limit))}`;

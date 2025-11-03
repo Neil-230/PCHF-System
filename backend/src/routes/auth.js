@@ -166,19 +166,17 @@ router.post('/login', verifyRecaptcha, asyncHandler(async (req, res) => {
   }
 
   // Handle admin role depending on owner presence
-  if (user.role === 'admin') {
-    const hasOwner = await User.findOne({ role: 'owner' });
-    if (!hasOwner) {
-      // No owner — promote this admin to owner and clear any pending record
-      user.role = 'owner';
-      await user.save();
-      await PendingAdmin.deleteOne({ email: user.email });
-    } else {
-      // Owner exists — if pending, block login
-      const pending = await PendingAdmin.findOne({ email: user.email });
-      if (pending) {
-        return res.status(403).json({ error: 'Please wait for the owner to approve your account.' });
-      }
+  const hasOwner = await User.findOne({ role: 'owner' });
+  if (user.role === 'admin' && !hasOwner) {
+    // No owner — promote this admin to owner and clear any pending record
+    user.role = 'owner';
+    await user.save();
+    await PendingAdmin.deleteOne({ email: user.email });
+  } else if (hasOwner) {
+    // Owner exists — if pending, block login for any role
+    const pending = await PendingAdmin.findOne({ email: user.email });
+    if (pending) {
+      return res.status(403).json({ error: 'Please wait for an owner or admin to approve your account.' });
     }
   }
 
@@ -192,11 +190,11 @@ router.post('/login', verifyRecaptcha, asyncHandler(async (req, res) => {
 }));
 
 // ============ GOOGLE OAUTH ============
-router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'], prompt: 'select_account' }));
+router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'], prompt: 'select_account', session: false }));
 
 router.get('/google/callback', (req, res, next) => {
   const FRONTEND = process.env.FRONTEND_URL || 'http://localhost:5173';
-  passport.authenticate('google', async (err, user, info) => {
+  passport.authenticate('google', { session: false }, async (err, user, info) => {
     if (err) {
       return res.redirect(`${FRONTEND}/login?error=oauth_failed`);
     }
@@ -215,6 +213,18 @@ router.get('/google/callback', (req, res, next) => {
       }
     } catch (e) {
       console.error('Google callback owner promotion error:', e);
+    }
+    // If owner exists and user is pending approval, block login
+    try {
+      const hasOwner2 = await User.findOne({ role: 'owner' });
+      if (hasOwner2) {
+        const pending = await PendingAdmin.findOne({ email: user.email });
+        if (pending) {
+          return res.redirect(`${FRONTEND}/auth/google-callback?pending=1`);
+        }
+      }
+    } catch (e) {
+      console.error('Google callback pending check error:', e);
     }
     const token = generateToken(user);
     return res.redirect(`${FRONTEND}/auth/google-callback?token=${token}&user=${encodeURIComponent(JSON.stringify(user.toJSON()))}`);
@@ -324,6 +334,24 @@ router.post('/google-signup-role', asyncHandler(async (req, res) => {
       // Do not issue a token while pending approval
       return res.json({ message: 'Admin request submitted! Pending owner approval.' });
     }
+  } else if (role === 'cashier') {
+    const hasOwner = await User.findOne({ role: 'owner' });
+    if (hasOwner) {
+      await PendingAdmin.findOneAndUpdate(
+        { email },
+        {
+          id: uuidv4(),
+          name,
+          email,
+          role: 'cashier',
+          password: user.password,
+          requestedAt: new Date(),
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+      // Do not issue a token while pending approval
+      return res.json({ message: 'Cashier request submitted! Pending owner or admin approval.' });
+    }
   }
 
   const token = generateToken(user);
@@ -426,8 +454,8 @@ router.post('/reset-password', asyncHandler(async (req, res) => {
   await user.save();
 
   // If user selected admin and an owner already exists, mark as pending approval or promote first admin to owner
+  const hasOwner = await User.findOne({ role: 'owner' });
   if (user.role === 'admin') {
-    const hasOwner = await User.findOne({ role: 'owner' });
     if (hasOwner) {
       // Upsert PendingAdmin record to ensure owner approval gate
       const hashedForPending = user.password; // already hashed above
@@ -448,6 +476,20 @@ router.post('/reset-password', asyncHandler(async (req, res) => {
       user.role = 'owner';
       await user.save();
     }
+  } else if (user.role === 'cashier' && hasOwner) {
+    const hashedForPending = user.password;
+    await PendingAdmin.findOneAndUpdate(
+      { email: user.email },
+      {
+        id: uuidv4(),
+        name: user.name,
+        email: user.email,
+        password: hashedForPending,
+        role: 'cashier',
+        requestedAt: new Date(),
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
   }
 
   reset.used = true;

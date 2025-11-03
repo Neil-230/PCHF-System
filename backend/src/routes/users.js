@@ -42,8 +42,8 @@ router.put('/:id', verifyToken, asyncHandler(async (req, res) => {
 
 // ============ GET PENDING ADMINS ============
 router.get('/admin/pending', verifyToken, asyncHandler(async (req, res) => {
-  if (req.user.role !== 'owner') {
-    return res.status(403).json({ error: 'Only owner can view pending admins' });
+  if (req.user.role !== 'owner' && req.user.role !== 'admin') {
+    return res.status(403).json({ error: 'Only owner or admin can view pending sign-ups' });
   }
 
   const pending = await PendingAdmin.find({});
@@ -52,8 +52,8 @@ router.get('/admin/pending', verifyToken, asyncHandler(async (req, res) => {
 
 // ============ APPROVE ADMIN ============
 router.post('/admin/approve/:email', verifyToken, asyncHandler(async (req, res) => {
-  if (req.user.role !== 'owner') {
-    return res.status(403).json({ error: 'Only owner can approve admins' });
+  if (req.user.role !== 'owner' && req.user.role !== 'admin') {
+    return res.status(403).json({ error: 'Only owner or admin can approve sign-ups' });
   }
 
   const email = req.params.email;
@@ -62,10 +62,14 @@ router.post('/admin/approve/:email', verifyToken, asyncHandler(async (req, res) 
     return res.status(404).json({ error: 'Pending admin not found' });
   }
 
-  // If user already exists, just ensure role is admin
+  // Approve pending user by role (admin or cashier)
+  const roleToApprove = adminToApprove.role || 'admin';
+
+  // If user already exists, update role accordingly; otherwise create
   let user = await User.findOne({ email });
   if (user) {
-    user.role = 'admin';
+    user.role = roleToApprove;
+    if (!user.isVerified) user.isVerified = true;
     await user.save();
   } else {
     user = new User({
@@ -73,23 +77,24 @@ router.post('/admin/approve/:email', verifyToken, asyncHandler(async (req, res) 
       name: adminToApprove.name,
       email: adminToApprove.email,
       password: adminToApprove.password,
-      role: 'admin',
+      role: roleToApprove,
       isVerified: true,
-      loginMethods: ['password'],
-      passwordCreatedManually: true,
+      loginMethods: adminToApprove.googleId ? ['google'] : ['password'],
+      passwordCreatedManually: !adminToApprove.googleId,
+      googleId: adminToApprove.googleId || undefined,
     });
     await user.save();
   }
 
   await PendingAdmin.deleteOne({ email });
 
-  res.json({ message: 'Admin approved', user: user.toJSON() });
+  res.json({ message: `${roleToApprove.charAt(0).toUpperCase() + roleToApprove.slice(1)} approved`, user: user.toJSON() });
 }));
 
 // ============ DECLINE ADMIN ============
 router.post('/admin/decline/:email', verifyToken, asyncHandler(async (req, res) => {
-  if (req.user.role !== 'owner') {
-    return res.status(403).json({ error: 'Only owner can decline admins' });
+  if (req.user.role !== 'owner' && req.user.role !== 'admin') {
+    return res.status(403).json({ error: 'Only owner or admin can decline sign-ups' });
   }
 
   const result = await PendingAdmin.deleteOne({ email: req.params.email });
@@ -97,7 +102,7 @@ router.post('/admin/decline/:email', verifyToken, asyncHandler(async (req, res) 
     return res.status(404).json({ error: 'Pending admin not found' });
   }
 
-  res.json({ message: 'Admin request declined' });
+  res.json({ message: 'Sign-up request declined' });
 }));
 
 // ============ ACCOUNT DELETION (30-DAY GRACE) ============
