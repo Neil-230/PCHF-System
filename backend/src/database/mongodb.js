@@ -90,6 +90,14 @@ const transactionSchema = new mongoose.Schema({
 const systemSettingsSchema = new mongoose.Schema({
   id: { type: String, unique: true, default: 'system' },
   signupsOpen: { type: Boolean, default: false },
+  // Store info for receipts and POS defaults
+  storeName: { type: String, default: 'My Store' },
+  storeAddress: { type: String, default: '123 Main St, City, State 12345' },
+  phone: { type: String, default: '+63 912 345 6789' },
+  email: { type: String, default: 'store@example.com' },
+  taxRate: { type: Number, default: 10 },
+  currency: { type: String, default: 'PHP' },
+  footerMessage: { type: String, default: 'Thank you for your purchase! Please come again.' },
   updatedAt: { type: Date, default: Date.now }
 });
 

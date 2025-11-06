@@ -48,6 +48,7 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
   const today = new Date();
   const [pendingAdmins, setPendingAdmins] = useState<any[]>([]);
   const [metrics, setMetrics] = useState<any | null>(null);
+  const [products, setProducts] = useState<any[]>([]);
 
   // Load pending sign-ups (owner or admin)
   useEffect(() => {
@@ -98,6 +99,14 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
       .catch(() => setMetrics(null));
   }, [transactions]);
 
+  // Fetch products for fallback and other computations
+  useEffect(() => {
+    apiService
+      .getProducts()
+      .then(({ products }) => setProducts(products))
+      .catch(() => {});
+  }, []);
+
   // --- Dashboard Data ---
   const todayTransactions = transactions.filter((t) => {
     const transactionDate = new Date(t.timestamp);
@@ -112,14 +121,15 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
     0
   );
 
-  const totalProducts = mockProducts.length;
-  const totalStock = mockProducts.reduce((sum, p) => sum + p.stock, 0);
-  const lowStockItems = mockProducts.filter(
-    (p) => p.stock <= 10 && p.stock > 0
+  const productSource = (products?.length ? products : mockProducts);
+  const totalProducts = productSource.length;
+  const totalStock = productSource.reduce((sum: number, p: any) => sum + p.stock, 0);
+  const lowStockItems = productSource.filter(
+    (p: any) => p.stock <= 10 && p.stock > 0
   ).length;
-  const outOfStockItems = mockProducts.filter((p) => p.stock === 0).length;
-  const inventoryValue = mockProducts.reduce(
-    (sum, p) => sum + p.price * p.stock,
+  const outOfStockItems = productSource.filter((p: any) => p.stock === 0).length;
+  const inventoryValue = productSource.reduce(
+    (sum: number, p: any) => sum + p.price * p.stock,
     0
   );
 
@@ -132,9 +142,27 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
   const displayOutOfStockItems = (metrics?.outOfStockItems ?? outOfStockItems);
   const displayInventoryValue = (metrics?.inventoryValue ?? inventoryValue);
   const recentTransactions = (metrics?.recentTransactions?.length ? metrics.recentTransactions : transactions);
-  const topProducts = metrics?.topProductsByInventoryValue?.length
-    ? metrics.topProductsByInventoryValue
-    : [...mockProducts].sort((a, b) => b.price * b.stock - a.price * a.stock).slice(0, 5);
+  const hasBackendTop = Array.isArray(metrics?.topProductsByInventoryValue);
+  const computedFromProducts = (products && products.length > 0)
+    ? [...products].sort((a: any, b: any) => b.price * b.stock - a.price * a.stock).slice(0, 5)
+    : [];
+  const topProducts = hasBackendTop
+    ? metrics!.topProductsByInventoryValue
+    : computedFromProducts;
+
+  // Notifications data
+  const fallbackLowList = productSource
+    .filter((p: any) => p.stock > 0 && p.stock <= 10)
+    .sort((a: any, b: any) => a.stock - b.stock)
+    .slice(0, 10)
+    .map((p: any) => ({ id: p.id, name: p.name, sku: p.sku, stock: p.stock }));
+  const fallbackOutList = productSource
+    .filter((p: any) => p.stock === 0)
+    .sort((a: any, b: any) => String(a.name).localeCompare(String(b.name)))
+    .slice(0, 10)
+    .map((p: any) => ({ id: p.id, name: p.name, sku: p.sku, stock: p.stock }));
+  const notificationsLow = (metrics?.notificationsDetail?.lowStock as any[]) ?? fallbackLowList;
+  const notificationsOut = (metrics?.notificationsDetail?.outOfStock as any[]) ?? fallbackOutList;
 
   const salesData = {
     labels: metrics?.weeklySales?.labels ?? ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
@@ -332,6 +360,57 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
         </div>
       </div>
 
+      {/* Notifications */}
+      <div className="row g-3 mt-1">
+        <div className="col-12">
+          <div className="card p-3 border-0" style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}>
+            <h6 className="mb-2">Notifications</h6>
+            {notificationsLow.length === 0 && notificationsOut.length === 0 ? (
+              <p className="text-muted">No notifications.</p>
+            ) : (
+              <div className="row">
+                <div className="col-md-6">
+                  <div className="mb-2 d-flex align-items-center gap-2">
+                    <AlertTriangle size={16} color="red" />
+                    <strong>Out of Stock ({notificationsOut.length})</strong>
+                  </div>
+                  {notificationsOut.length === 0 ? (
+                    <small className="text-muted">None</small>
+                  ) : (
+                    <ul className="list-unstyled mb-0">
+                      {notificationsOut.map((p: any) => (
+                        <li key={p.id} className="d-flex justify-content-between border-bottom py-1">
+                          <span>{p.name} <small className="text-muted">({p.sku})</small></span>
+                          <span className="badge bg-danger">0</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+                <div className="col-md-6">
+                  <div className="mb-2 d-flex align-items-center gap-2">
+                    <AlertTriangle size={16} color="orange" />
+                    <strong>Low Stock (≤ 10) ({notificationsLow.length})</strong>
+                  </div>
+                  {notificationsLow.length === 0 ? (
+                    <small className="text-muted">None</small>
+                  ) : (
+                    <ul className="list-unstyled mb-0">
+                      {notificationsLow.map((p: any) => (
+                        <li key={p.id} className="d-flex justify-content-between border-bottom py-1">
+                          <span>{p.name} <small className="text-muted">({p.sku})</small></span>
+                          <span className="badge bg-secondary">{p.stock}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* Charts yeahhhhhhhhh  */}
       <div className="row mt-4">
         <div className="col-lg-6">
@@ -366,6 +445,9 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
           style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}
           >
             <h6>Top Products by Value</h6>
+            {topProducts.length === 0 && (
+              <p className="text-muted mb-2">No products to display.</p>
+            )}
             {topProducts.map((product: any, index: number) => (
                 <div
                   key={product.id || index}

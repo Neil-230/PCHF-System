@@ -35,6 +35,37 @@ export default function App() {
       .finally(() => setIsLoading(false));
   }, []);
 
+  const loadTransactions = async () => {
+    try {
+      const { transactions } = await apiService.getTransactions({ limit: 200 });
+      // Map backend items to frontend Transaction type
+      const mapped: Transaction[] = transactions.map((t: any) => ({
+        id: t.id,
+        items: (t.items || []).map((i: any) => ({
+          product: { id: i.productId, name: i.name, price: i.price, category: "", stock: 0, sku: i.sku },
+          quantity: i.quantity,
+        })),
+        subtotal: t.subtotal,
+        tax: t.tax,
+        total: t.total,
+        customerName: t.customerName,
+        paymentMethod: t.paymentMethod,
+        status: t.status || 'completed',
+        timestamp: new Date(t.timestamp),
+        handledBy: t.handledBy,
+        isDelivery: !!t.isDelivery,
+        deliveryFee: t.deliveryFee,
+      }));
+      setTransactions(mapped);
+    } catch {}
+  };
+
+  useEffect(() => {
+    if (user) {
+      loadTransactions();
+    }
+  }, [user]);
+
   const handleAuthSuccess = (authenticatedUser: User) => {
     setUser(authenticatedUser);
     setActiveTab("dashboard");
@@ -51,6 +82,8 @@ export default function App() {
 
   const handleTransactionComplete = (transaction: Transaction) => {
     setTransactions((prev) => [...prev, transaction]);
+    // Also refresh from backend to sync stock & history
+    loadTransactions();
   };
 
   const handleTabChange = (tab: string) => {
@@ -62,6 +95,9 @@ export default function App() {
     };
     if (allowedTabs[user.role]?.includes(tab)) {
       setActiveTab(tab);
+      if (tab === 'transactions') {
+        loadTransactions();
+      }
     }
   };
 
@@ -79,7 +115,12 @@ export default function App() {
         return (
           <TransactionHistory
             transactions={transactions}
-            onDeleteAll={() => {}}
+            onDeleteAll={async () => {
+              try {
+                await apiService.deleteTransactions();
+              } catch {}
+              await loadTransactions();
+            }}
           />
         );
       case "settings":

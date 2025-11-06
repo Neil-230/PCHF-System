@@ -12,7 +12,18 @@ router.get('/', asyncHandler(async (req, res) => {
     settings = new SystemSettings({ id: 'system', signupsOpen: false });
     await settings.save();
   }
-  res.json({ id: settings.id, signupsOpen: settings.signupsOpen, updatedAt: settings.updatedAt });
+  res.json({
+    id: settings.id,
+    signupsOpen: settings.signupsOpen,
+    storeName: settings.storeName,
+    storeAddress: settings.storeAddress,
+    phone: settings.phone,
+    email: settings.email,
+    taxRate: settings.taxRate,
+    currency: settings.currency,
+    footerMessage: settings.footerMessage,
+    updatedAt: settings.updatedAt,
+  });
 }));
 
 // Owner-only: Toggle signups open/closed
@@ -34,6 +45,44 @@ router.post('/signups-open', verifyToken, asyncHandler(async (req, res) => {
   );
 
   res.json({ id: settings.id, signupsOpen: settings.signupsOpen, updatedAt: settings.updatedAt });
+}));
+
+// Owner/Admin: Update store settings
+router.post('/store', verifyToken, asyncHandler(async (req, res) => {
+  if (!['owner', 'admin'].includes(req.user.role)) {
+    return res.status(403).json({ error: 'Only owner or admin can update store settings' });
+  }
+
+  const allowed = ['storeName','storeAddress','phone','email','taxRate','currency','footerMessage'];
+  const updates = {};
+  for (const key of allowed) {
+    if (req.body[key] !== undefined) updates[key] = req.body[key];
+  }
+  if (updates.taxRate != null) {
+    const n = Number(updates.taxRate);
+    if (Number.isNaN(n) || n < 0) return res.status(400).json({ error: 'Invalid taxRate' });
+    updates.taxRate = n;
+  }
+
+  updates.updatedAt = new Date();
+  const settings = await SystemSettings.findOneAndUpdate(
+    { id: 'system' },
+    updates,
+    { upsert: true, new: true, setDefaultsOnInsert: true }
+  );
+
+  res.json({
+    id: settings.id,
+    signupsOpen: settings.signupsOpen,
+    storeName: settings.storeName,
+    storeAddress: settings.storeAddress,
+    phone: settings.phone,
+    email: settings.email,
+    taxRate: settings.taxRate,
+    currency: settings.currency,
+    footerMessage: settings.footerMessage,
+    updatedAt: settings.updatedAt,
+  });
 }));
 
 export default router;

@@ -190,15 +190,32 @@ class ApiService {
   }
 
   // ============ TRANSACTIONS ENDPOINTS ============
-  async getTransactions(limit = 50): Promise<{ transactions: any[] }> {
-    const qs = `?limit=${encodeURIComponent(String(limit))}`;
-    return this.request(`/transactions${qs}`);
+  async getTransactions(params: { limit?: number; q?: string; dateFrom?: string; dateTo?: string; paymentMethod?: string; status?: string } = {}): Promise<{ transactions: any[] }> {
+    const query = new URLSearchParams();
+    if (params.limit != null) query.set('limit', String(params.limit));
+    if (params.q) query.set('q', params.q);
+    if (params.dateFrom) query.set('dateFrom', params.dateFrom);
+    if (params.dateTo) query.set('dateTo', params.dateTo);
+    if (params.paymentMethod) query.set('paymentMethod', params.paymentMethod);
+    if (params.status) query.set('status', params.status);
+    const qs = query.toString();
+    return this.request(`/transactions${qs ? `?${qs}` : ''}`);
   }
 
   async createTransaction(payload: any): Promise<{ transaction: any }> {
     return this.request('/transactions', {
       method: 'POST',
       body: JSON.stringify(payload),
+    });
+  }
+
+  async deleteTransactions(params: { dateFrom?: string; dateTo?: string } = {}): Promise<{ message: string; deletedCount: number }>{
+    const query = new URLSearchParams();
+    if (params.dateFrom) query.set('dateFrom', params.dateFrom);
+    if (params.dateTo) query.set('dateTo', params.dateTo);
+    const qs = query.toString();
+    return this.request(`/transactions${qs ? `?${qs}` : ''}`, {
+      method: 'DELETE',
     });
   }
 
@@ -221,7 +238,7 @@ class ApiService {
   }
 
   // ============ SYSTEM SETTINGS ============
-  async getSystemSettings(): Promise<{ id: string; signupsOpen: boolean; updatedAt: string }> {
+  async getSystemSettings(): Promise<{ id: string; signupsOpen: boolean; updatedAt: string; storeName?: string; storeAddress?: string; phone?: string; email?: string; taxRate?: number; currency?: string; footerMessage?: string }> {
     return this.request('/settings');
   }
 
@@ -229,6 +246,13 @@ class ApiService {
     return this.request('/settings/signups-open', {
       method: 'POST',
       body: JSON.stringify({ signupsOpen })
+    });
+  }
+
+  async updateStoreSettings(settings: { storeName?: string; storeAddress?: string; phone?: string; email?: string; taxRate?: number; currency?: string; footerMessage?: string }): Promise<{ id: string; signupsOpen: boolean; updatedAt: string; storeName: string; storeAddress: string; phone: string; email: string; taxRate: number; currency: string; footerMessage: string }>{
+    return this.request('/settings/store', {
+      method: 'POST',
+      body: JSON.stringify(settings),
     });
   }
 }

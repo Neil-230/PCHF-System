@@ -6,10 +6,34 @@ import { asyncHandler } from '../middleware/errorHandler.js';
 
 const router = express.Router();
 
-// Get transactions (optional limit)
+// Get transactions with optional filters
 router.get('/', verifyToken, asyncHandler(async (req, res) => {
-  const limit = Math.min(parseInt(req.query.limit || '50', 10), 200);
-  const txns = await Transaction.find({}).sort({ timestamp: -1 }).limit(limit);
+  const limit = Math.min(parseInt(req.query.limit || '50', 10), 500);
+  const { q, dateFrom, dateTo, paymentMethod, status } = req.query;
+
+  const filter = {};
+  if (q) {
+    const regex = new RegExp(String(q), 'i');
+    filter.$or = [
+      { id: regex },
+      { customerName: regex },
+      { 'handledBy.name': regex },
+      { paymentMethod: regex },
+    ];
+  }
+  if (dateFrom || dateTo) {
+    filter.timestamp = {};
+    if (dateFrom) filter.timestamp.$gte = new Date(String(dateFrom));
+    if (dateTo) {
+      const end = new Date(String(dateTo));
+      end.setHours(23,59,59,999);
+      filter.timestamp.$lt = end;
+    }
+  }
+  if (paymentMethod) filter.paymentMethod = String(paymentMethod);
+  if (status) filter.status = String(status);
+
+  const txns = await Transaction.find(filter).sort({ timestamp: -1 }).limit(limit);
   res.json({ transactions: txns.map(t => t.toJSON()) });
 }));
 
@@ -87,6 +111,28 @@ router.post('/', verifyToken, asyncHandler(async (req, res) => {
 
   await txn.save();
   res.status(201).json({ message: 'Transaction created', transaction: txn.toJSON() });
+}));
+
+// Delete ALL transactions (owner only)
+router.delete('/', verifyToken, asyncHandler(async (req, res) => {
+  const { role } = req.user || {};
+  if (role !== 'owner') {
+    return res.status(403).json({ error: 'Only owner can delete all transactions' });
+  }
+
+  const { dateFrom, dateTo } = req.query;
+  const filter = {};
+  if (dateFrom || dateTo) {
+    filter.timestamp = {};
+    if (dateFrom) filter.timestamp.$gte = new Date(String(dateFrom));
+    if (dateTo) {
+      const end = new Date(String(dateTo));
+      end.setHours(23,59,59,999);
+      filter.timestamp.$lt = end;
+    }
+  }
+  const result = await Transaction.deleteMany(filter);
+  res.json({ message: 'Transactions deleted', deletedCount: result.deletedCount });
 }));
 
 export default router;

@@ -30,6 +30,14 @@ router.get('/metrics', verifyToken, asyncHandler(async (req, res) => {
 
   const lowStockItems = await Product.countDocuments({ stock: { $gt: 0, $lte: 10 } });
   const outOfStockItems = await Product.countDocuments({ stock: 0 });
+  const lowStockList = await Product.find(
+    { stock: { $gt: 0, $lte: 10 } },
+    { id: 1, name: 1, sku: 1, stock: 1, _id: 0 }
+  ).sort({ stock: 1 }).limit(10);
+  const outOfStockList = await Product.find(
+    { stock: 0 },
+    { id: 1, name: 1, sku: 1, stock: 1, _id: 0 }
+  ).sort({ name: 1 }).limit(10);
 
   const recentTransactions = await Transaction.find({}).sort({ timestamp: -1 }).limit(10);
 
@@ -111,6 +119,10 @@ router.get('/metrics', verifyToken, asyncHandler(async (req, res) => {
     salesByCategory: { labels: salesCategoryLabels, data: salesCategoryData },
     topProductsByInventoryValue: topProductsAgg,
     notifications,
+    notificationsDetail: {
+      lowStock: lowStockList,
+      outOfStock: outOfStockList,
+    },
   });
 }));
 

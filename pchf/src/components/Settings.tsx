@@ -112,27 +112,56 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user 
   }, []);
 
   useEffect(() => {
-    if (currentRole === "owner") {
-      apiService.getSystemSettings()
-        .then((s) => setSignupsOpen(!!s.signupsOpen))
-        .catch(() => setSignupsOpen(false));
-    }
+    apiService.getSystemSettings()
+      .then((s) => {
+        if (currentRole === "owner") setSignupsOpen(!!s.signupsOpen);
+        setStoreSettings((prev) => ({
+          ...prev,
+          storeName: s.storeName || prev.storeName,
+          storeAddress: s.storeAddress || prev.storeAddress,
+          phone: s.phone || prev.phone,
+          email: s.email || prev.email,
+          taxRate: String(s.taxRate ?? prev.taxRate),
+          currency: s.currency || prev.currency,
+          footerMessage: s.footerMessage || prev.footerMessage,
+        }));
+      })
+      .catch(() => {
+        if (currentRole === "owner") setSignupsOpen(false);
+      });
   }, [currentRole]);
 
   /* ---------- Save Settings ---------- */
-  const handleSaveSettings = () => {
+  const handleSaveSettings = async () => {
     if (isCashier) {
       localStorage.setItem("securitySettings", JSON.stringify(securitySettings));
       toast.info("Only Security Settings were updated (Cashier mode).");
-    } else {
-      localStorage.setItem("storeSettings", JSON.stringify(storeSettings));
-      localStorage.setItem("securitySettings", JSON.stringify(securitySettings));
-      toast.success("All settings saved successfully!");
+      setTimeout(() => onTabChange("dashboard"), 800);
+      return;
     }
 
-    setTimeout(() => {
-      onTabChange("dashboard");
-    }, 1200);
+    try {
+      const payload = {
+        storeName: storeSettings.storeName,
+        storeAddress: storeSettings.storeAddress,
+        phone: storeSettings.phone,
+        email: storeSettings.email,
+        taxRate: Number(storeSettings.taxRate),
+        currency: storeSettings.currency,
+        footerMessage: storeSettings.footerMessage,
+      };
+      await apiService.updateStoreSettings(payload);
+      localStorage.setItem("storeSettings", JSON.stringify(storeSettings));
+      localStorage.setItem("securitySettings", JSON.stringify(securitySettings));
+      toast.success("Settings saved successfully!");
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to save settings");
+      // still persist locally for POS fallback
+      localStorage.setItem("storeSettings", JSON.stringify(storeSettings));
+      localStorage.setItem("securitySettings", JSON.stringify(securitySettings));
+    }
+
+    setTimeout(() => onTabChange("dashboard"), 800);
   };
 
   /* ---------- Modal State ---------- */
