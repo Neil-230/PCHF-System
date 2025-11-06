@@ -1,5 +1,5 @@
 import "./css/layout.css";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { // Iconssssssssss 
   ShoppingCart,
   Package,
@@ -14,6 +14,7 @@ import { // Iconssssssssss
   User,
   ShieldIcon,
 } from "lucide-react";
+import apiService from "../services/api";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -38,6 +39,9 @@ const navigation = [
 
 export function Layout({ children, activeTab, onTabChange, user, onLogout }: LayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [notifLow, setNotifLow] = useState<any[]>([]);
+  const [notifOut, setNotifOut] = useState<any[]>([]);
+  const [notifCount, setNotifCount] = useState<number>(0);
 
   const getUserInitials = (name: string) =>
     name
@@ -48,6 +52,31 @@ export function Layout({ children, activeTab, onTabChange, user, onLogout }: Lay
 
   // Filter tabs dependi sa Roles
   const allowedNavigation = navigation.filter((item) => item.roles.includes(user.role));
+
+  // Load notifications from backend and poll periodically
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      try {
+        const m = await apiService.getDashboardMetrics();
+        const low = (m?.notificationsDetail?.lowStock) || [];
+        const out = (m?.notificationsDetail?.outOfStock) || [];
+        if (!mounted) return;
+        setNotifLow(low);
+        setNotifOut(out);
+        const total = Number(m?.lowStockItems || 0) + Number(m?.outOfStockItems || 0);
+        setNotifCount(total);
+      } catch {
+        if (!mounted) return;
+        setNotifLow([]);
+        setNotifOut([]);
+        setNotifCount(0);
+      }
+    };
+    load();
+    const id = setInterval(load, 60000);
+    return () => { mounted = false; clearInterval(id); };
+  }, []);
 
   return (
     <div className="d-flex min-vh-100">
@@ -119,26 +148,46 @@ export function Layout({ children, activeTab, onTabChange, user, onLogout }: Lay
             <div className="dropdown">
               <button className="btn position-relative mt-2" data-bs-toggle="dropdown">
                 <Bell className="text-light" size={20} />
-                <span className="badge bg-light position-absolute top-0 start-100 translate-middle text-dark">
-                  3
-                </span>
+                {notifCount > 0 && (
+                  <span className="badge bg-light position-absolute top-0 start-100 translate-middle text-dark">
+                    {notifCount}
+                  </span>
+                )}
               </button>
-              <div className="dropdown-menu dropdown-menu-end p-2" style={{ width: "300px" }}>
-                <h6 className="dropdown-header">Notifications</h6>
-                <div className="dropdown-item d-flex gap-2">
-                  <AlertTriangle size={16} className="text-danger mt-1" />
-                  <div>
-                    <strong>Low Stock Alert</strong>
-                    <div className="small text-muted">Greek Yogurt is running low</div>
-                  </div>
-                </div>
-                <div className="dropdown-item d-flex gap-2">
-                  <Package size={16} className="text-warning mt-1" />
-                  <div>
-                    <strong>Out of Stock</strong>
-                    <div className="small text-muted">Energy Drink is out of stock</div>
-                  </div>
-                </div>
+              <div className="dropdown-menu dropdown-menu-end p-2" style={{ width: "320px" }}>
+                <h6 className="dropdown-header d-flex justify-content-between align-items-center">
+                  <span>Notifications</span>
+                  <small className="text-muted">{notifCount}</small>
+                </h6>
+                {notifCount === 0 ? (
+                  <div className="dropdown-item-text text-muted small">No notifications</div>
+                ) : (
+                  <>
+                    {notifOut.slice(0, 6).map((p: any) => (
+                      <div key={`out-${p.id}`} className="dropdown-item d-flex gap-2">
+                        <Package size={16} className="text-danger mt-1" />
+                        <div>
+                          <strong>Out of Stock</strong>
+                          <div className="small text-muted">{p.name} ({p.sku})</div>
+                        </div>
+                      </div>
+                    ))}
+                    {notifLow.slice(0, Math.max(0, 6 - Math.min(6, notifOut.length))).map((p: any) => (
+                      <div key={`low-${p.id}`} className="dropdown-item d-flex gap-2">
+                        <AlertTriangle size={16} className="text-warning mt-1" />
+                        <div>
+                          <strong>Low Stock</strong>
+                          <div className="small text-muted">{p.name} ({p.sku}) • {p.stock} left</div>
+                        </div>
+                      </div>
+                    ))}
+                    <div className="dropdown-divider"></div>
+                    <button className="dropdown-item" onClick={() => onTabChange("inventory")}>
+                      <Package size={16} className="me-2" />
+                      Manage Inventory
+                    </button>
+                  </>
+                )}
               </div>
             </div>
 

@@ -150,20 +150,6 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
     ? metrics!.topProductsByInventoryValue
     : computedFromProducts;
 
-  // Notifications data
-  const fallbackLowList = productSource
-    .filter((p: any) => p.stock > 0 && p.stock <= 10)
-    .sort((a: any, b: any) => a.stock - b.stock)
-    .slice(0, 10)
-    .map((p: any) => ({ id: p.id, name: p.name, sku: p.sku, stock: p.stock }));
-  const fallbackOutList = productSource
-    .filter((p: any) => p.stock === 0)
-    .sort((a: any, b: any) => String(a.name).localeCompare(String(b.name)))
-    .slice(0, 10)
-    .map((p: any) => ({ id: p.id, name: p.name, sku: p.sku, stock: p.stock }));
-  const notificationsLow = (metrics?.notificationsDetail?.lowStock as any[]) ?? fallbackLowList;
-  const notificationsOut = (metrics?.notificationsDetail?.outOfStock as any[]) ?? fallbackOutList;
-
   const salesData = {
     labels: metrics?.weeklySales?.labels ?? ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
     datasets: [
@@ -178,12 +164,19 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
     ],
   };
 
+  const rawCatLabels = metrics?.salesByCategory?.labels as string[] | undefined;
+  const rawCatData = metrics?.salesByCategory?.data as number[] | undefined;
+  const hasCategoryData = Array.isArray(rawCatLabels) && rawCatLabels.length > 0 && Array.isArray(rawCatData) && rawCatData.some((n) => Number(n) > 0);
+  const categoryPalette = ["#8884d8", "#82ca9d", "#ffc658", "#ff7c7c", "#a0e7e5", "#b4f8c8", "#fbe7c6", "#ffafcc", "#cdb4db", "#90caf9"];
+  const catLabels = hasCategoryData ? rawCatLabels! : ["No products"];
+  const catData = hasCategoryData ? rawCatData! : [1];
+  const bgColors = hasCategoryData ? catLabels.map((_, i) => categoryPalette[i % categoryPalette.length]) : ["#e0e0e0"];
   const categoryData = {
-    labels: metrics?.salesByCategory?.labels ?? ["Beverages", "Snacks", "Dairy", "Bakery"],
+    labels: catLabels,
     datasets: [
       {
-        data: metrics?.salesByCategory?.data ?? [35, 25, 20, 20],
-        backgroundColor: ["#8884d8", "#82ca9d", "#ffc658", "#ff7c7c"],
+        data: catData,
+        backgroundColor: bgColors,
       },
     ],
   };
@@ -213,15 +206,6 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
             </h1>
           </div>
 
-      {Array.isArray(metrics?.notifications) && metrics.notifications.length > 0 && (
-        <div className="alert alert-warning border-0" style={{ boxShadow: "2px 4px 8px rgba(0, 0, 0, 0.10)" }}>
-          <ul style={{ marginBottom: 0 }}>
-            {metrics.notifications.map((n: string, i: number) => (
-              <li key={i}>{n}</li>
-            ))}
-          </ul>
-        </div>
-      )}
           <div className="d-flex">
             <p
               className="p-2 ps-3 rounded-3"
@@ -360,75 +344,29 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
         </div>
       </div>
 
-      {/* Notifications */}
-      <div className="row g-3 mt-1">
-        <div className="col-12">
-          <div className="card p-3 border-0" style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}>
-            <h6 className="mb-2">Notifications</h6>
-            {notificationsLow.length === 0 && notificationsOut.length === 0 ? (
-              <p className="text-muted">No notifications.</p>
-            ) : (
-              <div className="row">
-                <div className="col-md-6">
-                  <div className="mb-2 d-flex align-items-center gap-2">
-                    <AlertTriangle size={16} color="red" />
-                    <strong>Out of Stock ({notificationsOut.length})</strong>
-                  </div>
-                  {notificationsOut.length === 0 ? (
-                    <small className="text-muted">None</small>
-                  ) : (
-                    <ul className="list-unstyled mb-0">
-                      {notificationsOut.map((p: any) => (
-                        <li key={p.id} className="d-flex justify-content-between border-bottom py-1">
-                          <span>{p.name} <small className="text-muted">({p.sku})</small></span>
-                          <span className="badge bg-danger">0</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-                <div className="col-md-6">
-                  <div className="mb-2 d-flex align-items-center gap-2">
-                    <AlertTriangle size={16} color="orange" />
-                    <strong>Low Stock (≤ 10) ({notificationsLow.length})</strong>
-                  </div>
-                  {notificationsLow.length === 0 ? (
-                    <small className="text-muted">None</small>
-                  ) : (
-                    <ul className="list-unstyled mb-0">
-                      {notificationsLow.map((p: any) => (
-                        <li key={p.id} className="d-flex justify-content-between border-bottom py-1">
-                          <span>{p.name} <small className="text-muted">({p.sku})</small></span>
-                          <span className="badge bg-secondary">{p.stock}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
       {/* Charts yeahhhhhhhhh  */}
-      <div className="row mt-4">
+      <div className="row mt-4 align-items-stretch">
         <div className="col-lg-6">
-          <div className="card p-3 border-0"
+          <div className="card p-3 border-0 h-100"
           style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}
           >
             <h6>
               <BarChart3 size={18} /> Weekly Sales Trend
             </h6>
-            <Line data={salesData} />
+            <div style={{ width: "100%", height: "242px"}}>
+              <Line
+                data={salesData}
+                options={{ responsive: true, maintainAspectRatio: false }}
+              />
+            </div>
           </div>
         </div>
 
         <div className="col-lg-6">
-          <div className="card d-flex border-0"
+          <div className="card p-3 border-0 h-100"
             style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}
             >
-            <h6>Sales by Category</h6>
+            <h6><BarChart3 size={18} /> Sales by Category</h6>
             <div style={{ width: "100%", height: "242px"}}>
               <Pie
                 data={categoryData}
