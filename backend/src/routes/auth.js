@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import passport from 'passport';
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
+import crypto from 'crypto';
 import { User, PasswordReset, PendingAdmin, SystemSettings } from '../database/mongodb.js';
 import { sendVerificationEmail, sendPasswordResetEmail, sendAdminApprovalEmail } from '../services/emailService.js';
 import { verifyRecaptcha, verifyToken } from '../middleware/auth.js';
@@ -20,6 +21,24 @@ const generateToken = (user) => {
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRE || '7d' }
   );
+};
+
+// Cookie options helper for OAuth state
+const cookieOpts = {
+  httpOnly: true,
+  sameSite: 'lax',
+  secure: process.env.NODE_ENV === 'production',
+  path: '/',
+};
+
+const readCookie = (req, name) => {
+  const header = req.headers?.cookie || '';
+  const parts = header.split(';');
+  for (const p of parts) {
+    const [k, ...rest] = p.trim().split('=');
+    if (k === decodeURIComponent(name)) return decodeURIComponent(rest.join('='));
+  }
+  return undefined;
 };
 
 // ============ SIGNUP ============
@@ -194,10 +213,22 @@ router.post('/login', verifyRecaptcha, asyncHandler(async (req, res) => {
 }));
 
 // ============ GOOGLE OAUTH ============
-router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'], prompt: 'select_account', session: false }));
+router.get('/google', (req, res, next) => {
+  const state = crypto.randomBytes(24).toString('hex');
+  res.cookie('oauth_state', state, { ...cookieOpts, maxAge: 10 * 60 * 1000 });
+  return passport.authenticate('google', { scope: ['profile', 'email'], prompt: 'consent select_account', session: false, state })(req, res, next);
+});
 
 router.get('/google/callback', (req, res, next) => {
   const FRONTEND = process.env.FRONTEND_URL || 'http://localhost:5173';
+  // Validate state to prevent unintended logins (e.g., browser back navigation)
+  const stateFromQuery = req.query?.state;
+  const stateFromCookie = readCookie(req, 'oauth_state');
+  if (!stateFromQuery || !stateFromCookie || stateFromCookie !== stateFromQuery) {
+    res.clearCookie('oauth_state', cookieOpts);
+    return res.redirect(`${FRONTEND}/login?error=invalid_state`);
+  }
+  res.clearCookie('oauth_state', cookieOpts);
   passport.authenticate('google', { session: false }, async (err, user, info) => {
     if (err) {
       return res.redirect(`${FRONTEND}/login?error=oauth_failed`);
@@ -236,10 +267,21 @@ router.get('/google/callback', (req, res, next) => {
 });
 
 // ============ FACEBOOK OAUTH ============
-router.get('/facebook', passport.authenticate('facebook', { scope: ['email'], session: false }));
+router.get('/facebook', (req, res, next) => {
+  const state = crypto.randomBytes(24).toString('hex');
+  res.cookie('oauth_state', state, { ...cookieOpts, maxAge: 10 * 60 * 1000 });
+  return passport.authenticate('facebook', { scope: ['email'], session: false, state })(req, res, next);
+});
 
 router.get('/facebook/callback', (req, res, next) => {
   const FRONTEND = process.env.FRONTEND_URL || 'http://localhost:5173';
+  const stateFromQuery = req.query?.state;
+  const stateFromCookie = readCookie(req, 'oauth_state');
+  if (!stateFromQuery || !stateFromCookie || stateFromCookie !== stateFromQuery) {
+    res.clearCookie('oauth_state', cookieOpts);
+    return res.redirect(`${FRONTEND}/login?error=invalid_state`);
+  }
+  res.clearCookie('oauth_state', cookieOpts);
   passport.authenticate('facebook', { session: false }, async (err, user, info) => {
     if (err) {
       return res.redirect(`${FRONTEND}/login?error=oauth_failed`);
@@ -692,9 +734,9 @@ router.get('/me', verifyToken, asyncHandler(async (req, res) => {
 // ============ LOGOUT (CLEAR SESSION) ============
 router.post('/logout', (req, res) => {
   try {
-    if (typeof req.logout === 'function') {
+    if (typeof req.logout === 'function' && req.session) {
       // passport 0.6+ requires callback
-      req.logout(() => {});
+      req.logout({ keepSessionInfo: true }, () => {});
     }
     if (req.session) {
       req.session.destroy(() => {});

@@ -13,7 +13,6 @@ dotenv.config({ path: envPath });
 // Now import other modules
 import express from 'express';
 import cors from 'cors';
-import session from 'express-session';
 import passport from 'passport';
 import { errorHandler } from './middleware/errorHandler.js';
 import { connectDB } from './database/mongodb.js';
@@ -31,21 +30,8 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Session configuration
-app.use(session({
-  secret: process.env.JWT_SECRET || 'your-secret-key',
-  resave: false,
-  saveUninitialized: false,
-  cookie: { 
-    secure: process.env.NODE_ENV === 'production',
-    httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000
-  }
-}));
-
 // Passport initialization
 app.use(passport.initialize());
-app.use(passport.session());
 
 // Import and setup routes after passport configuration
 const setupRoutes = async () => {
