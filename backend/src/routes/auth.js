@@ -152,8 +152,12 @@ router.post('/login', verifyRecaptcha, asyncHandler(async (req, res) => {
 
   // If account was created via Google only (no manual password)
   const googleOnly = !!user.googleId && Array.isArray(user.loginMethods) && !user.loginMethods.includes('password');
+  const facebookOnly = !!user.facebookId && Array.isArray(user.loginMethods) && !user.loginMethods.includes('password');
   if (googleOnly) {
     return res.status(400).json({ error: 'You signed up with Google. Please use Google Sign-In.' });
+  }
+  if (facebookOnly) {
+    return res.status(400).json({ error: 'You signed up with Facebook. Please use Facebook Login.' });
   }
 
   const isPasswordValid = await bcrypt.compare(password, user.password);
@@ -228,6 +232,47 @@ router.get('/google/callback', (req, res, next) => {
     }
     const token = generateToken(user);
     return res.redirect(`${FRONTEND}/auth/google-callback?token=${token}&user=${encodeURIComponent(JSON.stringify(user.toJSON()))}`);
+  })(req, res, next);
+});
+
+// ============ FACEBOOK OAUTH ============
+router.get('/facebook', passport.authenticate('facebook', { scope: ['email'], session: false }));
+
+router.get('/facebook/callback', (req, res, next) => {
+  const FRONTEND = process.env.FRONTEND_URL || 'http://localhost:5173';
+  passport.authenticate('facebook', { session: false }, async (err, user, info) => {
+    if (err) {
+      return res.redirect(`${FRONTEND}/login?error=oauth_failed`);
+    }
+    if (!user) {
+      const profile = info && info.profile ? encodeURIComponent(JSON.stringify(info.profile)) : '';
+      return res.redirect(`${FRONTEND}/auth/facebook-callback?signup=required&user=${profile}`);
+    }
+    // If no owner exists, promote admin to owner at login time
+    try {
+      const hasOwner = await User.findOne({ role: 'owner' });
+      if (!hasOwner && user.role === 'admin') {
+        user.role = 'owner';
+        await user.save();
+        await PendingAdmin.deleteOne({ email: user.email });
+      }
+    } catch (e) {
+      console.error('Facebook callback owner promotion error:', e);
+    }
+    // If owner exists and user is pending approval, block login
+    try {
+      const hasOwner2 = await User.findOne({ role: 'owner' });
+      if (hasOwner2) {
+        const pending = await PendingAdmin.findOne({ email: user.email });
+        if (pending) {
+          return res.redirect(`${FRONTEND}/auth/facebook-callback?pending=1`);
+        }
+      }
+    } catch (e) {
+      console.error('Facebook callback pending check error:', e);
+    }
+    const token = generateToken(user);
+    return res.redirect(`${FRONTEND}/auth/facebook-callback?token=${token}&user=${encodeURIComponent(JSON.stringify(user.toJSON()))}`);
   })(req, res, next);
 });
 
@@ -357,6 +402,142 @@ router.post('/google-signup-role', asyncHandler(async (req, res) => {
   const token = generateToken(user);
   return res.json({
     message: 'Google signup successful',
+    token,
+    user: user.toJSON(),
+  });
+}));
+
+// ============ FACEBOOK SIGNUP WITH ROLE ============
+router.post('/facebook-signup-role', asyncHandler(async (req, res) => {
+  const { facebookId, name, email, role } = req.body;
+
+  if (!facebookId || !name || !email || !role) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+
+  // If admin role and already pending approval, block duplicate facebook signup
+  if (role === 'admin') {
+    const alreadyPending = await PendingAdmin.findOne({ email });
+    if (alreadyPending) {
+      return res.status(409).json({ error: 'This account is already pending approval. Please wait for owner approval.' });
+    }
+  }
+
+  // Try to find user by Facebook ID first
+  let user = await User.findOne({ facebookId });
+
+  if (!user) {
+    // Attempt merge by email
+    const byEmail = await User.findOne({ email });
+    if (byEmail) {
+      // If existing manual account
+      if (!byEmail.facebookId) {
+        if (!byEmail.isVerified) {
+          return res.status(403).json({ error: 'Please verify your email before linking Facebook.' });
+        }
+        byEmail.facebookId = facebookId;
+        if (!Array.isArray(byEmail.loginMethods)) byEmail.loginMethods = [];
+        if (!byEmail.loginMethods.includes('facebook')) byEmail.loginMethods.push('facebook');
+        // Keep existing role unless user is selecting admin and owner approval flow applies
+        if (role === 'admin') {
+          const hasOwner = await User.findOne({ role: 'owner' });
+          if (!hasOwner) {
+            byEmail.role = 'owner';
+          } else {
+            byEmail.role = 'admin';
+          }
+        } else if (role === 'cashier') {
+          // Optionally update to cashier if desired; otherwise keep existing
+          byEmail.role = byEmail.role || 'cashier';
+        }
+        await byEmail.save();
+        user = byEmail;
+      } else {
+        // Another Facebook account with same email (shouldn't happen normally)
+        user = byEmail;
+      }
+    } else {
+      // Gate new Facebook-based signups unless owner doesn't exist
+      const hasOwner = await User.findOne({ role: 'owner' });
+      if (hasOwner) {
+        const settings = await SystemSettings.findOne({ id: 'system' });
+        if (!settings || !settings.signupsOpen) {
+          return res.status(403).json({ error: 'Sign-ups are currently closed by the owner.' });
+        }
+      }
+      // Create new user for Facebook signup
+      user = new User({
+        id: uuidv4(),
+        name,
+        email,
+        facebookId,
+        role,
+        isVerified: true,
+        loginMethods: ['facebook'],
+        passwordCreatedManually: false,
+        password: await bcrypt.hash(Math.random().toString(36).slice(-8), 12),
+      });
+      await user.save();
+    }
+  } else {
+    // Update existing user role if needed
+    user.role = role;
+    await user.save();
+  }
+
+  // If admin role, apply owner approval flow
+  if (role === 'admin') {
+    const hasOwner = await User.findOne({ role: 'owner' });
+    if (!hasOwner) {
+      user.role = 'owner';
+      await user.save();
+    } else {
+      // Create or upsert pending admin request
+      await PendingAdmin.findOneAndUpdate(
+        { email },
+        {
+          id: uuidv4(),
+          name,
+          email,
+          role: 'admin',
+          password: user.password,
+          facebookId,
+          requestedAt: new Date(),
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+      try {
+        await sendAdminApprovalEmail(email, name);
+      } catch (err) {
+        console.error('Email sending failed:', err);
+      }
+      // Do not issue a token while pending approval
+      return res.json({ message: 'Admin request submitted! Pending owner approval.' });
+    }
+  } else if (role === 'cashier') {
+    const hasOwner = await User.findOne({ role: 'owner' });
+    if (hasOwner) {
+      await PendingAdmin.findOneAndUpdate(
+        { email },
+        {
+          id: uuidv4(),
+          name,
+          email,
+          role: 'cashier',
+          password: user.password,
+          facebookId,
+          requestedAt: new Date(),
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+      // Do not issue a token while pending approval
+      return res.json({ message: 'Cashier request submitted! Pending owner or admin approval.' });
+    }
+  }
+
+  const token = generateToken(user);
+  return res.json({
+    message: 'Facebook signup successful',
     token,
     user: user.toJSON(),
   });

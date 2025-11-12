@@ -13,7 +13,7 @@ export function GoogleCallback() {
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [selectedRole, setSelectedRole] = useState<'admin' | 'cashier'>('cashier');
   const [isLoading, setIsLoading] = useState(false);
-  const [googleData, setGoogleData] = useState<any>(null);
+  const [socialData, setSocialData] = useState<any>(null);
 
   useEffect(() => {
     const token = searchParams.get('token');
@@ -37,7 +37,7 @@ export function GoogleCallback() {
     if (signupRequired && userStr) {
       try {
         const minimal = JSON.parse(decodeURIComponent(userStr));
-        setGoogleData(minimal);
+        setSocialData(minimal);
         setShowRoleModal(true);
         toast.message('Complete signup to continue');
       } catch {
@@ -50,16 +50,28 @@ export function GoogleCallback() {
   }, [searchParams, navigate]);
 
   const handleRoleSelection = async () => {
-    if (!googleData) return;
+    if (!socialData) return;
 
     setIsLoading(true);
     try {
-      const resp = await apiService.googleSignupWithRole(
-        googleData.googleId,
-        googleData.name,
-        googleData.email,
-        selectedRole
-      );
+      let resp: any;
+      if (socialData.googleId) {
+        resp = await apiService.googleSignupWithRole(
+          socialData.googleId,
+          socialData.name,
+          socialData.email,
+          selectedRole
+        );
+      } else if (socialData.facebookId) {
+        resp = await apiService.facebookSignupWithRole(
+          socialData.facebookId,
+          socialData.name,
+          socialData.email,
+          selectedRole
+        );
+      } else {
+        throw new Error('Unsupported provider');
+      }
 
       if (resp.token) {
         apiService.setToken(resp.token);

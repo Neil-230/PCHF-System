@@ -18,6 +18,7 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/login" element={<App />} />
         <Route path="/dashboard" element={<App />} />
         <Route path="/auth/google-callback" element={<GoogleCallback />} />
+        <Route path="/auth/facebook-callback" element={<GoogleCallback />} />
         <Route path="*" element={<App />} />
       </Routes>
       <Toaster richColors position="top-center"/>

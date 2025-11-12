@@ -17,6 +17,7 @@ import session from 'express-session';
 import passport from 'passport';
 import { errorHandler } from './middleware/errorHandler.js';
 import { connectDB } from './database/mongodb.js';
+import { runScheduledBackupIfEnabled } from './services/driveService.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -73,6 +74,19 @@ const setupRoutes = async () => {
   }
 };
 
+// Backup scheduler (periodic)
+const startBackupScheduler = () => {
+  const run = async () => {
+    try {
+      await runScheduledBackupIfEnabled();
+    } catch {}
+  };
+  // run once after startup delay to allow DB connection
+  setTimeout(run, 60 * 1000);
+  // then every 6 hours
+  setInterval(run, 6 * 60 * 60 * 1000);
+};
+
 // Account Deletion Cleanup (runs daily)
 const startDeletionCleanup = () => {
   const run = async () => {
@@ -115,6 +129,7 @@ const startServer = async () => {
     await connectDB();
 
     startDeletionCleanup();
+    startBackupScheduler();
 
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);

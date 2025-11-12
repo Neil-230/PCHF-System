@@ -12,32 +12,13 @@ import {
   Check,
   X,
 } from "lucide-react";
-import { Line, Pie } from "react-chartjs-2";
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  ArcElement,
-  Tooltip,
-  Legend,
-} from "chart.js";
+import { Chart } from "react-google-charts";
 import { AuthService } from "../data/authData";
 import { useAuth } from "./auth/AuthWrapper"; //ayaw ni ninyo i delete for future updates ni
 import { toast } from "sonner";
 import type { User } from "../types/auth";
 import apiService from "../services/api";
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  ArcElement,
-  Tooltip,
-  Legend
-);
 
 interface DashboardProps {
   transactions: any[];
@@ -150,19 +131,18 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
     ? metrics!.topProductsByInventoryValue
     : computedFromProducts;
 
-  const salesData = {
-    labels: metrics?.weeklySales?.labels ?? ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
-    datasets: [
-      {
-        label: "Sales",
-        data: metrics?.weeklySales?.data ?? [240, 320, 180, 410, 560, 680, 420],
-        borderColor: "#8884d8",
-        backgroundColor: "#8884d8",
-        fill: false,
-        tension: 0.4,
-      },
-    ],
-  };
+  const weeklyLabels = metrics?.weeklySales?.labels ?? ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const weeklyValues = metrics?.weeklySales?.data ?? [240, 320, 180, 410, 560, 680, 420];
+  const weeklySalesChartData = [
+    ["Day", "Sales"],
+    ...weeklyLabels.map((label: string, i: number) => [label, Number(weeklyValues[i] ?? 0)]),
+  ];
+  const weeklySalesChartOptions = {
+    legend: { position: "bottom" },
+    curveType: "function",
+    colors: ["#8884d8"],
+    chartArea: { width: "85%", height: "70%" },
+  } as const;
 
   const rawCatLabels = metrics?.salesByCategory?.labels as string[] | undefined;
   const rawCatData = metrics?.salesByCategory?.data as number[] | undefined;
@@ -170,16 +150,16 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
   const categoryPalette = ["#8884d8", "#82ca9d", "#ffc658", "#ff7c7c", "#a0e7e5", "#b4f8c8", "#fbe7c6", "#ffafcc", "#cdb4db", "#90caf9"];
   const catLabels = hasCategoryData ? rawCatLabels! : ["No products"];
   const catData = hasCategoryData ? rawCatData! : [1];
-  const bgColors = hasCategoryData ? catLabels.map((_, i) => categoryPalette[i % categoryPalette.length]) : ["#e0e0e0"];
-  const categoryData = {
-    labels: catLabels,
-    datasets: [
-      {
-        data: catData,
-        backgroundColor: bgColors,
-      },
-    ],
-  };
+  const categorySlices = Object.fromEntries(catLabels.map((_: string, i: number) => [i, { color: categoryPalette[i % categoryPalette.length] }])) as Record<number, { color: string }>;
+  const categoryChartData = [
+    ["Category", "Sales"],
+    ...catLabels.map((label: string, i: number) => [label, Number((catData as any)[i] ?? 0)]),
+  ];
+  const categoryChartOptions = {
+    legend: { position: "right" },
+    chartArea: { width: "85%", height: "70%" },
+    slices: categorySlices,
+  } as const;
 
   return (
     <div style={{ padding: "20px" }}>
@@ -354,9 +334,12 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
               <BarChart3 size={18} /> Weekly Sales Trend
             </h6>
             <div style={{ width: "100%", height: "242px"}}>
-              <Line
-                data={salesData}
-                options={{ responsive: true, maintainAspectRatio: false }}
+              <Chart
+                chartType="LineChart"
+                data={weeklySalesChartData}
+                options={weeklySalesChartOptions}
+                width="100%"
+                height="242px"
               />
             </div>
           </div>
@@ -368,9 +351,12 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
             >
             <h6><BarChart3 size={18} /> Sales by Category</h6>
             <div style={{ width: "100%", height: "242px"}}>
-              <Pie
-                data={categoryData}
-                options={{ responsive: true, maintainAspectRatio: false }}
+              <Chart
+                chartType="PieChart"
+                data={categoryChartData}
+                options={categoryChartOptions}
+                width="100%"
+                height="242px"
               />
             </div>
           </div>

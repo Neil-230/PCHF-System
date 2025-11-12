@@ -98,6 +98,13 @@ class ApiService {
     });
   }
 
+  async facebookSignupWithRole(facebookId: string, name: string, email: string, role: string): Promise<AuthResponse> {
+    return this.request('/auth/facebook-signup-role', {
+      method: 'POST',
+      body: JSON.stringify({ facebookId, name, email, role }),
+    });
+  }
+
   async forgotPassword(email: string): Promise<AuthResponse> {
     return this.request('/auth/forgot-password', {
       method: 'POST',
@@ -254,6 +261,33 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify(settings),
     });
+  }
+
+  // ============ BACKUP (GOOGLE DRIVE) ============
+  async getDriveStatus(): Promise<{ connected: boolean; backupEnabled: boolean; backupLastRun: string | null; backupLastError: string; driveFolderId: string | null }> {
+    return this.request('/settings/drive/status');
+  }
+
+  async getDriveAuthUrl(): Promise<{ url: string }> {
+    return this.request('/settings/drive/auth-url');
+  }
+
+  async setBackupEnabled(enabled: boolean): Promise<{ backupEnabled: boolean }> {
+    return this.request('/settings/backup-enabled', {
+      method: 'POST',
+      body: JSON.stringify({ enabled }),
+    });
+  }
+
+  async ensureDriveFolder(name?: string): Promise<{ driveFolderId: string }> {
+    return this.request('/settings/drive/ensure-folder', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    });
+  }
+
+  async runDriveBackup(): Promise<{ message: string; file: { id: string; name: string } }> {
+    return this.request('/settings/drive/backup', { method: 'POST' });
   }
 }
 

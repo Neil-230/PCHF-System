@@ -8,6 +8,7 @@ import { Eye, EyeOff, CreditCard, LogInIcon, MailCheck } from "lucide-react";
 import { toast } from "sonner";
 import "../css/login.css";
 import { FcGoogle } from "react-icons/fc";
+import { FaFacebook } from "react-icons/fa";
 import apiService from "../../services/api";
 import { executeRecaptcha } from "../../services/recaptcha";
 import { useNavigate } from "react-router-dom";
@@ -69,6 +70,12 @@ export function LoginUpdated({ onLogin, onSwitchToSignUp }: LoginProps) {
     const api = (import.meta.env.VITE_API_URL || 'http://localhost:4000/api');
     const base = api.replace(/\/api\/?$/, '');
     window.location.href = `${base}/api/auth/google`;
+  };
+
+  const handleFacebookSignup = () => {
+    const api = (import.meta.env.VITE_API_URL || 'http://localhost:4000/api');
+    const base = api.replace(/\/api\/?$/, '');
+    window.location.href = `${base}/api/auth/facebook`;
   };
 
   const handleSendCode = async () => {
@@ -223,16 +230,32 @@ export function LoginUpdated({ onLogin, onSwitchToSignUp }: LoginProps) {
                     <div className="text-center mt-2">
                       <button
                         type="button"
-                        className="border border-0 bg-dark rounded-2 w-100 text-light text-sm"
+                        className="border border-0 rounded-2 w-100 text-sm"
                         style={{
                           border: "1px solid #dadce0",
                           backgroundColor: "#fff",
+                          color: "#1f1f1f",
                           cursor: "pointer",
                         }}
                         onClick={handleGoogleSignup}
                       >
                         <FcGoogle size={20} className="me-2" />
                         Sign in with Google
+                      </button>
+                    </div>
+
+                    <div className="text-center mt-2">
+                      <button
+                        type="button"
+                        className="border border-0 rounded-2 w-100 text-sm text-light"
+                        style={{
+                          backgroundColor: "#1877F2",
+                          cursor: "pointer",
+                        }}
+                        onClick={handleFacebookSignup}
+                      >
+                        <FaFacebook size={20} className="me-2" />
+                        Continue with Facebook
                       </button>
                     </div>
 

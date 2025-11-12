@@ -106,6 +106,8 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user 
   const [deletion, setDeletion] = useState<{ scheduledFor: string | null; daysRemaining: number | null } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState("");
   const [loadingDeletion, setLoadingDeletion] = useState(false);
+  const [driveStatus, setDriveStatus] = useState<{ connected: boolean; backupEnabled: boolean; backupLastRun: string | null; backupLastError: string; driveFolderId: string | null }>({ connected: false, backupEnabled: false, backupLastRun: null, backupLastError: '', driveFolderId: null });
+  const [loadingDrive, setLoadingDrive] = useState(false);
 
   useEffect(() => {
     apiService.getDeletionStatus().then(setDeletion).catch(() => setDeletion(null));
@@ -130,6 +132,74 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user 
         if (currentRole === "owner") setSignupsOpen(false);
       });
   }, [currentRole]);
+
+  // Initialize Drive status and handle OAuth callback indicator
+  useEffect(() => {
+    if (canAccessStoreSettings) {
+      const refresh = async () => {
+        try {
+          const s = await apiService.getDriveStatus();
+          setDriveStatus(s);
+          setSecuritySettings((prev) => ({ ...prev, dataBackup: !!s.backupEnabled }));
+        } catch {}
+      };
+      refresh();
+    }
+    const params = new URLSearchParams(window.location.search);
+    const st = params.get('drive');
+    if (st === 'connected') {
+      toast.success('Google Drive connected');
+      params.delete('drive');
+      const newUrl = window.location.pathname + (params.toString() ? `?${params.toString()}` : '');
+      window.history.replaceState({}, '', newUrl);
+      // refresh status
+      (async () => {
+        try { const s = await apiService.getDriveStatus(); setDriveStatus(s); } catch {}
+      })();
+    } else if (st === 'error') {
+      toast.error('Google Drive connection failed');
+      params.delete('drive');
+      const newUrl = window.location.pathname + (params.toString() ? `?${params.toString()}` : '');
+      window.history.replaceState({}, '', newUrl);
+    }
+  }, [canAccessStoreSettings]);
+
+  const handleConnectDrive = async () => {
+    try {
+      const { url } = await apiService.getDriveAuthUrl();
+      window.location.href = url;
+    } catch (e: any) {
+      toast.error(e?.message || 'Failed to initiate Google Drive connection');
+    }
+  };
+
+  const handleEnsureFolder = async () => {
+    setLoadingDrive(true);
+    try {
+      const { driveFolderId } = await apiService.ensureDriveFolder('PCH_Backups');
+      setDriveStatus((prev) => ({ ...prev, driveFolderId }));
+      toast.success('Backup folder is ready');
+    } catch (e: any) {
+      toast.error(e?.message || 'Failed to ensure folder');
+    } finally {
+      setLoadingDrive(false);
+    }
+  };
+
+  const handleRunBackup = async () => {
+    setLoadingDrive(true);
+    try {
+      await apiService.runDriveBackup();
+      setDriveStatus((prev) => ({ ...prev, backupLastRun: new Date().toISOString(), backupLastError: '' }));
+      toast.success('Backup created');
+    } catch (e: any) {
+      const msg = e?.message || 'Backup failed';
+      setDriveStatus((prev) => ({ ...prev, backupLastError: msg }));
+      toast.error(msg);
+    } finally {
+      setLoadingDrive(false);
+    }
+  };
 
   /* ---------- Save Settings ---------- */
   const handleSaveSettings = async () => {
@@ -411,9 +481,44 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user 
 
           <div className="form-check form-switch mb-2">
             <input className="form-check-input" type="checkbox" checked={securitySettings.dataBackup}
-              onChange={(e) => setSecuritySettings({ ...securitySettings, dataBackup: e.target.checked })} />
+              onChange={async (e) => {
+                const enabled = e.target.checked;
+                setSecuritySettings({ ...securitySettings, dataBackup: enabled });
+                if (!canAccessStoreSettings) return;
+                try {
+                  const res = await apiService.setBackupEnabled(enabled);
+                  setDriveStatus((prev) => ({ ...prev, backupEnabled: res.backupEnabled }));
+                  toast.success(res.backupEnabled ? 'Automatic backup enabled' : 'Automatic backup disabled');
+                } catch (err: any) {
+                  toast.error(err?.message || 'Failed to update backup setting');
+                }
+              }}
+              disabled={!canAccessStoreSettings || !driveStatus.connected}
+            />
             <label className="form-check-label">Automatic Data Backup</label>
           </div>
+
+          {canAccessStoreSettings && (
+            <div className="mb-2">
+              <label className="fw-bold d-block mb-1">Cloud Backup (Google Drive)</label>
+              <div className="small text-muted mb-2">
+                Status: {driveStatus.connected ? 'Connected' : 'Not connected'}
+                {driveStatus.backupLastRun ? ` • Last run: ${new Date(driveStatus.backupLastRun).toLocaleString()}` : ''}
+              </div>
+              {!driveStatus.connected ? (
+                <button className="btn btn-outline-dark btn-sm" onClick={handleConnectDrive} disabled={loadingDrive}>Connect Google Drive</button>
+              ) : (
+                <div className="d-flex gap-2 flex-wrap align-items-center">
+                  <button className="btn btn-outline-secondary btn-sm" onClick={handleEnsureFolder} disabled={loadingDrive}>Ensure Backup Folder</button>
+                  <button className="btn btn-dark btn-sm" onClick={handleRunBackup} disabled={loadingDrive}>Run Backup Now</button>
+                  {driveStatus.driveFolderId && (
+                    <a className="btn btn-link btn-sm p-0" href={`https://drive.google.com/drive/folders/${driveStatus.driveFolderId}`} target="_blank" rel="noreferrer">Open Folder</a>
+                  )}
+                </div>
+              )}
+              {driveStatus.backupLastError && <div className="text-danger small mt-2">{driveStatus.backupLastError}</div>}
+            </div>
+          )}
 
           <hr className="my-4" />
           <label className="fw-bold mb-3">Change your account password</label>

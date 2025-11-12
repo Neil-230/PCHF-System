@@ -8,6 +8,7 @@ const userSchema = new mongoose.Schema({
   password: { type: String, required: true },
   role: { type: String, enum: ['owner', 'admin', 'cashier'], default: 'cashier' },
   googleId: { type: String, unique: true, sparse: true },
+  facebookId: { type: String, unique: true, sparse: true },
   profilePic: { type: String },
   loginMethods: { type: [String], default: [] },
   isVerified: { type: Boolean, default: false },
@@ -36,6 +37,7 @@ const pendingAdminSchema = new mongoose.Schema({
   email: { type: String, unique: true, required: true },
   password: { type: String },
   googleId: { type: String, sparse: true },
+  facebookId: { type: String, sparse: true },
   role: { type: String, default: 'admin' },
   emailVerified: { type: Boolean, default: false },
   passwordSet: { type: Boolean, default: false },
@@ -98,6 +100,12 @@ const systemSettingsSchema = new mongoose.Schema({
   taxRate: { type: Number, default: 10 },
   currency: { type: String, default: 'PHP' },
   footerMessage: { type: String, default: 'Thank you for your purchase! Please come again.' },
+  // Cloud backup (Google Drive)
+  backupEnabled: { type: Boolean, default: false },
+  backupLastRun: { type: Date, default: null },
+  backupLastError: { type: String, default: '' },
+  driveFolderId: { type: String, default: null },
+  driveRefreshToken: { type: String, default: null },
   updatedAt: { type: Date, default: Date.now }
 });
 

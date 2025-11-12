@@ -79,9 +79,10 @@ router.post('/admin/approve/:email', verifyToken, asyncHandler(async (req, res) 
       password: adminToApprove.password,
       role: roleToApprove,
       isVerified: true,
-      loginMethods: adminToApprove.googleId ? ['google'] : ['password'],
-      passwordCreatedManually: !adminToApprove.googleId,
+      loginMethods: adminToApprove.googleId ? ['google'] : (adminToApprove.facebookId ? ['facebook'] : ['password']),
+      passwordCreatedManually: !(adminToApprove.googleId || adminToApprove.facebookId),
       googleId: adminToApprove.googleId || undefined,
+      facebookId: adminToApprove.facebookId || undefined,
     });
     await user.save();
   }
