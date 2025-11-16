@@ -108,6 +108,10 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user 
   const [loadingDeletion, setLoadingDeletion] = useState(false);
   const [driveStatus, setDriveStatus] = useState<{ connected: boolean; backupEnabled: boolean; backupLastRun: string | null; backupLastError: string; driveFolderId: string | null }>({ connected: false, backupEnabled: false, backupLastRun: null, backupLastError: '', driveFolderId: null });
   const [loadingDrive, setLoadingDrive] = useState(false);
+  const [notifyLowStock, setNotifyLowStock] = useState(false);
+  const [notifyOutOfStock, setNotifyOutOfStock] = useState(false);
+  const [lowStockThreshold, setLowStockThreshold] = useState<string>('10');
+  const [notificationMethod, setNotificationMethod] = useState<'email' | 'sms' | 'both'>('email');
 
   useEffect(() => {
     apiService.getDeletionStatus().then(setDeletion).catch(() => setDeletion(null));
@@ -127,6 +131,10 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user 
           currency: s.currency || prev.currency,
           footerMessage: s.footerMessage || prev.footerMessage,
         }));
+        setNotifyLowStock(!!s.notifyLowStock);
+        setNotifyOutOfStock(!!s.notifyOutOfStock);
+        setLowStockThreshold(String(s.lowStockThreshold ?? '10'));
+        setNotificationMethod((s.notificationMethod as any) || 'email');
       })
       .catch(() => {
         if (currentRole === "owner") setSignupsOpen(false);
@@ -221,6 +229,12 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user 
         footerMessage: storeSettings.footerMessage,
       };
       await apiService.updateStoreSettings(payload);
+      await apiService.updateNotificationSettings({
+        notifyLowStock,
+        notifyOutOfStock,
+        lowStockThreshold: Number(lowStockThreshold),
+        notificationMethod,
+      });
       localStorage.setItem("storeSettings", JSON.stringify(storeSettings));
       localStorage.setItem("securitySettings", JSON.stringify(securitySettings));
       toast.success("Settings saved successfully!");
@@ -524,6 +538,38 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user 
           <label className="fw-bold mb-3">Change your account password</label>
           <div>
             <button className="btn btn-dark" onClick={openChangePasswordModal}>Change password</button>
+          </div>
+        </div>
+      </div>
+
+      <div className="card mb-4" style={{ borderRadius: "12px", boxShadow: "2px 4px 8px rgba(0,0,0,0.15)" }}>
+        <div className="card-header bg-0 text-dark fw-bold">Inventory Alerts</div>
+        <div className="card-body">
+          <div className="form-check form-switch mb-2">
+            <input className="form-check-input" type="checkbox" checked={notifyLowStock}
+              onChange={(e) => setNotifyLowStock(e.target.checked)} disabled={!canAccessStoreSettings} />
+            <label className="form-check-label">Notify on low stock</label>
+          </div>
+          <div className="form-check form-switch mb-3">
+            <input className="form-check-input" type="checkbox" checked={notifyOutOfStock}
+              onChange={(e) => setNotifyOutOfStock(e.target.checked)} disabled={!canAccessStoreSettings} />
+            <label className="form-check-label">Notify when out of stock</label>
+          </div>
+          <div className="row">
+            <div className="col-md-6 mb-3">
+              <label className="form-label">Low stock threshold</label>
+              <input type="number" min={0} className="form-control" value={lowStockThreshold}
+                onChange={(e) => setLowStockThreshold(e.target.value)} disabled={!canAccessStoreSettings} />
+            </div>
+            <div className="col-md-6 mb-3">
+              <label className="form-label">Notification method</label>
+              <select className="form-select" value={notificationMethod}
+                onChange={(e) => setNotificationMethod(e.target.value as any)} disabled={!canAccessStoreSettings}>
+                <option value="email">Email</option>
+                <option value="sms">SMS</option>
+                <option value="both">Both</option>
+              </select>
+            </div>
           </div>
         </div>
       </div>

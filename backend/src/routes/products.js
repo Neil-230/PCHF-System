@@ -1,8 +1,10 @@
 import express from 'express';
 import { v4 as uuidv4 } from 'uuid';
-import { Product } from '../database/mongodb.js';
+import { Product, SystemSettings } from '../database/mongodb.js';
 import { verifyToken } from '../middleware/auth.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
+import { sendGenericEmail } from '../services/emailService.js';
+import { sendSMS } from '../services/smsService.js';
 
 const router = express.Router();
 
@@ -65,6 +67,26 @@ router.put('/:id', verifyToken, asyncHandler(async (req, res) => {
   const updates = { ...req.body, updatedAt: new Date() };
   const product = await Product.findOneAndUpdate({ id: req.params.id }, updates, { new: true });
   if (!product) return res.status(404).json({ error: 'Product not found' });
+  if (typeof updates.stock === 'number') {
+    const settings = await SystemSettings.findOne({ id: 'system' });
+    if (settings) {
+      const threshold = typeof settings.lowStockThreshold === 'number' ? settings.lowStockThreshold : 10;
+      const isOut = settings.notifyOutOfStock && product.stock === 0;
+      const isLow = settings.notifyLowStock && product.stock > 0 && product.stock <= threshold;
+      if (isOut || isLow) {
+        const method = settings.notificationMethod || 'email';
+        const wantsEmail = method === 'email' || method === 'both';
+        const wantsSMS = method === 'sms' || method === 'both';
+        const emailTo = settings.email;
+        const smsTo = settings.phone;
+        const typeText = isOut ? 'Out of stock' : 'Low stock';
+        const smsBody = `Inventory alert:\n${typeText}: ${product.name} (SKU: ${product.sku}) – stock: ${product.stock}`;
+        const emailHtml = `<div style="font-family:Arial,sans-serif"><p>Inventory alert:</p><ul><li>${typeText}: ${product.name} (SKU: ${product.sku}) – stock: ${product.stock}</li></ul></div>`;
+        try { if (wantsEmail && emailTo) { await sendGenericEmail(emailTo, 'Inventory alert', emailHtml); } } catch {}
+        try { if (wantsSMS && smsTo) { await sendSMS(smsTo, smsBody); } } catch {}
+      }
+    }
+  }
   res.json({ message: 'Product updated', product: product.toJSON() });
 }));
 

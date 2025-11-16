@@ -1,8 +1,10 @@
 import express from 'express';
 import { v4 as uuidv4 } from 'uuid';
-import { User, Product, Transaction } from '../database/mongodb.js';
+import { User, Product, Transaction, SystemSettings } from '../database/mongodb.js';
 import { verifyToken } from '../middleware/auth.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
+import { sendGenericEmail } from '../services/emailService.js';
+import { sendSMS } from '../services/smsService.js';
 
 const router = express.Router();
 
@@ -76,6 +78,33 @@ router.post('/', verifyToken, asyncHandler(async (req, res) => {
     const p = productMap.get(item.productId);
     p.stock = p.stock - item.quantity;
     await p.save();
+  }
+
+  const settings = await SystemSettings.findOne({ id: 'system' });
+  if (settings) {
+    const toNotify = [];
+    const threshold = typeof settings.lowStockThreshold === 'number' ? settings.lowStockThreshold : 10;
+    for (const item of items) {
+      const p = productMap.get(item.productId);
+      if (!p) continue;
+      if (settings.notifyOutOfStock && p.stock === 0) {
+        toNotify.push({ type: 'out', name: p.name, sku: p.sku, stock: p.stock });
+      } else if (settings.notifyLowStock && p.stock > 0 && p.stock <= threshold) {
+        toNotify.push({ type: 'low', name: p.name, sku: p.sku, stock: p.stock });
+      }
+    }
+    if (toNotify.length > 0) {
+      const method = settings.notificationMethod || 'email';
+      const wantsEmail = method === 'email' || method === 'both';
+      const wantsSMS = method === 'sms' || method === 'both';
+      const emailTo = settings.email;
+      const smsTo = settings.phone;
+      const lines = toNotify.map(e => `${e.type === 'out' ? 'Out of stock' : 'Low stock'}: ${e.name} (SKU: ${e.sku}) – stock: ${e.stock}`);
+      const smsBody = `Inventory alert:\n${lines.join('\n')}`;
+      const emailHtml = `<div style="font-family:Arial,sans-serif"><p>Inventory alert:</p><ul>${toNotify.map(e => `<li>${e.type === 'out' ? 'Out of stock' : 'Low stock'}: ${e.name} (SKU: ${e.sku}) – stock: ${e.stock}</li>`).join('')}</ul></div>`;
+      try { if (wantsEmail && emailTo) { await sendGenericEmail(emailTo, 'Inventory alert', emailHtml); } } catch {}
+      try { if (wantsSMS && smsTo) { await sendSMS(smsTo, smsBody); } } catch {}
+    }
   }
 
   // Build transaction record with snapshot of item details

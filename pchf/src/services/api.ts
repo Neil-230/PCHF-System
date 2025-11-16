@@ -245,7 +245,7 @@ class ApiService {
   }
 
   // ============ SYSTEM SETTINGS ============
-  async getSystemSettings(): Promise<{ id: string; signupsOpen: boolean; updatedAt: string; storeName?: string; storeAddress?: string; phone?: string; email?: string; taxRate?: number; currency?: string; footerMessage?: string }> {
+  async getSystemSettings(): Promise<{ id: string; signupsOpen: boolean; updatedAt: string; storeName?: string; storeAddress?: string; phone?: string; email?: string; taxRate?: number; currency?: string; footerMessage?: string; notifyLowStock?: boolean; notifyOutOfStock?: boolean; lowStockThreshold?: number; notificationMethod?: 'email' | 'sms' | 'both' }> {
     return this.request('/settings');
   }
 
@@ -258,6 +258,13 @@ class ApiService {
 
   async updateStoreSettings(settings: { storeName?: string; storeAddress?: string; phone?: string; email?: string; taxRate?: number; currency?: string; footerMessage?: string }): Promise<{ id: string; signupsOpen: boolean; updatedAt: string; storeName: string; storeAddress: string; phone: string; email: string; taxRate: number; currency: string; footerMessage: string }>{
     return this.request('/settings/store', {
+      method: 'POST',
+      body: JSON.stringify(settings),
+    });
+  }
+
+  async updateNotificationSettings(settings: { notifyLowStock?: boolean; notifyOutOfStock?: boolean; lowStockThreshold?: number; notificationMethod?: 'email' | 'sms' | 'both' }): Promise<{ notifyLowStock: boolean; notifyOutOfStock: boolean; lowStockThreshold: number; notificationMethod: 'email' | 'sms' | 'both' }>{
+    return this.request('/settings/notifications', {
       method: 'POST',
       body: JSON.stringify(settings),
     });

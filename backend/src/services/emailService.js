@@ -31,6 +31,16 @@ export const sendVerificationEmail = async (email, code) => {
   return transporter.sendMail(mailOptions);
 };
 
+export const sendGenericEmail = async (to, subject, html) => {
+  const mailOptions = {
+    from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+    to,
+    subject,
+    html,
+  };
+  return transporter.sendMail(mailOptions);
+};
+
 export const sendPasswordResetEmail = async (email, code) => {
   const mailOptions = {
     from: process.env.EMAIL_FROM || process.env.EMAIL_USER,

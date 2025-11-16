@@ -23,6 +23,10 @@ router.get('/', asyncHandler(async (req, res) => {
     taxRate: settings.taxRate,
     currency: settings.currency,
     footerMessage: settings.footerMessage,
+    notifyLowStock: !!settings.notifyLowStock,
+    notifyOutOfStock: !!settings.notifyOutOfStock,
+    lowStockThreshold: settings.lowStockThreshold,
+    notificationMethod: settings.notificationMethod || 'email',
     updatedAt: settings.updatedAt,
   });
 }));
@@ -102,6 +106,38 @@ router.post('/drive/backup', verifyToken, asyncHandler(async (req, res) => {
   }
   const result = await uploadBackup();
   res.json({ message: 'Backup created', file: result });
+}));
+
+// Notifications: update inventory alert settings
+router.post('/notifications', verifyToken, asyncHandler(async (req, res) => {
+  if (!['owner', 'admin'].includes(req.user.role)) {
+    return res.status(403).json({ error: 'Unauthorized' });
+  }
+  const updates = {};
+  if (typeof req.body.notifyLowStock === 'boolean') updates.notifyLowStock = req.body.notifyLowStock;
+  if (typeof req.body.notifyOutOfStock === 'boolean') updates.notifyOutOfStock = req.body.notifyOutOfStock;
+  if (req.body.lowStockThreshold != null) {
+    const n = Number(req.body.lowStockThreshold);
+    if (Number.isNaN(n) || n < 0) return res.status(400).json({ error: 'Invalid lowStockThreshold' });
+    updates.lowStockThreshold = n;
+  }
+  if (req.body.notificationMethod != null) {
+    const v = String(req.body.notificationMethod);
+    if (!['email','sms','both'].includes(v)) return res.status(400).json({ error: 'Invalid notificationMethod' });
+    updates.notificationMethod = v;
+  }
+  updates.updatedAt = new Date();
+  const settings = await SystemSettings.findOneAndUpdate(
+    { id: 'system' },
+    updates,
+    { upsert: true, new: true, setDefaultsOnInsert: true }
+  );
+  res.json({
+    notifyLowStock: !!settings.notifyLowStock,
+    notifyOutOfStock: !!settings.notifyOutOfStock,
+    lowStockThreshold: settings.lowStockThreshold,
+    notificationMethod: settings.notificationMethod || 'email',
+  });
 }));
 
 // Owner-only: Toggle signups open/closed

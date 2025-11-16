@@ -100,6 +100,10 @@ const systemSettingsSchema = new mongoose.Schema({
   taxRate: { type: Number, default: 10 },
   currency: { type: String, default: 'PHP' },
   footerMessage: { type: String, default: 'Thank you for your purchase! Please come again.' },
+  notifyLowStock: { type: Boolean, default: false },
+  notifyOutOfStock: { type: Boolean, default: false },
+  lowStockThreshold: { type: Number, default: 10 },
+  notificationMethod: { type: String, enum: ['email', 'sms', 'both'], default: 'email' },
   // Cloud backup (Google Drive)
   backupEnabled: { type: Boolean, default: false },
   backupLastRun: { type: Date, default: null },
