@@ -5,6 +5,7 @@ import { verifyToken } from '../middleware/auth.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { sendGenericEmail } from '../services/emailService.js';
 import { sendSMS } from '../services/smsService.js';
+import { publishInventoryVersion, publishProductSnapshot } from '../services/realtimeService.js';
 
 const router = express.Router();
 
@@ -55,6 +56,8 @@ router.post('/', verifyToken, asyncHandler(async (req, res) => {
     description,
   });
   await product.save();
+  try { await publishProductSnapshot(product); } catch {}
+  try { await publishInventoryVersion(); } catch {}
   res.status(201).json({ message: 'Product created', product: product.toJSON() });
 }));
 
@@ -67,6 +70,8 @@ router.put('/:id', verifyToken, asyncHandler(async (req, res) => {
   const updates = { ...req.body, updatedAt: new Date() };
   const product = await Product.findOneAndUpdate({ id: req.params.id }, updates, { new: true });
   if (!product) return res.status(404).json({ error: 'Product not found' });
+  try { await publishProductSnapshot(product); } catch {}
+  try { await publishInventoryVersion(); } catch {}
   if (typeof updates.stock === 'number') {
     const settings = await SystemSettings.findOne({ id: 'system' });
     if (settings) {
@@ -98,6 +103,7 @@ router.delete('/:id', verifyToken, asyncHandler(async (req, res) => {
   }
   const deleted = await Product.findOneAndDelete({ id: req.params.id });
   if (!deleted) return res.status(404).json({ error: 'Product not found' });
+  try { await publishInventoryVersion(); } catch {}
   res.json({ message: 'Product deleted' });
 }));
 

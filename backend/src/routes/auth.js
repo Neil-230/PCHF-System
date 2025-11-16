@@ -204,6 +204,22 @@ router.post('/login', verifyRecaptcha, asyncHandler(async (req, res) => {
   }
 
   const token = generateToken(user);
+  // Persist last login audit info (best-effort)
+  try {
+    const ii = req.ipinfo;
+    if (ii) {
+      user.lastLogin = {
+        ip: ii.ip,
+        country: ii.country,
+        region: ii.region,
+        city: ii.city,
+        org: ii.org,
+        timezone: ii.timezone,
+        at: new Date(),
+      };
+      await user.save();
+    }
+  } catch {}
 
   res.json({
     message: 'Login successful',

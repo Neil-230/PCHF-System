@@ -13,6 +13,7 @@ import type { Transaction } from "./types";
 import type { User } from "./types/auth";
 import { mockTransactions } from "./data/mockData";
 import apiService from "./services/api";
+import { onTransactionsVersion } from "./services/realtime";
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -64,6 +65,14 @@ export default function App() {
     if (user) {
       loadTransactions();
     }
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    const off = onTransactionsVersion(() => {
+      loadTransactions();
+    });
+    return off;
   }, [user]);
 
   const handleAuthSuccess = (authenticatedUser: User) => {

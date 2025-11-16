@@ -17,11 +17,13 @@ import passport from 'passport';
 import { errorHandler } from './middleware/errorHandler.js';
 import { connectDB } from './database/mongodb.js';
 import { runScheduledBackupIfEnabled } from './services/driveService.js';
+import { ipinfoEnricher } from './middleware/ipinfo.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
+app.set('trust proxy', true);
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:5173',
   credentials: true
@@ -29,6 +31,7 @@ app.use(cors({
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(ipinfoEnricher);
 
 // Passport initialization
 app.use(passport.initialize());
@@ -104,13 +107,14 @@ const startServer = async () => {
     // Setup routes first (this will load passport configuration)
     await setupRoutes();
     
-    // Add error handling middleware after routes are set up
-    app.use(errorHandler);
-
-    // 404 handler (must be last)
-    app.use((req, res) => {
+    // 404 handler (must be before error handler)
+    app.use((req, res, next) => {
+      if (res.headersSent) return next();
       res.status(404).json({ error: 'Route not found' });
     });
+
+    // Error handler should be last
+    app.use(errorHandler);
     
     await connectDB();
 

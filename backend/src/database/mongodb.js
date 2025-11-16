@@ -17,7 +17,16 @@ const userSchema = new mongoose.Schema({
   deletionScheduledFor: { type: Date, default: null },
   deletedAt: { type: Date, default: null },
   createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now }
+  updatedAt: { type: Date, default: Date.now },
+  lastLogin: {
+    ip: { type: String, default: null },
+    country: { type: String, default: null },
+    region: { type: String, default: null },
+    city: { type: String, default: null },
+    org: { type: String, default: null },
+    timezone: { type: String, default: null },
+    at: { type: Date, default: null },
+  }
 });
 
 // Password Reset Schema
@@ -86,6 +95,14 @@ const transactionSchema = new mongoose.Schema({
   },
   isDelivery: { type: Boolean, default: false },
   deliveryFee: { type: Number },
+  requestInfo: {
+    ip: { type: String, default: null },
+    country: { type: String, default: null },
+    region: { type: String, default: null },
+    city: { type: String, default: null },
+    org: { type: String, default: null },
+    timezone: { type: String, default: null },
+  },
 });
 
 // System Settings Schema (singleton)

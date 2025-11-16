@@ -5,6 +5,7 @@ import { verifyToken } from '../middleware/auth.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { sendGenericEmail } from '../services/emailService.js';
 import { sendSMS } from '../services/smsService.js';
+import { publishInventoryVersion, publishProductSnapshot, publishTransactionEvent, publishTransactionsVersion } from '../services/realtimeService.js';
 
 const router = express.Router();
 
@@ -78,6 +79,7 @@ router.post('/', verifyToken, asyncHandler(async (req, res) => {
     const p = productMap.get(item.productId);
     p.stock = p.stock - item.quantity;
     await p.save();
+    try { await publishProductSnapshot(p); } catch {}
   }
 
   const settings = await SystemSettings.findOne({ id: 'system' });
@@ -136,9 +138,20 @@ router.post('/', verifyToken, asyncHandler(async (req, res) => {
     isDelivery: !!isDelivery,
     deliveryFee: serverDelivery || undefined,
     timestamp: new Date(),
+    requestInfo: (req.ipinfo ? {
+      ip: req.ipinfo.ip,
+      country: req.ipinfo.country,
+      region: req.ipinfo.region,
+      city: req.ipinfo.city,
+      org: req.ipinfo.org,
+      timezone: req.ipinfo.timezone,
+    } : undefined),
   });
 
   await txn.save();
+  try { await publishTransactionEvent(txn); } catch {}
+  try { await publishTransactionsVersion(); } catch {}
+  try { await publishInventoryVersion(); } catch {}
   res.status(201).json({ message: 'Transaction created', transaction: txn.toJSON() });
 }));
 
@@ -161,6 +174,7 @@ router.delete('/', verifyToken, asyncHandler(async (req, res) => {
     }
   }
   const result = await Transaction.deleteMany(filter);
+  try { await publishTransactionsVersion(); } catch {}
   res.json({ message: 'Transactions deleted', deletedCount: result.deletedCount });
 }));
 

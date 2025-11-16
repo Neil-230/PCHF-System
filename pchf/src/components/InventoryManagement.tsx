@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import jsPDF from "jspdf";
 import { FileDown } from "lucide-react";
 import apiService from "../services/api";
+import { onInventoryVersion } from "../services/realtime";
 
 import { Modal, Button } from "react-bootstrap";
 
@@ -51,6 +52,16 @@ export function InventoryManagement({ user }: { user?: User }) {
       .getProducts()
       .then(({ products }) => setProducts(products))
       .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const off = onInventoryVersion(async () => {
+      try {
+        const { products } = await apiService.getProducts();
+        setProducts(products);
+      } catch {}
+    });
+    return off;
   }, []);
 
   // SKU Generator (e.g., COF001, SNA123) pwedi ni ninyo i Module
