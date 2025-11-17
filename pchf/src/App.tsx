@@ -13,7 +13,6 @@ import type { Transaction } from "./types";
 import type { User } from "./types/auth";
 import { mockTransactions } from "./data/mockData";
 import apiService from "./services/api";
-import { onTransactionsVersion } from "./services/realtime";
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -68,11 +67,8 @@ export default function App() {
   }, [user]);
 
   useEffect(() => {
-    if (!user) return;
-    const off = onTransactionsVersion(() => {
-      loadTransactions();
-    });
-    return off;
+    // Realtime disabled: rely on manual refreshes and navigation triggers
+    return () => {};
   }, [user]);
 
   const handleAuthSuccess = (authenticatedUser: User) => {
@@ -130,6 +126,7 @@ export default function App() {
               } catch {}
               await loadTransactions();
             }}
+            canDeleteAll={user.role === 'admin' || user.role === 'owner'}
           />
         );
       case "settings":

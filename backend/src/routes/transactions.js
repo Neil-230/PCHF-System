@@ -5,7 +5,6 @@ import { verifyToken } from '../middleware/auth.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { sendGenericEmail } from '../services/emailService.js';
 import { sendSMS } from '../services/smsService.js';
-import { publishInventoryVersion, publishProductSnapshot, publishTransactionEvent, publishTransactionsVersion } from '../services/realtimeService.js';
 
 const router = express.Router();
 
@@ -79,7 +78,6 @@ router.post('/', verifyToken, asyncHandler(async (req, res) => {
     const p = productMap.get(item.productId);
     p.stock = p.stock - item.quantity;
     await p.save();
-    try { await publishProductSnapshot(p); } catch {}
   }
 
   const settings = await SystemSettings.findOne({ id: 'system' });
@@ -149,17 +147,14 @@ router.post('/', verifyToken, asyncHandler(async (req, res) => {
   });
 
   await txn.save();
-  try { await publishTransactionEvent(txn); } catch {}
-  try { await publishTransactionsVersion(); } catch {}
-  try { await publishInventoryVersion(); } catch {}
   res.status(201).json({ message: 'Transaction created', transaction: txn.toJSON() });
 }));
 
 // Delete ALL transactions (owner only)
 router.delete('/', verifyToken, asyncHandler(async (req, res) => {
   const { role } = req.user || {};
-  if (role !== 'owner') {
-    return res.status(403).json({ error: 'Only owner can delete all transactions' });
+  if (role !== 'owner' && role !== 'admin') {
+    return res.status(403).json({ error: 'Only admin or owner can delete all transactions' });
   }
 
   const { dateFrom, dateTo } = req.query;
@@ -174,7 +169,6 @@ router.delete('/', verifyToken, asyncHandler(async (req, res) => {
     }
   }
   const result = await Transaction.deleteMany(filter);
-  try { await publishTransactionsVersion(); } catch {}
   res.json({ message: 'Transactions deleted', deletedCount: result.deletedCount });
 }));
 

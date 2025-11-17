@@ -18,8 +18,6 @@ import { useAuth } from "./auth/AuthWrapper"; //ayaw ni ninyo i delete for futur
 import { toast } from "sonner";
 import type { User } from "../types/auth";
 import apiService from "../services/api";
-import { onInventoryVersion } from "../services/realtime";
-
 
 interface DashboardProps {
   transactions: any[];
@@ -89,19 +87,7 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
       .catch(() => {});
   }, []);
 
-  useEffect(() => {
-    const off = onInventoryVersion(async () => {
-      try {
-        const m = await apiService.getDashboardMetrics();
-        setMetrics(m);
-      } catch {}
-      try {
-        const { products } = await apiService.getProducts();
-        setProducts(products);
-      } catch {}
-    });
-    return off;
-  }, []);
+  
 
   // --- Dashboard Data ---
   const todayTransactions = transactions.filter((t) => {

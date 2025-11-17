@@ -7,9 +7,10 @@ import { Button, Modal } from "react-bootstrap";
 interface TransactionHistoryProps {
   transactions: Transaction[];
   onDeleteAll: () => void;
+  canDeleteAll?: boolean;
 }
 
-export function TransactionHistory({ transactions, onDeleteAll }: TransactionHistoryProps) {
+export function TransactionHistory({ transactions, onDeleteAll, canDeleteAll = false }: TransactionHistoryProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [dateFrom, setDateFrom] = useState("");
@@ -237,9 +238,11 @@ export function TransactionHistory({ transactions, onDeleteAll }: TransactionHis
           <button className="btn btn-dark me-2" onClick={printAllTransactions}>
             <Printer size={16} className="me-2" /> Print All
           </button>
-          <button className="btn btn-danger" onClick={handleDeleteAll}>
-            <Trash2 size={16} className="me-2" /> Delete All
-          </button>
+          {canDeleteAll && (
+            <button className="btn btn-danger" onClick={handleDeleteAll}>
+              <Trash2 size={16} className="me-2" /> Delete All
+            </button>
+          )}
         </div>
       </div>
 
