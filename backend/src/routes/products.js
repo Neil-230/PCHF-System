@@ -2,6 +2,7 @@ import express from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { Product, SystemSettings } from '../database/mongodb.js';
 import { verifyToken } from '../middleware/auth.js';
+import { authorize } from '../middleware/authorize.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { sendGenericEmail } from '../services/emailService.js';
 import { sendSMS } from '../services/smsService.js';
@@ -9,7 +10,7 @@ import { sendSMS } from '../services/smsService.js';
 const router = express.Router();
 
 // Get all products with optional filters
-router.get('/', verifyToken, asyncHandler(async (req, res) => {
+router.get('/', verifyToken, authorize('product', 'read:any'), asyncHandler(async (req, res) => {
   const { q, category } = req.query;
   const filter = {};
   if (q) {
@@ -24,18 +25,14 @@ router.get('/', verifyToken, asyncHandler(async (req, res) => {
 }));
 
 // Get single product by id
-router.get('/:id', verifyToken, asyncHandler(async (req, res) => {
+router.get('/:id', verifyToken, authorize('product', 'read:any'), asyncHandler(async (req, res) => {
   const product = await Product.findOne({ id: req.params.id });
   if (!product) return res.status(404).json({ error: 'Product not found' });
   res.json({ product: product.toJSON() });
 }));
 
 // Create product (owner/admin)
-router.post('/', verifyToken, asyncHandler(async (req, res) => {
-  const { role } = req.user || {};
-  if (!['owner', 'admin'].includes(role)) {
-    return res.status(403).json({ error: 'Unauthorized' });
-  }
+router.post('/', verifyToken, authorize('product', 'create:any'), asyncHandler(async (req, res) => {
 
   const { name, sku, category, price, stock, description } = req.body;
   if (!name || !sku || price == null) {
@@ -59,14 +56,20 @@ router.post('/', verifyToken, asyncHandler(async (req, res) => {
 }));
 
 // Update product (owner/admin)
-router.put('/:id', verifyToken, asyncHandler(async (req, res) => {
-  const { role } = req.user || {};
-  if (!['owner', 'admin'].includes(role)) {
-    return res.status(403).json({ error: 'Unauthorized' });
-  }
-  const updates = { ...req.body, updatedAt: new Date() };
-  const product = await Product.findOneAndUpdate({ id: req.params.id }, updates, { new: true });
+router.put('/:id', verifyToken, authorize('product', 'update:any'), asyncHandler(async (req, res) => {
+  const product = await Product.findOne({ id: req.params.id });
   if (!product) return res.status(404).json({ error: 'Product not found' });
+  const updates = { ...req.body };
+  Object.assign(product, updates);
+  product.updatedAt = new Date();
+  try {
+    await product.save();
+  } catch (err) {
+    if (err && err.name === 'VersionError') {
+      return res.status(409).json({ error: 'Conflict: product was updated concurrently. Please retry.' });
+    }
+    throw err;
+  }
   if (typeof updates.stock === 'number') {
     const settings = await SystemSettings.findOne({ id: 'system' });
     if (settings) {
@@ -91,11 +94,7 @@ router.put('/:id', verifyToken, asyncHandler(async (req, res) => {
 }));
 
 // Delete product (owner/admin)
-router.delete('/:id', verifyToken, asyncHandler(async (req, res) => {
-  const { role } = req.user || {};
-  if (role !== 'owner') {
-    return res.status(403).json({ error: 'Only owner can delete products' });
-  }
+router.delete('/:id', verifyToken, authorize('product', 'delete:any'), asyncHandler(async (req, res) => {
   const deleted = await Product.findOneAndDelete({ id: req.params.id });
   if (!deleted) return res.status(404).json({ error: 'Product not found' });
   res.json({ message: 'Product deleted' });

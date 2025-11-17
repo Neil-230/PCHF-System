@@ -1,7 +1,9 @@
 import express from 'express';
+import mongoose from 'mongoose';
 import { v4 as uuidv4 } from 'uuid';
 import { User, Product, Transaction, SystemSettings } from '../database/mongodb.js';
 import { verifyToken } from '../middleware/auth.js';
+import { authorize } from '../middleware/authorize.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { sendGenericEmail } from '../services/emailService.js';
 import { sendSMS } from '../services/smsService.js';
@@ -9,7 +11,7 @@ import { sendSMS } from '../services/smsService.js';
 const router = express.Router();
 
 // Get transactions with optional filters
-router.get('/', verifyToken, asyncHandler(async (req, res) => {
+router.get('/', verifyToken, authorize('transaction', 'read:any'), asyncHandler(async (req, res) => {
   const limit = Math.min(parseInt(req.query.limit || '50', 10), 500);
   const { q, dateFrom, dateTo, paymentMethod, status } = req.query;
 
@@ -40,7 +42,7 @@ router.get('/', verifyToken, asyncHandler(async (req, res) => {
 }));
 
 // Create a transaction and update stock
-router.post('/', verifyToken, asyncHandler(async (req, res) => {
+router.post('/', verifyToken, authorize('transaction', 'create:any'), asyncHandler(async (req, res) => {
   const { items, subtotal, tax, deliveryFee, total, customerName, customerContact, customerAddress, paymentMethod, isDelivery } = req.body;
 
   if (!Array.isArray(items) || items.length === 0) {
@@ -53,109 +55,120 @@ router.post('/', verifyToken, asyncHandler(async (req, res) => {
     return res.status(401).json({ error: 'Invalid user' });
   }
 
-  // Fetch products and validate stock
-  const productIds = items.map(i => i.productId);
-  const products = await Product.find({ id: { $in: productIds } });
-  const productMap = new Map(products.map(p => [p.id, p]));
+  const session = await mongoose.startSession();
+  try {
+    let txn;
+    await session.withTransaction(async () => {
+      // Fetch products and validate stock within the transaction
+      const productIds = items.map(i => i.productId);
+      const products = await Product.find({ id: { $in: productIds } }).session(session);
+      const productMap = new Map(products.map(p => [p.id, p]));
 
-  for (const item of items) {
-    const p = productMap.get(item.productId);
-    if (!p) return res.status(400).json({ error: `Product not found: ${item.productId}` });
-    if (p.stock < item.quantity) return res.status(400).json({ error: `Insufficient stock for ${p.name}` });
-  }
-
-  // Compute server-side subtotal and total to avoid trusting client
-  const serverSubtotal = items.reduce((sum, i) => {
-    const p = productMap.get(i.productId);
-    return sum + (p.price * i.quantity);
-  }, 0);
-  const serverTax = typeof tax === 'number' ? tax : 0;
-  const serverDelivery = typeof deliveryFee === 'number' ? deliveryFee : 0;
-  const serverTotal = serverSubtotal + serverTax + serverDelivery;
-
-  // Update stock
-  for (const item of items) {
-    const p = productMap.get(item.productId);
-    p.stock = p.stock - item.quantity;
-    await p.save();
-  }
-
-  const settings = await SystemSettings.findOne({ id: 'system' });
-  if (settings) {
-    const toNotify = [];
-    const threshold = typeof settings.lowStockThreshold === 'number' ? settings.lowStockThreshold : 10;
-    for (const item of items) {
-      const p = productMap.get(item.productId);
-      if (!p) continue;
-      if (settings.notifyOutOfStock && p.stock === 0) {
-        toNotify.push({ type: 'out', name: p.name, sku: p.sku, stock: p.stock });
-      } else if (settings.notifyLowStock && p.stock > 0 && p.stock <= threshold) {
-        toNotify.push({ type: 'low', name: p.name, sku: p.sku, stock: p.stock });
+      for (const item of items) {
+        const p = productMap.get(item.productId);
+        if (!p) throw Object.assign(new Error(`Product not found: ${item.productId}`), { status: 400 });
+        if (p.stock < item.quantity) throw Object.assign(new Error(`Insufficient stock for ${p.name}`), { status: 400 });
       }
+
+      // Compute server-side totals
+      const serverSubtotal = items.reduce((sum, i) => {
+        const p = productMap.get(i.productId);
+        return sum + (p.price * i.quantity);
+      }, 0);
+      const serverTax = typeof tax === 'number' ? tax : 0;
+      const serverDelivery = typeof deliveryFee === 'number' ? deliveryFee : 0;
+      const serverTotal = serverSubtotal + serverTax + serverDelivery;
+
+      // Update stock with optimistic concurrency inside transaction
+      for (const item of items) {
+        const p = productMap.get(item.productId);
+        p.stock = p.stock - item.quantity;
+        p.updatedAt = new Date();
+        await p.save({ session });
+      }
+
+      // Prepare notifications based on new stock values
+      const settings = await SystemSettings.findOne({ id: 'system' }).session(session);
+      if (settings) {
+        const toNotify = [];
+        const threshold = typeof settings.lowStockThreshold === 'number' ? settings.lowStockThreshold : 10;
+        for (const item of items) {
+          const p = productMap.get(item.productId);
+          if (!p) continue;
+          if (settings.notifyOutOfStock && p.stock === 0) {
+            toNotify.push({ type: 'out', name: p.name, sku: p.sku, stock: p.stock });
+          } else if (settings.notifyLowStock && p.stock > 0 && p.stock <= threshold) {
+            toNotify.push({ type: 'low', name: p.name, sku: p.sku, stock: p.stock });
+          }
+        }
+        if (toNotify.length > 0) {
+          const method = settings.notificationMethod || 'email';
+          const wantsEmail = method === 'email' || method === 'both';
+          const wantsSMS = method === 'sms' || method === 'both';
+          const emailTo = settings.email;
+          const smsTo = settings.phone;
+          const lines = toNotify.map(e => `${e.type === 'out' ? 'Out of stock' : 'Low stock'}: ${e.name} (SKU: ${e.sku}) – stock: ${e.stock}`);
+          const smsBody = `Inventory alert:\n${lines.join('\n')}`;
+          const emailHtml = `<div style=\"font-family:Arial,sans-serif\"><p>Inventory alert:</p><ul>${toNotify.map(e => `<li>${e.type === 'out' ? 'Out of stock' : 'Low stock'}: ${e.name} (SKU: ${e.sku}) – stock: ${e.stock}</li>`).join('')}</ul></div>`;
+          try { if (wantsEmail && emailTo) { await sendGenericEmail(emailTo, 'Inventory alert', emailHtml); } } catch {}
+          try { if (wantsSMS && smsTo) { await sendSMS(smsTo, smsBody); } } catch {}
+        }
+      }
+
+      // Build transaction record
+      txn = new Transaction({
+        id: uuidv4(),
+        items: items.map(i => {
+          const p = productMap.get(i.productId);
+          return {
+            productId: p.id,
+            name: p.name,
+            sku: p.sku,
+            price: p.price,
+            quantity: i.quantity,
+          };
+        }),
+        subtotal: serverSubtotal,
+        tax: serverTax,
+        total: serverTotal,
+        customerName,
+        customerContact,
+        customerAddress,
+        status: 'completed',
+        paymentMethod: paymentMethod || 'Cash',
+        handledBy: {
+          name: currentUser.name,
+          email: currentUser.email,
+          role: currentUser.role,
+        },
+        isDelivery: !!isDelivery,
+        deliveryFee: serverDelivery || undefined,
+        timestamp: new Date(),
+        requestInfo: (req.ipinfo ? {
+          ip: req.ipinfo.ip,
+          country: req.ipinfo.country,
+          region: req.ipinfo.region,
+          city: req.ipinfo.city,
+          org: req.ipinfo.org,
+          timezone: req.ipinfo.timezone,
+        } : undefined),
+      });
+      await txn.save({ session });
+    }, { readConcern: { level: 'snapshot' }, writeConcern: { w: 'majority' } });
+
+    res.status(201).json({ message: 'Transaction created', transaction: txn.toJSON() });
+  } catch (err) {
+    if (err && (err.name === 'VersionError' || err.codeName === 'WriteConflict')) {
+      return res.status(409).json({ error: 'Conflict: inventory was updated concurrently. Please retry.' });
     }
-    if (toNotify.length > 0) {
-      const method = settings.notificationMethod || 'email';
-      const wantsEmail = method === 'email' || method === 'both';
-      const wantsSMS = method === 'sms' || method === 'both';
-      const emailTo = settings.email;
-      const smsTo = settings.phone;
-      const lines = toNotify.map(e => `${e.type === 'out' ? 'Out of stock' : 'Low stock'}: ${e.name} (SKU: ${e.sku}) – stock: ${e.stock}`);
-      const smsBody = `Inventory alert:\n${lines.join('\n')}`;
-      const emailHtml = `<div style="font-family:Arial,sans-serif"><p>Inventory alert:</p><ul>${toNotify.map(e => `<li>${e.type === 'out' ? 'Out of stock' : 'Low stock'}: ${e.name} (SKU: ${e.sku}) – stock: ${e.stock}</li>`).join('')}</ul></div>`;
-      try { if (wantsEmail && emailTo) { await sendGenericEmail(emailTo, 'Inventory alert', emailHtml); } } catch {}
-      try { if (wantsSMS && smsTo) { await sendSMS(smsTo, smsBody); } } catch {}
-    }
+    throw err;
+  } finally {
+    session.endSession();
   }
-
-  // Build transaction record with snapshot of item details
-  const txn = new Transaction({
-    id: uuidv4(),
-    items: items.map(i => {
-      const p = productMap.get(i.productId);
-      return {
-        productId: p.id,
-        name: p.name,
-        sku: p.sku,
-        price: p.price,
-        quantity: i.quantity,
-      };
-    }),
-    subtotal: serverSubtotal,
-    tax: serverTax,
-    total: serverTotal,
-    customerName,
-    customerContact,
-    customerAddress,
-    status: 'completed',
-    paymentMethod: paymentMethod || 'Cash',
-    handledBy: {
-      name: currentUser.name,
-      email: currentUser.email,
-      role: currentUser.role,
-    },
-    isDelivery: !!isDelivery,
-    deliveryFee: serverDelivery || undefined,
-    timestamp: new Date(),
-    requestInfo: (req.ipinfo ? {
-      ip: req.ipinfo.ip,
-      country: req.ipinfo.country,
-      region: req.ipinfo.region,
-      city: req.ipinfo.city,
-      org: req.ipinfo.org,
-      timezone: req.ipinfo.timezone,
-    } : undefined),
-  });
-
-  await txn.save();
-  res.status(201).json({ message: 'Transaction created', transaction: txn.toJSON() });
 }));
 
-// Delete ALL transactions (owner only)
-router.delete('/', verifyToken, asyncHandler(async (req, res) => {
-  const { role } = req.user || {};
-  if (role !== 'owner' && role !== 'admin') {
-    return res.status(403).json({ error: 'Only admin or owner can delete all transactions' });
-  }
+// Delete ALL transactions (owner/admin per RBAC)
+router.delete('/', verifyToken, authorize('transaction', 'delete:any'), asyncHandler(async (req, res) => {
 
   const { dateFrom, dateTo } = req.query;
   const filter = {};

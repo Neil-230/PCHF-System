@@ -190,7 +190,11 @@ export function PointOfSale({ onTransactionComplete, user }: PointOfSaleProps) {
       const res = await apiService.createTransaction(payload);
       saved = res.transaction;
     } catch (e: any) {
-      toast.error(e?.message || "Failed to save transaction");
+      if (e?.status === 409) {
+        toast.error("Data changed by someone else. Please refresh and try again.");
+      } else {
+        toast.error(e?.message || "Failed to save transaction");
+      }
       return;
     }
 

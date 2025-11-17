@@ -64,7 +64,7 @@ const productSchema = new mongoose.Schema({
   description: { type: String },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
-});
+}, { optimisticConcurrency: true });
 
 // Transaction Item Subschema
 const transactionItemSchema = new mongoose.Schema({
@@ -128,7 +128,7 @@ const systemSettingsSchema = new mongoose.Schema({
   driveFolderId: { type: String, default: null },
   driveRefreshToken: { type: String, default: null },
   updatedAt: { type: Date, default: Date.now }
-});
+}, { optimisticConcurrency: true });
 
 export const User = mongoose.model('User', userSchema);
 export const PasswordReset = mongoose.model('PasswordReset', passwordResetSchema);

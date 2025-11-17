@@ -53,16 +53,21 @@ class ApiService {
 
     if (!response.ok) {
       let message = 'API request failed';
+      let raw: any = null;
       try {
-        const error = await response.json();
-        message = error?.error || message;
+        raw = await response.json();
+        message = raw?.error || message;
       } catch {
         try {
           const text = await response.text();
+          raw = text || null;
           if (text) message = text;
         } catch {}
       }
-      throw new Error(message);
+      const err: any = new Error(message);
+      err.status = response.status;
+      err.body = raw;
+      throw err;
     }
 
     return response.json();

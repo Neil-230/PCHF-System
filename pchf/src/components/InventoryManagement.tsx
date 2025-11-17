@@ -84,6 +84,10 @@ export function InventoryManagement({ user }: { user?: User }) {
       setIsAddDialogOpen(false);
       toast.success("Product added successfully");
     } catch (e: any) {
+      if (e?.status === 409) {
+        toast.error("Data changed by someone else. Please refresh and try again.");
+        return;
+      }
       const newProduct: Product = {
         id: Date.now().toString(),
         name: formData.name,
@@ -118,7 +122,11 @@ export function InventoryManagement({ user }: { user?: User }) {
       resetForm();
       setEditingProduct(null);
       toast.success("Product updated successfully");
-    } catch {
+    } catch (e: any) {
+      if (e?.status === 409) {
+        toast.error("Data changed by someone else. Please refresh and try again.");
+        return;
+      }
       const updatedProduct: Product = {
         ...editingProduct,
         ...updates,
