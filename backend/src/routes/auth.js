@@ -23,6 +23,36 @@ const generateToken = (user) => {
   );
 };
 
+const upsertPendingAdminRecord = async (updates, conflictMessage = 'Conflict: pending admin record was updated concurrently. Please retry.') => {
+  if (!updates?.email) {
+    throw new Error('Pending admin email is required');
+  }
+
+  let pending = await PendingAdmin.findOne({ email: updates.email });
+  const payload = { ...updates };
+
+  if (!pending) {
+    payload.id = payload.id || uuidv4();
+    payload.requestedAt = payload.requestedAt || new Date();
+    pending = new PendingAdmin(payload);
+  } else {
+    payload.id = payload.id || pending.id || uuidv4();
+    payload.requestedAt = payload.requestedAt || new Date();
+    pending.set(payload);
+  }
+
+  try {
+    await pending.save();
+  } catch (err) {
+    if (err?.name === 'VersionError') {
+      throw Object.assign(new Error(conflictMessage), { status: 409 });
+    }
+    throw err;
+  }
+
+  return pending;
+};
+
 // Cookie options helper for OAuth state
 const cookieOpts = {
   httpOnly: true,
@@ -55,7 +85,7 @@ router.post('/signup', asyncHandler(async (req, res) => {
   }
 
   // Gate signups unless owner doesn't exist
-  const ownerExists = await User.findOne({ role: 'owner' });
+  const ownerExists = await User.findOne({ role: 'owner', isArchived: false });
   if (ownerExists) {
     const settings = await SystemSettings.findOne({ id: 'system' });
     if (!settings || !settings.signupsOpen) {
@@ -72,7 +102,7 @@ router.post('/signup', asyncHandler(async (req, res) => {
   }
 
   // Check if user exists
-  const existingUser = await User.findOne({ email });
+  const existingUser = await User.findOne({ email, isArchived: false });
   if (existingUser) {
     const hasGoogleOnly = !!existingUser.googleId && Array.isArray(existingUser.loginMethods) && !existingUser.loginMethods.includes('password');
     if (hasGoogleOnly) {
@@ -144,7 +174,7 @@ router.post('/verify-email', asyncHandler(async (req, res) => {
     return res.status(400).json({ error: 'Invalid or expired code' });
   }
 
-  const user = await User.findOne({ email });
+  const user = await User.findOne({ email, isArchived: false });
   if (!user) {
     return res.status(400).json({ error: 'User not found' });
   }
@@ -164,9 +194,13 @@ router.post('/login', verifyRecaptcha, asyncHandler(async (req, res) => {
     return res.status(400).json({ error: 'Email and password are required' });
   }
 
-  const user = await User.findOne({ email });
+  const user = await User.findOne({ email, isArchived: false });
   if (!user) {
     return res.status(404).json({ error: 'No account found with this email.' });
+  }
+
+  if (user.isArchived) {
+    return res.status(403).json({ error: 'This account has been archived. Please contact an administrator.' });
   }
 
   // If account was created via Google only (no manual password)
@@ -189,7 +223,7 @@ router.post('/login', verifyRecaptcha, asyncHandler(async (req, res) => {
   }
 
   // Handle admin role depending on owner presence
-  const hasOwner = await User.findOne({ role: 'owner' });
+  const hasOwner = await User.findOne({ role: 'owner', isArchived: false });
   if (user.role === 'admin' && !hasOwner) {
     // No owner — promote this admin to owner and clear any pending record
     user.role = 'owner';
@@ -256,7 +290,7 @@ router.get('/google/callback', (req, res, next) => {
     }
     // If no owner exists, promote admin to owner at login time
     try {
-      const hasOwner = await User.findOne({ role: 'owner' });
+      const hasOwner = await User.findOne({ role: 'owner', isArchived: false });
       if (!hasOwner && user.role === 'admin') {
         user.role = 'owner';
         await user.save();
@@ -267,7 +301,7 @@ router.get('/google/callback', (req, res, next) => {
     }
     // If owner exists and user is pending approval, block login
     try {
-      const hasOwner2 = await User.findOne({ role: 'owner' });
+      const hasOwner2 = await User.findOne({ role: 'owner', isArchived: false });
       if (hasOwner2) {
         const pending = await PendingAdmin.findOne({ email: user.email });
         if (pending) {
@@ -308,7 +342,7 @@ router.get('/facebook/callback', (req, res, next) => {
     }
     // If no owner exists, promote admin to owner at login time
     try {
-      const hasOwner = await User.findOne({ role: 'owner' });
+      const hasOwner = await User.findOne({ role: 'owner', isArchived: false });
       if (!hasOwner && user.role === 'admin') {
         user.role = 'owner';
         await user.save();
@@ -319,7 +353,7 @@ router.get('/facebook/callback', (req, res, next) => {
     }
     // If owner exists and user is pending approval, block login
     try {
-      const hasOwner2 = await User.findOne({ role: 'owner' });
+      const hasOwner2 = await User.findOne({ role: 'owner', isArchived: false });
       if (hasOwner2) {
         const pending = await PendingAdmin.findOne({ email: user.email });
         if (pending) {
@@ -351,11 +385,11 @@ router.post('/google-signup-role', asyncHandler(async (req, res) => {
   }
 
   // Try to find user by Google ID first
-  let user = await User.findOne({ googleId });
+  let user = await User.findOne({ googleId, isArchived: false });
 
   if (!user) {
     // Attempt merge by email
-    const byEmail = await User.findOne({ email });
+    const byEmail = await User.findOne({ email, isArchived: false });
     if (byEmail) {
       // If existing manual account
       if (!byEmail.googleId) {
@@ -367,7 +401,7 @@ router.post('/google-signup-role', asyncHandler(async (req, res) => {
         if (!byEmail.loginMethods.includes('google')) byEmail.loginMethods.push('google');
         // Keep existing role unless user is selecting admin and owner approval flow applies
         if (role === 'admin') {
-          const hasOwner = await User.findOne({ role: 'owner' });
+          const hasOwner = await User.findOne({ role: 'owner', isArchived: false });
           if (!hasOwner) {
             byEmail.role = 'owner';
           } else {
@@ -382,7 +416,7 @@ router.post('/google-signup-role', asyncHandler(async (req, res) => {
       }
     } else {
       // Gate new Google-based signups unless owner doesn't exist
-      const hasOwner = await User.findOne({ role: 'owner' });
+      const hasOwner = await User.findOne({ role: 'owner', isArchived: false });
       if (hasOwner) {
         const settings = await SystemSettings.findOne({ id: 'system' });
         if (!settings || !settings.signupsOpen) {
@@ -417,18 +451,14 @@ router.post('/google-signup-role', asyncHandler(async (req, res) => {
       await user.save();
     } else {
       // Create or upsert pending admin request
-      await PendingAdmin.findOneAndUpdate(
-        { email },
-        {
-          id: uuidv4(),
-          name,
-          email,
-          role: 'admin',
-          password: user.password,
-          requestedAt: new Date(),
-        },
-        { upsert: true, new: true, setDefaultsOnInsert: true }
-      );
+      await upsertPendingAdminRecord({
+        id: uuidv4(),
+        name,
+        email,
+        role: 'admin',
+        password: user.password,
+        requestedAt: new Date(),
+      });
       try {
         await sendAdminApprovalEmail(email, name);
       } catch (err) {
@@ -440,18 +470,14 @@ router.post('/google-signup-role', asyncHandler(async (req, res) => {
   } else if (role === 'cashier') {
     const hasOwner = await User.findOne({ role: 'owner' });
     if (hasOwner) {
-      await PendingAdmin.findOneAndUpdate(
-        { email },
-        {
-          id: uuidv4(),
-          name,
-          email,
-          role: 'cashier',
-          password: user.password,
-          requestedAt: new Date(),
-        },
-        { upsert: true, new: true, setDefaultsOnInsert: true }
-      );
+      await upsertPendingAdminRecord({
+        id: uuidv4(),
+        name,
+        email,
+        role: 'cashier',
+        password: user.password,
+        requestedAt: new Date(),
+      });
       // Do not issue a token while pending approval
       return res.json({ message: 'Cashier request submitted! Pending owner or admin approval.' });
     }
@@ -482,11 +508,11 @@ router.post('/facebook-signup-role', asyncHandler(async (req, res) => {
   }
 
   // Try to find user by Facebook ID first
-  let user = await User.findOne({ facebookId });
+  let user = await User.findOne({ facebookId, isArchived: false });
 
   if (!user) {
     // Attempt merge by email
-    const byEmail = await User.findOne({ email });
+    const byEmail = await User.findOne({ email, isArchived: false });
     if (byEmail) {
       // If existing manual account
       if (!byEmail.facebookId) {
@@ -498,7 +524,7 @@ router.post('/facebook-signup-role', asyncHandler(async (req, res) => {
         if (!byEmail.loginMethods.includes('facebook')) byEmail.loginMethods.push('facebook');
         // Keep existing role unless user is selecting admin and owner approval flow applies
         if (role === 'admin') {
-          const hasOwner = await User.findOne({ role: 'owner' });
+          const hasOwner = await User.findOne({ role: 'owner', isArchived: false });
           if (!hasOwner) {
             byEmail.role = 'owner';
           } else {
@@ -516,7 +542,7 @@ router.post('/facebook-signup-role', asyncHandler(async (req, res) => {
       }
     } else {
       // Gate new Facebook-based signups unless owner doesn't exist
-      const hasOwner = await User.findOne({ role: 'owner' });
+      const hasOwner = await User.findOne({ role: 'owner', isArchived: false });
       if (hasOwner) {
         const settings = await SystemSettings.findOne({ id: 'system' });
         if (!settings || !settings.signupsOpen) {
@@ -551,19 +577,15 @@ router.post('/facebook-signup-role', asyncHandler(async (req, res) => {
       await user.save();
     } else {
       // Create or upsert pending admin request
-      await PendingAdmin.findOneAndUpdate(
-        { email },
-        {
-          id: uuidv4(),
-          name,
-          email,
-          role: 'admin',
-          password: user.password,
-          facebookId,
-          requestedAt: new Date(),
-        },
-        { upsert: true, new: true, setDefaultsOnInsert: true }
-      );
+      await upsertPendingAdminRecord({
+        id: uuidv4(),
+        name,
+        email,
+        role: 'admin',
+        password: user.password,
+        facebookId,
+        requestedAt: new Date(),
+      });
       try {
         await sendAdminApprovalEmail(email, name);
       } catch (err) {
@@ -575,19 +597,15 @@ router.post('/facebook-signup-role', asyncHandler(async (req, res) => {
   } else if (role === 'cashier') {
     const hasOwner = await User.findOne({ role: 'owner' });
     if (hasOwner) {
-      await PendingAdmin.findOneAndUpdate(
-        { email },
-        {
-          id: uuidv4(),
-          name,
-          email,
-          role: 'cashier',
-          password: user.password,
-          facebookId,
-          requestedAt: new Date(),
-        },
-        { upsert: true, new: true, setDefaultsOnInsert: true }
-      );
+      await upsertPendingAdminRecord({
+        id: uuidv4(),
+        name,
+        email,
+        role: 'cashier',
+        password: user.password,
+        facebookId,
+        requestedAt: new Date(),
+      });
       // Do not issue a token while pending approval
       return res.json({ message: 'Cashier request submitted! Pending owner or admin approval.' });
     }
@@ -609,7 +627,7 @@ router.post('/forgot-password', asyncHandler(async (req, res) => {
     return res.status(400).json({ error: 'Email is required' });
   }
 
-  const user = await User.findOne({ email });
+  const user = await User.findOne({ email, isArchived: false });
   if (!user) {
     return res.status(404).json({ error: 'User not found' });
   }
@@ -669,19 +687,20 @@ router.post('/reset-password', asyncHandler(async (req, res) => {
     return res.status(400).json({ error: 'Password must be at least 6 characters' });
   }
 
-  const reset = await PasswordReset.findOne({
-    email,
-    code,
-    used: false,
-    expiresAt: { $gt: new Date() }
+  const reset = await PasswordReset.findOne({ 
+    email, 
+    code, 
+    used: false, 
+    expiresAt: { $gt: new Date() } 
   });
+
   if (!reset) {
     return res.status(400).json({ error: 'Invalid or expired code' });
   }
 
-  const user = await User.findOne({ email });
+  const user = await User.findOne({ email, isArchived: false });
   if (!user) {
-    return res.status(404).json({ error: 'User not found' });
+    return res.status(400).json({ error: 'User not found' });
   }
 
   const hashed = await bcrypt.hash(newPassword, 12);
@@ -698,18 +717,14 @@ router.post('/reset-password', asyncHandler(async (req, res) => {
     if (hasOwner) {
       // Upsert PendingAdmin record to ensure owner approval gate
       const hashedForPending = user.password; // already hashed above
-      await PendingAdmin.findOneAndUpdate(
-        { email: user.email },
-        {
-          id: uuidv4(),
-          name: user.name,
-          email: user.email,
-          password: hashedForPending,
-          role: 'admin',
-          requestedAt: new Date(),
-        },
-        { upsert: true, new: true, setDefaultsOnInsert: true }
-      );
+      await upsertPendingAdminRecord({
+        id: uuidv4(),
+        name: user.name,
+        email: user.email,
+        password: hashedForPending,
+        role: 'admin',
+        requestedAt: new Date(),
+      });
     } else {
       // No owner yet; promote first admin to owner
       user.role = 'owner';
@@ -717,18 +732,14 @@ router.post('/reset-password', asyncHandler(async (req, res) => {
     }
   } else if (user.role === 'cashier' && hasOwner) {
     const hashedForPending = user.password;
-    await PendingAdmin.findOneAndUpdate(
-      { email: user.email },
-      {
-        id: uuidv4(),
-        name: user.name,
-        email: user.email,
-        password: hashedForPending,
-        role: 'cashier',
-        requestedAt: new Date(),
-      },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
-    );
+    await upsertPendingAdminRecord({
+      id: uuidv4(),
+      name: user.name,
+      email: user.email,
+      password: hashedForPending,
+      role: 'cashier',
+      requestedAt: new Date(),
+    });
   }
 
   reset.used = true;
@@ -739,7 +750,7 @@ router.post('/reset-password', asyncHandler(async (req, res) => {
 
 // ============ GET CURRENT USER ============
 router.get('/me', verifyToken, asyncHandler(async (req, res) => {
-  const user = await User.findOne({ id: req.user.id });
+  const user = await User.findOne({ id: req.user.id, isArchived: false });
   if (!user) {
     return res.status(404).json({ error: 'User not found' });
   }

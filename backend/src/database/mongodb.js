@@ -13,6 +13,8 @@ const userSchema = new mongoose.Schema({
   loginMethods: { type: [String], default: [] },
   isVerified: { type: Boolean, default: false },
   passwordCreatedManually: { type: Boolean, default: true },
+  isArchived: { type: Boolean, default: false },
+  archivedAt: { type: Date, default: null },
   deletionRequestedAt: { type: Date, default: null },
   deletionScheduledFor: { type: Date, default: null },
   deletedAt: { type: Date, default: null },
@@ -27,7 +29,7 @@ const userSchema = new mongoose.Schema({
     timezone: { type: String, default: null },
     at: { type: Date, default: null },
   }
-});
+}, { optimisticConcurrency: true });
 
 // Password Reset Schema
 const passwordResetSchema = new mongoose.Schema({
@@ -51,7 +53,7 @@ const pendingAdminSchema = new mongoose.Schema({
   emailVerified: { type: Boolean, default: false },
   passwordSet: { type: Boolean, default: false },
   requestedAt: { type: Date, default: Date.now }
-});
+}, { optimisticConcurrency: true });
 
 // Product Schema
 const productSchema = new mongoose.Schema({

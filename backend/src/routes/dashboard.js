@@ -1,11 +1,12 @@
 import express from 'express';
 import { verifyToken } from '../middleware/auth.js';
+import { authorize } from '../middleware/authorize.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { Product, Transaction } from '../database/mongodb.js';
 
 const router = express.Router();
 
-router.get('/metrics', verifyToken, asyncHandler(async (req, res) => {
+router.get('/metrics', verifyToken, authorize('dashboard', 'read:any'), asyncHandler(async (req, res) => {
   const now = new Date();
   const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);

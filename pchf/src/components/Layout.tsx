@@ -52,10 +52,18 @@ export function Layout({ children, activeTab, onTabChange, user, onLogout }: Lay
 
   // Filter tabs dependi sa Roles
   const allowedNavigation = navigation.filter((item) => item.roles.includes(user.role));
+  const canAccessDashboard = allowedNavigation.some((item) => item.id === 'dashboard');
 
   // Load notifications from backend and poll periodically
   useEffect(() => {
     let mounted = true;
+    if (!canAccessDashboard) {
+      setNotifLow([]);
+      setNotifOut([]);
+      setNotifCount(0);
+      return () => { mounted = false; };
+    }
+
     const load = async () => {
       try {
         const m = await apiService.getDashboardMetrics();
@@ -66,8 +74,15 @@ export function Layout({ children, activeTab, onTabChange, user, onLogout }: Lay
         setNotifOut(out);
         const total = Number(m?.lowStockItems || 0) + Number(m?.outOfStockItems || 0);
         setNotifCount(total);
-      } catch {
+      } catch (err: any) {
         if (!mounted) return;
+        if (err?.status === 403) {
+          setNotifLow([]);
+          setNotifOut([]);
+          setNotifCount(0);
+          mounted = false;
+          return;
+        }
         setNotifLow([]);
         setNotifOut([]);
         setNotifCount(0);
@@ -76,7 +91,7 @@ export function Layout({ children, activeTab, onTabChange, user, onLogout }: Lay
     load();
     const id = setInterval(load, 60000);
     return () => { mounted = false; clearInterval(id); };
-  }, []);
+  }, [canAccessDashboard]);
 
   return (
     <div className="d-flex min-vh-100">

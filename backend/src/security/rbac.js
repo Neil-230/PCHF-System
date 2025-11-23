@@ -4,6 +4,9 @@ import AccessControl from 'accesscontrol';
 // Resources: transaction, product, backupSetting, notificationSetting, storeSetting, signupSetting
 const grantsObject = {
   owner: {
+    dashboard: {
+      'read:any': ['*'],
+    },
     transaction: {
       'create:any': ['*'],
       'read:any': ['*'],
@@ -33,6 +36,9 @@ const grantsObject = {
     },
   },
   admin: {
+    dashboard: {
+      'read:any': ['*'],
+    },
     transaction: {
       'create:any': ['*'],
       'read:any': ['*'],

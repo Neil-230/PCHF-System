@@ -18,6 +18,8 @@ export interface User {
 
 class ApiService {
   private token: string | null = null;
+  private csrfToken: string | null = null;
+  private csrfPromise: Promise<string> | null = null;
 
   constructor() {
     this.token = localStorage.getItem('authToken');
@@ -37,6 +39,39 @@ class ApiService {
     localStorage.removeItem('authToken');
   }
 
+  private async ensureCsrfToken() {
+    if (this.csrfToken) return this.csrfToken;
+    if (this.csrfPromise) return this.csrfPromise;
+
+    this.csrfPromise = fetch(`${API_BASE_URL}/csrf-token`, {
+      method: 'GET',
+      credentials: 'include',
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          const errText = await res.text().catch(() => 'Unable to fetch CSRF token');
+          throw new Error(errText || 'Unable to fetch CSRF token');
+        }
+        return res.json();
+      })
+      .then((data) => {
+        if (!data?.csrfToken) {
+          throw new Error('Invalid CSRF token response');
+        }
+        this.csrfToken = data.csrfToken;
+        return this.csrfToken;
+      })
+      .finally(() => {
+        this.csrfPromise = null;
+      });
+
+    return this.csrfPromise;
+  }
+
+  private resetCsrfToken() {
+    this.csrfToken = null;
+  }
+
   private async request(endpoint: string, options: RequestInit = {}) {
     const headers = new Headers(options.headers as HeadersInit);
     headers.set('Content-Type', 'application/json');
@@ -44,6 +79,13 @@ class ApiService {
     if (this.token) {
       headers.set('Authorization', `Bearer ${this.token}`);
     }
+
+     const method = (options.method || 'GET').toUpperCase();
+     const needsCsrf = !endpoint.startsWith('/auth') && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
+     if (needsCsrf) {
+       const token = await this.ensureCsrfToken();
+       headers.set('X-CSRF-Token', token);
+     }
 
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       ...options,
@@ -64,6 +106,11 @@ class ApiService {
           if (text) message = text;
         } catch {}
       }
+
+      if (response.status === 403 && raw && typeof raw === 'object' && raw.error?.toLowerCase?.().includes('csrf')) {
+        this.resetCsrfToken();
+      }
+
       const err: any = new Error(message);
       err.status = response.status;
       err.body = raw;

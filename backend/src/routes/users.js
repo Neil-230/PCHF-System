@@ -7,13 +7,15 @@ const router = express.Router();
 
 // ============ GET ALL USERS ============
 router.get('/', verifyToken, asyncHandler(async (req, res) => {
-  const users = await User.find({});
+  const includeArchived = req.query.includeArchived === 'true';
+  const filter = includeArchived ? {} : { isArchived: false };
+  const users = await User.find(filter);
   res.json({ users: users.map(u => u.toJSON()) });
 }));
 
 // ============ GET USER BY ID ============
 router.get('/:id', verifyToken, asyncHandler(async (req, res) => {
-  const user = await User.findOne({ id: req.params.id });
+  const user = await User.findOne({ id: req.params.id, isArchived: false });
   if (!user) {
     return res.status(404).json({ error: 'User not found' });
   }
@@ -34,8 +36,18 @@ router.put('/:id', verifyToken, asyncHandler(async (req, res) => {
   }
   updates.updatedAt = new Date();
 
-  const user = await User.findOneAndUpdate({ id: req.params.id }, updates, { new: true });
+  const user = await User.findOne({ id: req.params.id, isArchived: false });
   if (!user) return res.status(404).json({ error: 'User not found' });
+
+  Object.assign(user, updates);
+  try {
+    await user.save();
+  } catch (err) {
+    if (err && err.name === 'VersionError') {
+      return res.status(409).json({ error: 'Conflict: user was updated concurrently. Please retry.' });
+    }
+    throw err;
+  }
 
   res.json({ message: 'User updated', user: user.toJSON() });
 }));
@@ -120,7 +132,7 @@ router.get('/me/deletion-status', verifyToken, asyncHandler(async (req, res) => 
 }));
 
 router.post('/me/deletion-request', verifyToken, asyncHandler(async (req, res) => {
-  const user = await User.findOne({ id: req.user.id });
+  const user = await User.findOne({ id: req.user.id, isArchived: false });
   if (!user) return res.status(404).json({ error: 'User not found' });
 
   if (!user.deletionScheduledFor) {
@@ -137,7 +149,7 @@ router.post('/me/deletion-request', verifyToken, asyncHandler(async (req, res) =
 }));
 
 router.post('/me/deletion-cancel', verifyToken, asyncHandler(async (req, res) => {
-  const user = await User.findOne({ id: req.user.id });
+  const user = await User.findOne({ id: req.user.id, isArchived: false });
   if (!user) return res.status(404).json({ error: 'User not found' });
 
   user.deletionRequestedAt = null;

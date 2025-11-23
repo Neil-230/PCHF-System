@@ -30,7 +30,8 @@ export default function App() {
       .getCurrentUser()
       .then(({ user }) => {
         setUser(user);
-        setActiveTab("dashboard");
+        const defaultTab = user.role === 'cashier' ? 'pos' : 'dashboard';
+        setActiveTab(defaultTab);
       })
       .finally(() => setIsLoading(false));
   }, []);
@@ -73,7 +74,8 @@ export default function App() {
 
   const handleAuthSuccess = (authenticatedUser: User) => {
     setUser(authenticatedUser);
-    setActiveTab("dashboard");
+    const defaultTab = authenticatedUser.role === 'cashier' ? 'pos' : 'dashboard';
+    setActiveTab(defaultTab);
   };
 
   const handleLogout = async () => {
@@ -98,11 +100,11 @@ export default function App() {
       cashier: ["pos", "transactions", "settings"],
       owner: ["dashboard", "pos", "inventory", "transactions", "alerts", "settings"],
     };
-    if (allowedTabs[user.role]?.includes(tab)) {
-      setActiveTab(tab);
-      if (tab === 'transactions') {
-        loadTransactions();
-      }
+    const tabs = allowedTabs[user.role] || [];
+    const nextTab = tabs.includes(tab) ? tab : tabs[0] || 'pos';
+    setActiveTab(nextTab);
+    if (nextTab === 'transactions') {
+      loadTransactions();
     }
   };
 

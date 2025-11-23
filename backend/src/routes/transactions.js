@@ -10,6 +10,26 @@ import { sendSMS } from '../services/smsService.js';
 
 const router = express.Router();
 
+const normalizeItemsForCompare = (items) => {
+  const map = new Map();
+  for (const item of items || []) {
+    const key = String(item.productId);
+    const qty = Number(item.quantity) || 0;
+    map.set(key, (map.get(key) || 0) + qty);
+  }
+  return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+};
+
+const areTransactionItemsEqual = (aItems, bItems) => {
+  const na = normalizeItemsForCompare(aItems);
+  const nb = normalizeItemsForCompare(bItems);
+  if (na.length !== nb.length) return false;
+  for (let i = 0; i < na.length; i += 1) {
+    if (na[i][0] !== nb[i][0] || na[i][1] !== nb[i][1]) return false;
+  }
+  return true;
+};
+
 // Get transactions with optional filters
 router.get('/', verifyToken, authorize('transaction', 'read:any'), asyncHandler(async (req, res) => {
   const limit = Math.min(parseInt(req.query.limit || '50', 10), 500);
@@ -53,6 +73,19 @@ router.post('/', verifyToken, authorize('transaction', 'create:any'), asyncHandl
   const currentUser = await User.findOne({ id: req.user.id });
   if (!currentUser) {
     return res.status(401).json({ error: 'Invalid user' });
+  }
+
+  const recentTxn = await Transaction.findOne({ 'handledBy.email': currentUser.email }).sort({ timestamp: -1 });
+  if (recentTxn) {
+    const now = Date.now();
+    const lastTs = new Date(recentTxn.timestamp).getTime();
+    if (Number.isFinite(lastTs) && lastTs <= now && now - lastTs <= 5000 && areTransactionItemsEqual(recentTxn.items, items)) {
+      return res.status(200).json({
+        message: 'Duplicate transaction ignored',
+        transaction: recentTxn.toJSON(),
+        duplicate: true,
+      });
+    }
   }
 
   const session = await mongoose.startSession();

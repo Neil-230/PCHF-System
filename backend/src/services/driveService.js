@@ -12,6 +12,26 @@ const getOAuth2Client = () => {
   return new google.auth.OAuth2(clientId, clientSecret, redirectUri);
 };
 
+const getOrCreateSystemSettings = async () => {
+  let settings = await SystemSettings.findOne({ id: 'system' });
+  if (!settings) {
+    settings = new SystemSettings({ id: 'system' });
+  }
+  return settings;
+};
+
+const saveSystemSettings = async (settings, conflictMessage = 'Conflict: system settings were updated concurrently. Please retry.') => {
+  try {
+    await settings.save();
+  } catch (err) {
+    if (err?.name === 'VersionError') {
+      throw Object.assign(new Error(conflictMessage), { status: 409 });
+    }
+    throw err;
+  }
+  return settings;
+};
+
 export const getAuthUrl = async () => {
   const oAuth2Client = getOAuth2Client();
   const scopes = ['https://www.googleapis.com/auth/drive.file'];
@@ -30,11 +50,10 @@ export const handleOAuthCallback = async (code) => {
     throw new Error('No refresh token returned by Google. Try again with consent.');
   }
   // Save refresh token in SystemSettings
-  const settings = await SystemSettings.findOneAndUpdate(
-    { id: 'system' },
-    { driveRefreshToken: tokens.refresh_token, updatedAt: new Date() },
-    { upsert: true, new: true, setDefaultsOnInsert: true }
-  );
+  const settings = await getOrCreateSystemSettings();
+  settings.driveRefreshToken = tokens.refresh_token;
+  settings.updatedAt = new Date();
+  await saveSystemSettings(settings, 'Conflict: Google Drive settings were updated concurrently. Please retry.');
   return settings;
 };
 
@@ -89,11 +108,10 @@ export const uploadBackup = async () => {
 
   const res = await drive.files.create({ requestBody: fileMetadata, media, fields: 'id, name' });
 
-  await SystemSettings.findOneAndUpdate(
-    { id: 'system' },
-    { backupLastRun: new Date(), backupLastError: '', updatedAt: new Date() },
-    { upsert: true }
-  );
+  settings.backupLastRun = new Date();
+  settings.backupLastError = '';
+  settings.updatedAt = new Date();
+  await saveSystemSettings(settings, 'Conflict: system settings were updated concurrently while recording backup completion. Please retry.');
 
   return res.data;
 };
@@ -114,11 +132,10 @@ export const ensureFolder = async (folderName = 'PCH_Backups') => {
     });
     folderId = create.data.id;
   }
-  await SystemSettings.findOneAndUpdate(
-    { id: 'system' },
-    { driveFolderId: folderId, updatedAt: new Date() },
-    { upsert: true }
-  );
+  const settings = await getOrCreateSystemSettings();
+  settings.driveFolderId = folderId;
+  settings.updatedAt = new Date();
+  await saveSystemSettings(settings, 'Conflict: drive settings were updated concurrently. Please retry.');
   return folderId;
 };
 
@@ -129,11 +146,18 @@ export const runScheduledBackupIfEnabled = async () => {
     await uploadBackup();
     return { success: true };
   } catch (err) {
-    await SystemSettings.findOneAndUpdate(
-      { id: 'system' },
-      { backupLastError: err.message || String(err), updatedAt: new Date() },
-      { upsert: true }
-    );
+    try {
+      const settings = await getOrCreateSystemSettings();
+      settings.backupLastError = err.message || String(err);
+      settings.updatedAt = new Date();
+      await saveSystemSettings(settings, 'Conflict: system settings were updated concurrently while recording backup error state. Please retry.');
+    } catch (saveErr) {
+      if (saveErr?.status === 409) {
+        console.warn('Conflict while recording backup error state. Please retry.');
+      } else {
+        console.error('Failed to record backup error state:', saveErr);
+      }
+    }
     return { success: false, error: err.message };
   }
 };
