@@ -120,25 +120,25 @@ router.post('/', verifyToken, authorize('transaction', 'create:any'), asyncHandl
       }
 
       // Prepare notifications based on new stock values
-      const settings = await SystemSettings.findOne({ id: 'system' }).session(session);
-      if (settings) {
+      const inventorySettings = await SystemSettings.findOne({ id: 'system' }).session(session);
+      if (inventorySettings) {
         const toNotify = [];
-        const threshold = typeof settings.lowStockThreshold === 'number' ? settings.lowStockThreshold : 10;
+        const threshold = typeof inventorySettings.lowStockThreshold === 'number' ? inventorySettings.lowStockThreshold : 10;
         for (const item of items) {
           const p = productMap.get(item.productId);
           if (!p) continue;
-          if (settings.notifyOutOfStock && p.stock === 0) {
+          if (inventorySettings.notifyOutOfStock && p.stock === 0) {
             toNotify.push({ type: 'out', name: p.name, sku: p.sku, stock: p.stock });
-          } else if (settings.notifyLowStock && p.stock > 0 && p.stock <= threshold) {
+          } else if (inventorySettings.notifyLowStock && p.stock > 0 && p.stock <= threshold) {
             toNotify.push({ type: 'low', name: p.name, sku: p.sku, stock: p.stock });
           }
         }
         if (toNotify.length > 0) {
-          const method = settings.notificationMethod || 'email';
+          const method = inventorySettings.notificationMethod || 'email';
           const wantsEmail = method === 'email' || method === 'both';
           const wantsSMS = method === 'sms' || method === 'both';
-          const emailTo = settings.email;
-          const smsTo = settings.phone;
+          const emailTo = inventorySettings.email;
+          const smsTo = inventorySettings.phone;
           const lines = toNotify.map(e => `${e.type === 'out' ? 'Out of stock' : 'Low stock'}: ${e.name} (SKU: ${e.sku}) – stock: ${e.stock}`);
           const smsBody = `Inventory alert:\n${lines.join('\n')}`;
           const emailHtml = `<div style=\"font-family:Arial,sans-serif\"><p>Inventory alert:</p><ul>${toNotify.map(e => `<li>${e.type === 'out' ? 'Out of stock' : 'Low stock'}: ${e.name} (SKU: ${e.sku}) – stock: ${e.stock}</li>`).join('')}</ul></div>`;
