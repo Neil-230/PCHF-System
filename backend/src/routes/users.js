@@ -110,12 +110,32 @@ router.post('/admin/decline/:email', verifyToken, asyncHandler(async (req, res) 
     return res.status(403).json({ error: 'Only owner or admin can decline sign-ups' });
   }
 
-  const result = await PendingAdmin.deleteOne({ email: req.params.email });
-  if (result.deletedCount === 0) {
+  const email = req.params.email;
+  const pending = await PendingAdmin.findOne({ email });
+  if (!pending) {
     return res.status(404).json({ error: 'Pending admin not found' });
   }
 
-  res.json({ message: 'Sign-up request declined' });
+  await pending.deleteOne();
+
+  const user = await User.findOne({ email, isArchived: false });
+  if (user) {
+    user.isArchived = true;
+    user.archivedAt = new Date();
+    user.deletionRequestedAt = null;
+    user.deletionScheduledFor = null;
+    user.deletedAt = null;
+    try {
+      await user.save();
+    } catch (err) {
+      if (err && err.name === 'VersionError') {
+        return res.status(409).json({ error: 'Conflict: user was updated concurrently. Please retry.' });
+      }
+      throw err;
+    }
+  }
+
+  res.json({ message: 'Sign-up request declined and access revoked' });
 }));
 
 // ============ ACCOUNT DELETION (30-DAY GRACE) ============

@@ -1,5 +1,7 @@
 import mongoose from 'mongoose';
 
+// MongoDB’s MVCC is enabled via optimisticConcurrency so each write checks the __v version key
+// instead of silently overwriting stale documents.
 // User Schema
 const userSchema = new mongoose.Schema({
   id: { type: String, unique: true, required: true },
@@ -41,7 +43,7 @@ const passwordResetSchema = new mongoose.Schema({
   used: { type: Boolean, default: false }
 });
 
-// Pending Admin Schema
+// Pending Admin Schema (also safeguarded by MVCC through optimisticConcurrency)
 const pendingAdminSchema = new mongoose.Schema({
   id: { type: String, unique: true, required: true },
   name: { type: String, required: true },
