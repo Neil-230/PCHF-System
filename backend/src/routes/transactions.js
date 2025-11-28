@@ -148,13 +148,26 @@ router.post('/', verifyToken, authorize('transaction', 'create:any'), asyncHandl
       }
 
       // Generate sequential transaction ID (e.g., t_0005)
-      const settings = await SystemSettings.findOne({ id: 'system' }).session(session);
-      const nextNumber = settings?.nextTransactionNumber || 1;
-      const transactionId = `t_${String(nextNumber).padStart(4, '0')}`;
-      if (settings) {
-        settings.nextTransactionNumber = nextNumber + 1;
-        await settings.save({ session });
+      let settingsDoc = inventorySettings;
+      if (!settingsDoc) {
+        settingsDoc = await SystemSettings.findOne({ id: 'system' }).session(session);
       }
+      if (!settingsDoc) {
+        settingsDoc = new SystemSettings({ id: 'system' });
+      }
+
+      let nextNumber = Number.isFinite(settingsDoc.nextTransactionNumber)
+        ? settingsDoc.nextTransactionNumber
+        : 1;
+      let transactionId = `t_${String(nextNumber).padStart(4, '0')}`;
+
+      while (await Transaction.exists({ id: transactionId }).session(session)) {
+        nextNumber += 1;
+        transactionId = `t_${String(nextNumber).padStart(4, '0')}`;
+      }
+
+      settingsDoc.nextTransactionNumber = nextNumber + 1;
+      await settingsDoc.save({ session });
 
       // Build transaction record
       txn = new Transaction({
