@@ -118,24 +118,9 @@ router.post('/admin/decline/:email', verifyToken, asyncHandler(async (req, res) 
 
   await pending.deleteOne();
 
-  const user = await User.findOne({ email, isArchived: false });
-  if (user) {
-    user.isArchived = true;
-    user.archivedAt = new Date();
-    user.deletionRequestedAt = null;
-    user.deletionScheduledFor = null;
-    user.deletedAt = null;
-    try {
-      await user.save();
-    } catch (err) {
-      if (err && err.name === 'VersionError') {
-        return res.status(409).json({ error: 'Conflict: user was updated concurrently. Please retry.' });
-      }
-      throw err;
-    }
-  }
+  await User.deleteOne({ email });
 
-  res.json({ message: 'Sign-up request declined and access revoked' });
+  res.json({ message: 'Sign-up request declined and account deleted' });
 }));
 
 // ============ ACCOUNT DELETION (30-DAY GRACE) ============
