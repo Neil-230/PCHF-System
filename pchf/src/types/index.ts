@@ -7,6 +7,7 @@ export interface Product {
   sku: string;
   image?: string;
   description?: string;
+  __v?: number;
 }
 
 export interface CartItem {

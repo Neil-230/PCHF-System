@@ -242,8 +242,9 @@ class ApiService {
     });
   }
 
-  async deleteProduct(id: string): Promise<{ message: string }>{
-    return this.request(`/products/${id}`, {
+  async deleteProduct(id: string, version: number): Promise<{ message: string }> {
+    const qs = new URLSearchParams({ version: String(version) }).toString();
+    return this.request(`/products/${id}?${qs}`, {
       method: 'DELETE',
     });
   }

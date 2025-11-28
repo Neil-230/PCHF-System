@@ -107,6 +107,11 @@ export function InventoryManagement({ user }: { user?: User }) {
   const handleEditProduct = async () => {
     if (!editingProduct) return;
 
+    if (editingProduct.__v === undefined) {
+      toast.error("This product's version is unknown. Please refresh before editing.");
+      return;
+    }
+
     const updates = {
       name: formData.name,
       price: parseFloat(formData.price),
@@ -114,6 +119,7 @@ export function InventoryManagement({ user }: { user?: User }) {
       stock: parseInt(formData.stock),
       sku: formData.sku.trim() || generateSKU(formData.category),
       description: formData.description,
+      version: editingProduct.__v,
     } as any;
 
     try {
@@ -155,13 +161,29 @@ export function InventoryManagement({ user }: { user?: User }) {
       toast.error("Only the owner can delete products");
       return;
     }
+
+    const product = products.find((p) => p.id === productId);
+    if (!product) {
+      toast.error("Product not found. Please refresh.");
+      return;
+    }
+
+    if (product.__v === undefined) {
+      toast.error("This product's version is unknown. Please refresh before deleting.");
+      return;
+    }
+
     const confirmed = window.confirm("Are you sure you want to delete this product?");
     if (!confirmed) return;
     try {
-      await apiService.deleteProduct(productId);
+      await apiService.deleteProduct(productId, product.__v);
       setProducts((prev) => prev.filter((p) => p.id !== productId));
       toast.success("Product deleted");
-    } catch {
+    } catch (e: any) {
+      if (e?.status === 409) {
+        toast.error("Data changed by someone else. Please refresh and try again.");
+        return;
+      }
       setProducts((prev) => prev.filter((p) => p.id !== productId));
       toast.success("Product deleted locally");
     }
