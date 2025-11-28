@@ -3,6 +3,8 @@ import React, { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { AuthService, defaultPasswords } from "../data/authData";
 import apiService from "../services/api";
+import { Save } from "lucide-react";
+import { Store, Shield, Database, Bell } from "lucide-react";
 
 /* ---------- Types ---------- */
 interface StoreSettings {
@@ -332,320 +334,364 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user 
   /* ---------- Render ---------- */
   return (
     <div className="container py-2">
-      <h2 className="fw-bold mb-4 text-center">System Settings</h2>
+      <div className="text-center mb-4 d-flex justify-content-between">
+        <div className="">
+          <h2 className="fw-bold text-start">System Settings</h2>
+          <p className="text-muted">Manage your store preferences and system configurations.</p>
+        </div>
+        <div>
+          <button className="btn btn-outline-secondary rounded-3 px-4 py-2 me-2 btn-sm" onClick={handleSaveSettings}>
+            <Save className="me-2"/>Save Settings
+          </button>
+          <button className="btn btn-outline-danger rounded-3 px-4 py-2" onClick={onLogout}>
+            Logout
+          </button>
+        </div>
+      </div>
 
-      {/* ---------- Store Settings ---------- */}
-      <div className="position-relative mb-4">
-        <div className="card" style={{ borderRadius: "12px", boxShadow: "2px 4px 8px rgba(0,0,0,0.15)" }}>
-          <div className="card-header bg-0 text-dark fw-bold">Store Information</div>
-          <div className="card-body">
-            {/* store info form para nis receipt */}
-            {/* store langnis DATAbase para dimag cge kawala */}
-            <div className="mb-3">
-              <label className="form-label">Store Name</label>
-              <input
-                type="text"
-                className="form-control"
-                value={storeSettings.storeName}
-                onChange={(e) => setStoreSettings({ ...storeSettings, storeName: e.target.value })}
-                disabled={!canAccessStoreSettings}
-              />
+      <div className="row">
+        <div className="col-md-8">
+          {/* ---------- Store Settings ---------- */}
+          <div className="position-relative mb-4">
+            <div className="card border-0" style={{ borderRadius: "12px", boxShadow: "2px 4px 8px rgba(0,0,0,0.15)" }}>
+              <div className="card-header bg-transparent text-dark fw-bold fs-5">
+                <Store className="me-2"/>
+                Store Information
+              </div>
+              <div className="card-body">
+                {/* store info form para nis receipt */}
+                {/* store langnis DATAbase para dimag cge kawala */}
+                <div className="mb-3">
+                  <label className="form-label">Store Name</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={storeSettings.storeName}
+                    onChange={(e) => setStoreSettings({ ...storeSettings, storeName: e.target.value })}
+                    disabled={!canAccessStoreSettings}
+                  />
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">Address</label>
+                  <textarea
+                    className="form-control"
+                    rows={2}
+                    value={storeSettings.storeAddress}
+                    onChange={(e) => setStoreSettings({ ...storeSettings, storeAddress: e.target.value })}
+                    disabled={!canAccessStoreSettings}
+                  ></textarea>
+                </div>
+                <div className="row">
+                  <div className="col-md-6 mb-3">
+                    <label className="form-label">Phone</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={storeSettings.phone}
+                      onChange={(e) => setStoreSettings({ ...storeSettings, phone: e.target.value })}
+                      disabled={!canAccessStoreSettings}
+                    />
+                  </div>
+                  <div className="col-md-6 mb-3">
+                    <label className="form-label">Email</label>
+                    <input
+                      type="email"
+                      className="form-control"
+                      value={storeSettings.email}
+                      onChange={(e) => setStoreSettings({ ...storeSettings, email: e.target.value })}
+                      disabled={!canAccessStoreSettings}
+                    />
+                  </div>
+                </div>
+                <div className="row">
+                  <div className="col-md-6 mb-3" style={{display:"none"}}>
+                    <label className="form-label">Tax Rate (%)</label>
+                    <input
+                      type="number"
+                      className="form-control"
+                      value={storeSettings.taxRate}
+                      onChange={(e) => setStoreSettings({ ...storeSettings, taxRate: e.target.value })}
+                      disabled={!canAccessStoreSettings}
+                    />
+                  </div>
+                  <div className="col-md-6 mb-3" style={{display:"none"}}>
+                    <label className="form-label">Currency</label>
+                    <select
+                      className="form-select"
+                      value={storeSettings.currency}
+                      onChange={(e) => setStoreSettings({ ...storeSettings, currency: e.target.value })}
+                      disabled={!canAccessStoreSettings}
+                    >
+                      <option value="PHP">PHP</option>
+                      <option value="USD">USD</option>
+                      <option value="EUR">EUR</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="mb-3">
+                  <label className="form-label">Receipt Footer Message</label>
+                  <textarea
+                    className="form-control"
+                    rows={2}
+                    value={storeSettings.footerMessage}
+                    onChange={(e) => setStoreSettings({ ...storeSettings, footerMessage: e.target.value })}
+                    disabled={!canAccessStoreSettings}
+                  ></textarea>
+                  <small className="text-muted">
+                    This message will appear at the bottom of each printed receipt.
+                  </small>
+                </div>
+              </div>
             </div>
-            <div className="mb-3">
-              <label className="form-label">Address</label>
-              <textarea
-                className="form-control"
-                rows={2}
-                value={storeSettings.storeAddress}
-                onChange={(e) => setStoreSettings({ ...storeSettings, storeAddress: e.target.value })}
-                disabled={!canAccessStoreSettings}
-              ></textarea>
+
+            {/* Block overlay for Cashier */}
+            {isCashier && (
+              <div
+                className="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
+                style={{
+                  backgroundColor: "rgba(255,255,255,0.7)",
+                  borderRadius: "12px",
+                  backdropFilter: "blur(3px)",
+                }}
+              >
+                <div className="text-center text-dark fw-bold">
+                  <i className="bi bi-lock-fill fs-3 d-block mb-2"></i>
+                  Store Settings Locked for Cashiers
+                </div>
+              </div>
+            )}
+          </div>
+          
+          {/* NOTIFICATION SETTINGS */}
+          <div className="card mb-4 border-0" style={{ borderRadius: "12px", boxShadow: "2px 4px 8px rgba(0,0,0,0.15)" }}>
+            <div className="card-header bg-transparent text-dark fw-bold fs-5">
+              <Bell className="me-2"/>
+              Notifications
             </div>
-            <div className="row">
-              <div className="col-md-6 mb-3">
-                <label className="form-label">Phone</label>
+            <div className="card-body">
+              <div className="form-check form-switch mb-2">
+                <input className="form-check-input" type="checkbox" checked={notifyLowStock}
+                  onChange={(e) => setNotifyLowStock(e.target.checked)} disabled={!canAccessStoreSettings} />
+                <label className="form-check-label">Notify on low stock</label>
+              </div>
+              <div className="form-check form-switch mb-3">
+                <input className="form-check-input" type="checkbox" checked={notifyOutOfStock}
+                  onChange={(e) => setNotifyOutOfStock(e.target.checked)} disabled={!canAccessStoreSettings} />
+                <label className="form-check-label">Notify when out of stock</label>
+              </div>
+              <div className="row">
+                <div className="col-md-6 mb-3">
+                  <label className="form-label">Low stock threshold</label>
+                  <input type="number" min={0} className="form-control" value={lowStockThreshold}
+                    onChange={(e) => setLowStockThreshold(e.target.value)} disabled={!canAccessStoreSettings} />
+                </div>
+                <div className="col-md-6 mb-3">
+                  <label className="form-label">Notification method</label>
+                  <select className="form-select" value={notificationMethod}
+                    onChange={(e) => setNotificationMethod(e.target.value as any)} disabled={!canAccessStoreSettings}>
+                    <option value="email">Email</option>
+                    <option value="sms">SMS</option>
+                    <option value="both">Both</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        {/* ---------- Account Settings ---------- */}
+        <div className="col-md-4">
+          <div className="card mb-4 border-0" style={{ borderRadius: "12px", boxShadow: "2px 4px 8px rgba(0,0,0,0.15)" }}>
+            <div className="card-header bg-transparent fw-bold fs- ">
+              <Shield className="me-2"/>
+              Account Settings
+            </div>
+            <div className="card-body">
+              {currentRole === "owner" && (
+                <div className="form-check form-switch mb-2">
+                  <input
+                    className="form-check-input"
+                    type="checkbox"
+                    checked={!!signupsOpen}
+                    onChange={async (e) => {
+                      const next = e.target.checked;
+                      try {
+                        const res = await apiService.setSignupsOpen(next);
+                        setSignupsOpen(res.signupsOpen);
+                        toast.success(res.signupsOpen ? "Sign-ups opened" : "Sign-ups closed");
+                      } catch (err: any) {
+                        toast.error(err?.message || "Failed to update setting");
+                      }
+                    }}
+                    disabled={signupsOpen === null}
+                  />
+                  <label className="form-check-label">Allow new sign-up</label>
+                </div>
+              )}
+              {/* <div className="form-check form-switch mb-2">
+                <input className="form-check-input" type="checkbox" checked={securitySettings.requirePin}
+                  onChange={(e) => setSecuritySettings({ ...securitySettings, requirePin: e.target.checked })} />
+                <label className="form-check-label">Require PIN at Login</label>
+              </div> */}
+              <div className="form-check form-switch mb-2">
+                <input className="form-check-input" type="checkbox" checked={securitySettings.autoLogout}
+                  onChange={(e) => setSecuritySettings({ ...securitySettings, autoLogout: e.target.checked })} />
+                <label className="form-check-label">Auto Logout on Inactivity</label>
+              </div>
+
+              {/* kani bay pwedi ni ninyo i implement na mag logout ang account depending on time */}
+              <div className="mb-0">
+                <label className="form-label">Session Timeout (minutes)</label>
+                <select className="form-select" value={securitySettings.sessionTimeout}
+                  onChange={(e) => setSecuritySettings({ ...securitySettings, sessionTimeout: e.target.value })}>
+                  <option value="5">5</option>
+                  <option value="10">10</option>
+                  <option value="15">15</option>
+                  <option value="30">30</option>
+                </select>
+              </div>
+              {/* you can delete the logout mechanism kong feel ninyo dina needed */}
+            </div>
+            
+            
+            {/* Chanepass */}
+            {/* <hr className="" /> */}
+            {/* <label className="fw-bold mb-3">Change your account password</label> */}
+            <div className="mb-5">
+              <button className="btn btn-secondary w-100" onClick={openChangePasswordModal}>Change password</button>
+            </div>
+            {/* Delete Account */}
+            {deletion && deletion.scheduledFor ? (
+              <div className="d-flex flex-column gap-2">
+                <div>
+                  <strong>Scheduled for:</strong> {new Date(deletion.scheduledFor).toLocaleString()}
+                </div>
+                <div>
+                  <strong>Days remaining:</strong> {deletion.daysRemaining}
+                </div>
+                <button
+                  className="btn btn-outline-secondary"
+                  disabled={loadingDeletion}
+                  onClick={async () => {
+                    setLoadingDeletion(true);
+                    try {
+                      const res = await apiService.cancelDeletion();
+                      setDeletion(res);
+                      toast.success("Deletion canceled");
+                    } catch (e: any) {
+                      toast.error(e?.message || "Failed to cancel");
+                    } finally {
+                      setLoadingDeletion(false);
+                    }
+                  }}
+                >
+                  Cancel Deletion
+                </button>
+              </div>
+            ) : (
+              <div className="d-flex flex-column gap-2">
+                <small className="text-muted">Account Removal will be confirmed after 30 Days</small>
                 <input
                   type="text"
                   className="form-control"
-                  value={storeSettings.phone}
-                  onChange={(e) => setStoreSettings({ ...storeSettings, phone: e.target.value })}
-                  disabled={!canAccessStoreSettings}
+                  value={confirmDelete}
+                  onChange={(e) => setConfirmDelete(e.target.value)}
+                  placeholder="type Remove to confirm"
                 />
-              </div>
-              <div className="col-md-6 mb-3">
-                <label className="form-label">Email</label>
-                <input
-                  type="email"
-                  className="form-control"
-                  value={storeSettings.email}
-                  onChange={(e) => setStoreSettings({ ...storeSettings, email: e.target.value })}
-                  disabled={!canAccessStoreSettings}
-                />
-              </div>
-            </div>
-            <div className="row">
-              <div className="col-md-6 mb-3">
-                <label className="form-label">Tax Rate (%)</label>
-                <input
-                  type="number"
-                  className="form-control"
-                  value={storeSettings.taxRate}
-                  onChange={(e) => setStoreSettings({ ...storeSettings, taxRate: e.target.value })}
-                  disabled={!canAccessStoreSettings}
-                />
-              </div>
-              <div className="col-md-6 mb-3">
-                <label className="form-label">Currency</label>
-                <select
-                  className="form-select"
-                  value={storeSettings.currency}
-                  onChange={(e) => setStoreSettings({ ...storeSettings, currency: e.target.value })}
-                  disabled={!canAccessStoreSettings}
+                <button
+                  className="btn btn-secondary "
+                  disabled={loadingDeletion || confirmDelete !== "Remove"}
+                  onClick={async () => {
+                    setLoadingDeletion(true);
+                    try {
+                      const res = await apiService.requestDeletion();
+                      setDeletion(res);
+                      toast.success("Deletion scheduled in 30 days");
+                    } catch (e: any) {
+                      toast.error(e?.message || "Failed to schedule");
+                    } finally {
+                      setLoadingDeletion(false);
+                    }
+                  }}
                 >
-                  <option value="PHP">PHP</option>
-                  <option value="USD">USD</option>
-                  <option value="EUR">EUR</option>
-                </select>
+                  Remove Account
+                </button>
               </div>
+            )}
+          </div>
+
+          {/* Backup Settings */}
+          <div className="card mb-4 border-0" style={{ borderRadius: "12px", boxShadow: "2px 4px 8px rgba(0,0,0,0.15)" }}>
+            <div className="card-header bg-transparent text-dark fw-bold">
+              <Database className="me-2"/>
+              Backup Settings
             </div>
-
-            <div className="mb-3">
-              <label className="form-label">Receipt Footer Message</label>
-              <textarea
-                className="form-control"
-                rows={2}
-                value={storeSettings.footerMessage}
-                onChange={(e) => setStoreSettings({ ...storeSettings, footerMessage: e.target.value })}
-                disabled={!canAccessStoreSettings}
-              ></textarea>
-              <small className="text-muted">
-                This message will appear at the bottom of each printed receipt.
-              </small>
-            </div>
-          </div>
-        </div>
-
-        {/* Block overlay for Cashier */}
-        {isCashier && (
-          <div
-            className="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
-            style={{
-              backgroundColor: "rgba(255,255,255,0.7)",
-              borderRadius: "12px",
-              backdropFilter: "blur(3px)",
-            }}
-          >
-            <div className="text-center text-dark fw-bold">
-              <i className="bi bi-lock-fill fs-3 d-block mb-2"></i>
-              Store Settings Locked for Cashiers
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* ---------- Security Settings ---------- */}
-      <div className="card mb-4" style={{ borderRadius: "12px", boxShadow: "2px 4px 8px rgba(0,0,0,0.15)" }}>
-        <div className="card-header bg-0 text-dark fw-bold">Security Settings</div>
-        <div className="card-body">
-          {currentRole === "owner" && (
-            <div className="form-check form-switch mb-2">
-              <input
-                className="form-check-input"
-                type="checkbox"
-                checked={!!signupsOpen}
-                onChange={async (e) => {
-                  const next = e.target.checked;
-                  try {
-                    const res = await apiService.setSignupsOpen(next);
-                    setSignupsOpen(res.signupsOpen);
-                    toast.success(res.signupsOpen ? "Sign-ups opened" : "Sign-ups closed");
-                  } catch (err: any) {
-                    toast.error(err?.message || "Failed to update setting");
-                  }
-                }}
-                disabled={signupsOpen === null}
-              />
-              <label className="form-check-label">Allow new sign-ups</label>
-            </div>
-          )}
-          {/* <div className="form-check form-switch mb-2">
-            <input className="form-check-input" type="checkbox" checked={securitySettings.requirePin}
-              onChange={(e) => setSecuritySettings({ ...securitySettings, requirePin: e.target.checked })} />
-            <label className="form-check-label">Require PIN at Login</label>
-          </div> */}
-          <div className="form-check form-switch mb-2">
-            <input className="form-check-input" type="checkbox" checked={securitySettings.autoLogout}
-              onChange={(e) => setSecuritySettings({ ...securitySettings, autoLogout: e.target.checked })} />
-            <label className="form-check-label">Auto Logout on Inactivity</label>
-          </div>
-
-          {/* kani bay pwedi ni ninyo i implement na mag logout ang account depending on time */}
-          <div className="mb-3">
-            <label className="form-label">Session Timeout (minutes)</label>
-            <select className="form-select" value={securitySettings.sessionTimeout}
-              onChange={(e) => setSecuritySettings({ ...securitySettings, sessionTimeout: e.target.value })}>
-              <option value="5">5</option>
-              <option value="10">10</option>
-              <option value="15">15</option>
-              <option value="30">30</option>
-            </select>
-          </div>
-          {/* you can delete the logout mechanism kong feel ninyo dina needed */}
-
-
-          <div className="form-check form-switch mb-2">
-            <input className="form-check-input" type="checkbox" checked={securitySettings.dataBackup}
-              onChange={async (e) => {
-                const enabled = e.target.checked;
-                setSecuritySettings({ ...securitySettings, dataBackup: enabled });
-                if (!canAccessStoreSettings) return;
-                try {
-                  const res = await apiService.setBackupEnabled(enabled);
-                  setDriveStatus((prev) => ({ ...prev, backupEnabled: res.backupEnabled }));
-                  toast.success(res.backupEnabled ? 'Automatic backup enabled' : 'Automatic backup disabled');
-                } catch (err: any) {
-                  toast.error(err?.message || 'Failed to update backup setting');
-                }
-              }}
-              disabled={!canAccessStoreSettings || !driveStatus.connected}
-            />
-            <label className="form-check-label">Automatic Data Backup</label>
-          </div>
-
-          {canAccessStoreSettings && (
-            <div className="mb-2">
-              <label className="fw-bold d-block mb-1">Cloud Backup (Google Drive)</label>
-              <div className="small text-muted mb-2">
-                Status: {driveStatus.connected ? 'Connected' : 'Not connected'}
-                {driveStatus.backupLastRun ? ` • Last run: ${new Date(driveStatus.backupLastRun).toLocaleString()}` : ''}
+            <div className="card-body">
+              <div className="form-check form-switch mb-2">
+                <input className="form-check-input" type="checkbox" checked={securitySettings.dataBackup}
+                  onChange={async (e) => {
+                    const enabled = e.target.checked;
+                    setSecuritySettings({ ...securitySettings, dataBackup: enabled });
+                    if (!canAccessStoreSettings) return;
+                    try {
+                      const res = await apiService.setBackupEnabled(enabled);
+                      setDriveStatus((prev) => ({ ...prev, backupEnabled: res.backupEnabled }));
+                      toast.success(res.backupEnabled ? 'Automatic backup enabled' : 'Automatic backup disabled');
+                    } catch (err: any) {
+                      toast.error(err?.message || 'Failed to update backup setting');
+                    }
+                  }}
+                  disabled={!canAccessStoreSettings || !driveStatus.connected}
+                />
+                <label className="form-check-label">Automatic Data Backup</label>
               </div>
-              {!driveStatus.connected ? (
-                <button className="btn btn-outline-dark btn-sm" onClick={handleConnectDrive} disabled={loadingDrive}>Connect Google Drive</button>
-              ) : (
-                <div className="d-flex gap-2 flex-wrap align-items-center">
-                  <button className="btn btn-outline-secondary btn-sm" onClick={handleEnsureFolder} disabled={loadingDrive}>Ensure Backup Folder</button>
-                  <button className="btn btn-dark btn-sm" onClick={handleRunBackup} disabled={loadingDrive}>Run Backup Now</button>
-                  {driveStatus.driveFolderId && (
-                    <a className="btn btn-link btn-sm p-0" href={`https://drive.google.com/drive/folders/${driveStatus.driveFolderId}`} target="_blank" rel="noreferrer">Open Folder</a>
+
+              {canAccessStoreSettings && (
+                <div>
+                  <label className="fw-bold d-block mb-1">Cloud Backup (Google Drive)</label>
+                  <div className="small text-muted">
+                    Status: {driveStatus.connected ? 'Connected' : 'Not connected'}
+                  </div>
+                  <div className="small text-muted mb-2">
+                    {driveStatus.backupLastRun ? `Last run: ${new Date(driveStatus.backupLastRun).toLocaleString()}` : ''}
+                  </div>
+                  {!driveStatus.connected ? (
+                    <button className="btn btn-outline-dark btn-sm" onClick={handleConnectDrive} disabled={loadingDrive}>Connect Google Drive</button>
+                  ) : (
+                    <div className="d-flex gap-2 flex-wrap align-items-center">
+                      
+                      <button className="btn btn-outline-primary btn-sm w-100" 
+                        onClick={handleEnsureFolder} 
+                        disabled={loadingDrive}
+                      >
+                        Ensure Backup Folder
+                      </button>
+                      
+                      <button className="btn btn-secondary btn-sm w-100" 
+                        onClick={handleRunBackup} 
+                        disabled={loadingDrive}
+                      >
+                        Run Backup Now
+                      </button>
+                      {driveStatus.driveFolderId && (
+                        <a className="btn btn-link btn-sm text-decoration-none text-center w-100" 
+                          href={`https://drive.google.com/drive/folders/${driveStatus.driveFolderId}`} 
+                          target="_blank" 
+                          rel="noreferrer"
+                        >
+                          Open Folder
+                        </a>
+                      )}
+                    </div>
                   )}
+                  {driveStatus.backupLastError && <div className="text-danger small mt-2">{driveStatus.backupLastError}</div>}
                 </div>
               )}
-              {driveStatus.backupLastError && <div className="text-danger small mt-2">{driveStatus.backupLastError}</div>}
-            </div>
-          )}
-
-          <hr className="my-4" />
-          <label className="fw-bold mb-3">Change your account password</label>
-          <div>
-            <button className="btn btn-dark" onClick={openChangePasswordModal}>Change password</button>
-          </div>
-        </div>
-      </div>
-
-      <div className="card mb-4" style={{ borderRadius: "12px", boxShadow: "2px 4px 8px rgba(0,0,0,0.15)" }}>
-        <div className="card-header bg-0 text-dark fw-bold">Inventory Alerts</div>
-        <div className="card-body">
-          <div className="form-check form-switch mb-2">
-            <input className="form-check-input" type="checkbox" checked={notifyLowStock}
-              onChange={(e) => setNotifyLowStock(e.target.checked)} disabled={!canAccessStoreSettings} />
-            <label className="form-check-label">Notify on low stock</label>
-          </div>
-          <div className="form-check form-switch mb-3">
-            <input className="form-check-input" type="checkbox" checked={notifyOutOfStock}
-              onChange={(e) => setNotifyOutOfStock(e.target.checked)} disabled={!canAccessStoreSettings} />
-            <label className="form-check-label">Notify when out of stock</label>
-          </div>
-          <div className="row">
-            <div className="col-md-6 mb-3">
-              <label className="form-label">Low stock threshold</label>
-              <input type="number" min={0} className="form-control" value={lowStockThreshold}
-                onChange={(e) => setLowStockThreshold(e.target.value)} disabled={!canAccessStoreSettings} />
-            </div>
-            <div className="col-md-6 mb-3">
-              <label className="form-label">Notification method</label>
-              <select className="form-select" value={notificationMethod}
-                onChange={(e) => setNotificationMethod(e.target.value as any)} disabled={!canAccessStoreSettings}>
-                <option value="email">Email</option>
-                <option value="sms">SMS</option>
-                <option value="both">Both</option>
-              </select>
             </div>
           </div>
         </div>
       </div>
-
-      <div className="card mb-4" style={{ borderRadius: "12px", boxShadow: "2px 4px 8px rgba(0,0,0,0.15)" }}>
-        <div className="card-header bg-0 text-dark fw-bold">Account Deletion</div>
-        <div className="card-body">
-          {deletion && deletion.scheduledFor ? (
-            <div className="d-flex flex-column gap-2">
-              <div>
-                <strong>Scheduled for:</strong> {new Date(deletion.scheduledFor).toLocaleString()}
-              </div>
-              <div>
-                <strong>Days remaining:</strong> {deletion.daysRemaining}
-              </div>
-              <button
-                className="btn btn-outline-secondary"
-                disabled={loadingDeletion}
-                onClick={async () => {
-                  setLoadingDeletion(true);
-                  try {
-                    const res = await apiService.cancelDeletion();
-                    setDeletion(res);
-                    toast.success("Deletion canceled");
-                  } catch (e: any) {
-                    toast.error(e?.message || "Failed to cancel");
-                  } finally {
-                    setLoadingDeletion(false);
-                  }
-                }}
-              >
-                Cancel Deletion
-              </button>
-            </div>
-          ) : (
-            <div className="d-flex flex-column gap-2">
-              <small className="text-muted">Type DELETE to confirm scheduling account deletion in 30 days.</small>
-              <input
-                type="text"
-                className="form-control"
-                value={confirmDelete}
-                onChange={(e) => setConfirmDelete(e.target.value)}
-                placeholder="Type DELETE"
-              />
-              <button
-                className="btn btn-danger"
-                disabled={loadingDeletion || confirmDelete !== "DELETE"}
-                onClick={async () => {
-                  setLoadingDeletion(true);
-                  try {
-                    const res = await apiService.requestDeletion();
-                    setDeletion(res);
-                    toast.success("Deletion scheduled in 30 days");
-                  } catch (e: any) {
-                    toast.error(e?.message || "Failed to schedule");
-                  } finally {
-                    setLoadingDeletion(false);
-                  }
-                }}
-              >
-                Delete Account
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-
       {/* ---------- Buttons ---------- */}
-      <div className="text-center mb-4">
-        <button className="btn btn-dark px-4 py-2 me-2" onClick={handleSaveSettings}>
-          Save Settings
-        </button>
-        <button className="btn btn-danger px-4 py-2" onClick={onLogout}>
-          Logout
-        </button>
-      </div>
 
       {/* ---------- Modal hasola sa modal uy, pwedi mani himoun og object pero ngano mag bout mankag ako ning i individual ---------- */}
       {modalOpen && (

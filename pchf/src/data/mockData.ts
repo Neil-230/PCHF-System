@@ -76,34 +76,7 @@ export const mockProducts: Product[] = [
 ];
 
 export const mockTransactions: Transaction[] = [
-  {
-    id: 'TXN001',
-    items: [
-      { product: mockProducts[0], quantity: 1 },
-      { product: mockProducts[1], quantity: 2 }
-    ],
-    subtotal: 32.97,
-    tax: 3.30,
-    total: 36.27,
-    paymentMethod: 'card',
-    timestamp: new Date('2024-01-15T10:30:00'),
-    status: 'completed',
-    customerName: 'John Doe',
-  },
-  {
-    id: 'TXN002',
-    items: [
-      { product: mockProducts[3], quantity: 1 },
-      { product: mockProducts[4], quantity: 1 }
-    ],
-    subtotal: 14.98,
-    tax: 1.50,
-    total: 16.48,
-    paymentMethod: 'cash',
-    timestamp: new Date('2024-01-15T11:15:00'),
-    status: 'completed',
-    customerName: 'Jane Smith',
-  }
+ 
 ];
 
 export const mockInventoryAlerts: InventoryAlert[] = [
@@ -133,4 +106,4 @@ export const mockInventoryAlerts: InventoryAlert[] = [
   }
 ];
 
-export const categories = ['All', 'Beverages', 'Snacks', 'Dairy', 'Bakery'];
+export const categories = ['All', 'Tools', 'Electrical', 'Fasteners', 'Painting'];

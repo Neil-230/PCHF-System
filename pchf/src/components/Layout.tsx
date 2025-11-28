@@ -229,10 +229,10 @@ export function Layout({ children, activeTab, onTabChange, user, onLogout }: Lay
                   <div className="text-muted small">{user.email}</div>
                 </div>
                 <div className="dropdown-divider"></div>
-                <button className="dropdown-item">
+                {/* <button className="dropdown-item">
                   <ShieldIcon size={16} className="me-2" />
                   Security Settings
-                </button>
+                </button> */}
                 <button
                   className="dropdown-item"
                   onClick={() => onTabChange("settings")}

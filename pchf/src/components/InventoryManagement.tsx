@@ -26,7 +26,7 @@ export function InventoryManagement({ user }: { user?: User }) {
   });
 
   // Example categories
-  const categories = ["Coffee", "Snacks", "Drinks", "Stationery"];
+  const categories = ["All", "Tools", "Electrical", "Fasteners", "Painting"];
 
   const filteredProducts = products.filter(
     (product) =>
@@ -143,6 +143,23 @@ export function InventoryManagement({ user }: { user?: User }) {
       toast.success("Product updated locally");
     }
   };
+  // Keymaping for Edit
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.key === "Enter" && (isAddDialogOpen || editingProduct)) {
+        e.preventDefault(); 
+        if (editingProduct) {
+          handleEditProduct();
+        } else {
+          handleAddProduct();
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyPress);
+    return () => window.removeEventListener("keydown", handleKeyPress);
+  }, [isAddDialogOpen, editingProduct, formData]);
+  
 
   const openEditDialog = (product: Product) => {
     setEditingProduct(product);
@@ -192,8 +209,8 @@ export function InventoryManagement({ user }: { user?: User }) {
   // color codes. aypag bout bout sa color ako rabay UI 
   const getStockStatus = (stock: number) => {
     if (stock === 0) return { label: "Out of Stock", variant: "danger"};
-    if (stock <= 10) return { label: "Low Stock", variant: "secondary" };
-    return { label: "In Stock", variant: "dark" };
+    if (stock <= 10) return { label: "Low Stock", variant: "warning" };
+    return { label: "In Stock", variant: "primary" };
   };
 
   const handleDownloadPDF = () => {
@@ -248,37 +265,37 @@ export function InventoryManagement({ user }: { user?: User }) {
       {/* Stats Cards */}
       <div className="row g-3 mb-3">
         <div className="col-md-3">
-          <div className="card text-center p-3 gap-4 border-0" style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}>
+          <div className="card text-center border-0" style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}>
             <div className="d-flex flex-row justify-content-between align-items-center">
               <h6>Total Products</h6>
-              <Package size={20} className="mb-2"/>
+              {/* <Package size={20} className="mb-2"/> */}
             </div>
-            <strong className="text-start">{totalProducts}</strong>
+            <strong className="text-start text-primary fs-5">{totalProducts}</strong>
           </div>
         </div>
         <div className="col-md-3">
-          <div className="card text-center p-3 gap-4 border-0" style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}>
+          <div className="card text-center border-0" style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}>
             <h6 className="text-start">Total Value</h6>
 
-            <div className="fw-bold text-start">₱{totalValue.toFixed(2)}</div>
+            <div className="fw-bold text-start text-success fs-5">₱{totalValue.toFixed(2)}</div>
           </div>
         </div>
         <div className="col-md-3">
-          <div className="card text-center p-3 gap-4 border-0" style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}>
+          <div className="card text-center border-0" style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}>
             <div className="d-flex flex-row justify-content-between align-items-center">
               <h6>Low Stock</h6>
-              <span className="badge bg-secondary text-light" style={{ width: "25px" }}>{lowStockProducts}</span>
+              {/* <span className="badge bg-secondary text-light" style={{ width: "25px" }}>{lowStockProducts}</span> */}
             </div>
-            <div className="text-warning fw-bold text-muted text-start">{lowStockProducts} items</div>
+            <div className="text-warning fw-bold text-warning text-start fs-5">{lowStockProducts} items</div>
           </div>
         </div>
         <div className="col-md-3">
-          <div className="card text-center p-3 gap-4 border-0" style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}>
+          <div className="card text-center border-0" style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}>
             <div className="d-flex flex-row justify-content-between align-items-center">
               <h6>Out of Stock</h6>
-              <span className="badge bg-danger text-light" style={{ width: "25px" }}>{outOfStockProducts}</span>
+              {/* <span className="badge bg-danger text-light" style={{ width: "25px" }}>{outOfStockProducts}</span> */}
             </div>
-            <div className="text-danger fw-bold text-start">{outOfStockProducts} items</div>
+            <div className="text-danger fw-bold text-start fs-5">{outOfStockProducts} items</div>
           </div>
         </div>
       </div>
@@ -427,12 +444,12 @@ export function InventoryManagement({ user }: { user?: User }) {
       {/* Products Table */}
       <div className="card border-0 rounded-3" style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}>
         <div className="card-body p-0 ">
-          <table className="table table-striped table-hover mb-0">
+          <table className="table table-hover mb-0"> {/*table-striped Used this to make it stripe*/}
             <thead className="">
               <tr className="">
-                <th>Product</th>
-                <th>SKU</th>
                 <th>Category</th>
+                <th>ID</th>
+                <th>Product</th>
                 <th>Price</th>
                 <th>Stock</th>
                 <th>Status</th>
@@ -444,6 +461,10 @@ export function InventoryManagement({ user }: { user?: User }) {
                 const stockStatus = getStockStatus(product.stock);
                 return (
                   <tr key={product.id}>
+                    <td>
+                      <span className="badge text-dark border-0" >{product.category}</span>
+                    </td>
+                    <td style={{ fontFamily: "monospace", fontSize: "0.875rem" }}>{product.sku}</td>
                     <td style={{backgroundColor:"white"}}>
                       <div>
                         <p className="fw-semibold">{product.name}</p>
@@ -452,14 +473,10 @@ export function InventoryManagement({ user }: { user?: User }) {
                         )}
                       </div>
                     </td>
-                    <td style={{ fontFamily: "monospace", fontSize: "0.875rem" }}>{product.sku}</td>
-                    <td>
-                      <span className="badge text-dark border" >{product.category}</span>
-                    </td>
                     <td className="fw-semibold">₱{product.price.toFixed(2)}</td>
                     <td>{product.stock}</td>
                     <td>
-                      <span className={`badge bg-${stockStatus.variant}`}>{stockStatus.label}</span>
+                      <span className={`badge fw-bold text-${stockStatus.variant}`}>{stockStatus.label}</span>
                     </td>
                     <td>
                       <button
