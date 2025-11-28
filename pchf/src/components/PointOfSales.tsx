@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import type { Product, CartItem } from "../types";
 import { mockProducts, categories } from "../data/mockData";
-import { Search } from "lucide-react";
+import { Search, Trash2 } from "lucide-react";
 import "./css/PointOfSales.css";
 import { Modal, Button, Card } from "react-bootstrap";
 import { Badge } from "./ui/Badge";
@@ -85,6 +85,7 @@ export function PointOfSale({ onTransactionComplete, user }: PointOfSaleProps) {
       });
   }, []);
 
+  
   const removeFromCart = (productId: string) => {
     setCart((prev) => prev.filter((item) => item.product.id !== productId));
   };
@@ -106,6 +107,7 @@ export function PointOfSale({ onTransactionComplete, user }: PointOfSaleProps) {
     return matchesCategory && matchesSearch;
   });
 
+  // SUBMIT LOGIC
   const handleNameSubmit = () => {
     if (!customerName.trim() || !customerContact.trim() || !customerAddress.trim()) {
       toast.error("Please fill out all customer details");
@@ -114,6 +116,23 @@ export function PointOfSale({ onTransactionComplete, user }: PointOfSaleProps) {
     setHasEnteredName(true);
     setIsNameDialogOpen(false);
   };
+  //handle submit Keymap 
+  useEffect(() => {
+    const handleEnter = (e: KeyboardEvent) => {
+      // Only trigger when modal is open
+      if (isNameDialogOpen && e.key === "Enter") {
+        e.preventDefault(); // prevent form submit refresh
+        handleNameSubmit(); // call your button function
+      }
+    };
+
+    window.addEventListener("keydown", handleEnter);
+
+    return () => {
+      window.removeEventListener("keydown", handleEnter);
+    };
+  }, [isNameDialogOpen, handleNameSubmit]);
+
 
   const addToCart = (product: Product) => {
     if (product.stock === 0) {
@@ -314,7 +333,8 @@ export function PointOfSale({ onTransactionComplete, user }: PointOfSaleProps) {
       {/* Customer Modal */}
       <Modal show={isNameDialogOpen} onHide={() => setIsNameDialogOpen(false)} centered
         style={{ backgroundColor: "rgba(239, 252, 255, 0.31)" }}>
-        <Modal.Header closeButton>
+        <Modal.Header closeButton 
+        style={{marginRight: "2px"}}>
           <Modal.Title>Enter Customer Details</Modal.Title>
         </Modal.Header>
         <Modal.Body>
@@ -458,10 +478,13 @@ export function PointOfSale({ onTransactionComplete, user }: PointOfSaleProps) {
                           key={item.product.id}
                           className="d-flex align-items-center justify-content-between border-bottom py-2"
                         >
-                          <div className="">
+                          <div className="me-auto">
                             <p className="mb-0 fw-medium">{item.product.name}</p>
                             <small>₱{item.product.price.toFixed(2)} each</small>
                           </div>
+                          <p className="mb-0 me-2 fw-semibold">
+                            ₱{(item.product.price * item.quantity).toFixed(2)}
+                          </p>
                           <div className="d-flex align-items-center gap-2">
                             <input
                               type="number"
@@ -482,12 +505,9 @@ export function PointOfSale({ onTransactionComplete, user }: PointOfSaleProps) {
                               size="sm"
                               onClick={() => removeFromCart(item.product.id)}
                             >
-                              ✕
+                              <Trash2 size={20}/>
                             </Button>
                           </div>
-                          <p className="mb-0 fw-semibold">
-                            ₱{(item.product.price * item.quantity).toFixed(2)}
-                          </p>
                         </div>
                       ))}
                     </div>

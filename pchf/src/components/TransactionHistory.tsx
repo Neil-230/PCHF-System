@@ -56,7 +56,7 @@ export function TransactionHistory({ transactions, onDeleteAll, canDeleteAll = f
           <p><strong>Date:</strong> ${new Date(transaction.timestamp).toLocaleString()}</p>
           <p><strong>Payment Method:</strong> ${transaction.paymentMethod}</p>
           <p><strong>Delivery:</strong> ${transaction.isDelivery ? "Yes" : "No"}</p>
-          ${transaction.isDelivery ? `<p><strong>Delivery Fee:</strong> $${(transaction.deliveryFee || 0).toFixed(2)}</p>` : ""}
+          ${transaction.isDelivery ? `<p><strong>Delivery Fee:</strong> ₱${(transaction.deliveryFee || 0).toFixed(2)}</p>` : ""}
           ${
             transaction.handledBy
               ? `<p><strong>Processed By:</strong> ${transaction.handledBy.name} (${transaction.handledBy.role})<br/>
@@ -73,17 +73,17 @@ export function TransactionHistory({ transactions, onDeleteAll, canDeleteAll = f
                     `<tr>
                       <td>${item.product.name}</td>
                       <td>${item.quantity}</td>
-                      <td>$${item.product.price.toFixed(2)}</td>
-                      <td>$${(item.product.price * item.quantity).toFixed(2)}</td>
+                      <td>₱${item.product.price.toFixed(2)}</td>
+                      <td>₱${(item.product.price * item.quantity).toFixed(2)}</td>
                     </tr>`
                 )
                 .join("")}
             </tbody>
           </table>
-          <p><strong>Subtotal:</strong> $${transaction.subtotal.toFixed(2)}</p>
-          <p><strong>Tax:</strong> $${transaction.tax.toFixed(2)}</p>
-          ${transaction.isDelivery ? `<p><strong>Delivery Fee:</strong> $${(transaction.deliveryFee || 0).toFixed(2)}</p>` : ""}
-          <p><strong>Total:</strong> <b>$${transaction.total.toFixed(2)}</b></p>
+          <p><strong>Subtotal:</strong> ₱${transaction.subtotal.toFixed(2)}</p>
+          <p><strong>Tax:</strong> ₱${transaction.tax.toFixed(2)}</p>
+          ${transaction.isDelivery ? `<p><strong>Delivery Fee:</strong> ₱${(transaction.deliveryFee || 0).toFixed(2)}</p>` : ""}
+          <p><strong>Total:</strong> <b>₱${transaction.total.toFixed(2)}</b></p>
         </body>
       </html>
     `);
@@ -143,17 +143,17 @@ export function TransactionHistory({ transactions, onDeleteAll, canDeleteAll = f
                           <tr>
                             <td>${item.product.name}</td>
                             <td>${item.quantity}</td>
-                            <td>$${item.product.price.toFixed(2)}</td>
-                            <td>$${(item.product.price * item.quantity).toFixed(2)}</td>
+                            <td>₱${item.product.price.toFixed(2)}</td>
+                            <td>₱${(item.product.price * item.quantity).toFixed(2)}</td>
                           </tr>`
                       )
                       .join("")}
                   </tbody>
                 </table>
-                <p><strong>Subtotal:</strong> $${t.subtotal.toFixed(2)}</p>
-                <p><strong>Tax:</strong> $${t.tax.toFixed(2)}</p>
-                ${t.isDelivery ? `<p><strong>Delivery Fee:</strong> $${(t.deliveryFee || 0).toFixed(2)}</p>` : ""}
-                <p><strong>Total:</strong> <b>$${t.total.toFixed(2)}</b></p>
+                <p><strong>Subtotal:</strong> ₱${t.subtotal.toFixed(2)}</p>
+                <p><strong>Tax:</strong> ₱${t.tax.toFixed(2)}</p>
+                ${t.isDelivery ? `<p><strong>Delivery Fee:</strong> ₱${(t.deliveryFee || 0).toFixed(2)}</p>` : ""}
+                <p><strong>Total:</strong> <b>₱${t.total.toFixed(2)}</b></p>
               </div>
             `
             )
@@ -181,37 +181,28 @@ export function TransactionHistory({ transactions, onDeleteAll, canDeleteAll = f
   //kapuy nag modal tistingan taning prompt HAHA bati kaayo
 
   return (
-    <div className="container my-4">
+    <div style={{ marginTop: "1rem" }}>
       {/* Summary Cards */}
-      <div className="row mb-4">
+      <div className="row g-3 mb-3">
         {/* Total Revenue */}
-        <div className="col-md-4 mb-3">
-          <div className="card text-center border-0" style={{ boxShadow: "2px 4px 8px rgba(0,0,0,0.10)" }}>
-            <div className="card-body">
-              <DollarSign size={20} className="mb-2" />
-              <h6>Total Revenue</h6>
-              <p className="fw-bold">${totalRevenue.toFixed(2)}</p>
-            </div>
+        <div className="col-md-4">
+          <div className="card border-0 fs-5" style={{ boxShadow: "2px 4px 8px rgba(0,0,0,0.10)" }}>
+            <h6>Total Revenue</h6>
+            <p className="fw-bold m-0 text-primary">₱{totalRevenue.toFixed(2)}</p>
           </div>
         </div>
         {/* Total Transactions */}
-        <div className="col-md-4 mb-3">
-          <div className="card text-center border-0" style={{ boxShadow: "2px 4px 8px rgba(0,0,0,0.10)" }}>
-            <div className="card-body">
-              <Receipt size={20} className="mb-2" />
-              <h6>Total Transactions</h6>
-              <p className="fw-bold">{completedTransactions}</p>
-            </div>
+        <div className="col-md-4">
+          <div className="card border-0 fs-5" style={{ boxShadow: "2px 4px 8px rgba(0,0,0,0.10)" }}>
+            <h6>Total Transactions</h6>
+            <p className="fw-bold m-0 text-success">{completedTransactions}</p>
           </div>
         </div>
         {/* Average */}
-        <div className="col-md-4 mb-3">
-          <div className="card text-center border-0" style={{ boxShadow: "2px 4px 8px rgba(0,0,0,0.10)" }}>
-            <div className="card-body">
-              <CreditCard size={20} className="mb-2" />
-              <h6>Average Transaction</h6>
-              <p className="fw-bold">${averageTransaction.toFixed(2)}</p>
-            </div>
+        <div className="col-md-4">
+          <div className="card border-0 fs-5" style={{ boxShadow: "2px 4px 8px rgba(0,0,0,0.10)" }}>
+            <h6>Average Transaction</h6>
+            <p className="fw-bold m-0 text-warning">₱{averageTransaction.toFixed(2)}</p>
           </div>
         </div>
       </div>
@@ -228,10 +219,12 @@ export function TransactionHistory({ transactions, onDeleteAll, canDeleteAll = f
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-        <div className="col-md-3">
+        <div className="col-md-3 d-flex align-items-center">
+          <span className="fw-bold me-2">From</span>
           <input type="date" className="form-control" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
         </div>
-        <div className="col-md-3">
+        <div className="col-md-3 d-flex align-items-center">
+          <span className="fw-bold me-2">To</span>
           <input type="date" className="form-control" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
         </div>
         <div className="col-md-3 text-end">
@@ -246,52 +239,57 @@ export function TransactionHistory({ transactions, onDeleteAll, canDeleteAll = f
         </div>
       </div>
 
-      {/* table pwedi mani i object unta pero dilagi mag bout kay ako nag buhat */}
-      <div className="table-responsive d-flex rounded-2" ref={printAreaRef}>
-        <table className="table table-striped table-bordered rounded-2" style={{ boxShadow: "2px 4px 8px rgba(0,0,0,0.10)" }}>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Customer</th>
-              <th>Date & Time</th>
-              <th>Items</th>
-              <th>Payment</th>
-              <th>Delivery</th>
-              <th>Processed By</th>
-              <th>Total</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredTransactions.map((transaction) => (
-              <tr key={transaction.id}>
-                <td>{transaction.id}</td>
-                <td>{transaction.customerName}</td>
-                <td>{new Date(transaction.timestamp).toLocaleString()}</td>
-                <td>{transaction.items.length}</td>
-                <td>{transaction.paymentMethod}</td>
-                <td>{transaction.isDelivery ? "Yes" : "No"}</td>
-                <td>
-                  {transaction.handledBy
-                    ? `${transaction.handledBy.name} (${transaction.handledBy.role})`
-                    : "N/A"}
-                </td>
-                <td>${transaction.total.toFixed(2)}</td>
-                <td>
-                  <button
-                    className="btn btn-outline-secondary btn-sm me-1"
-                    onClick={() => setSelectedTransaction(transaction)}
-                  >
-                    <Eye size={16} />
-                  </button>
-                  <button className="btn btn-outline-secondary btn-sm" onClick={() => printTransaction(transaction)}>
-                    <Printer size={16} />
-                  </button>
-                </td>
+      {/* table  */}
+      <div className="card border-0 rounded-3" style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}>
+        <div className="table-responsive d-flex rounded-2" ref={printAreaRef}>
+          <table className="table table-hover rounded-2" >
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Customer</th>
+                <th>Date & Time</th>
+                <th>Items</th>
+                <th>Payment</th>
+                <th>Delivery</th>
+                <th>Processed By</th>
+                <th>Total</th>
+                <th>Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {filteredTransactions.map((transaction) => (
+                <tr key={transaction.id}>
+                  <td>{transaction.id}</td>
+                  <td>{transaction.customerName}</td>
+                  <td>
+                    <div style={{color: "blue"}}>{new Date(transaction.timestamp).toLocaleDateString()}</div>
+                    <div>{new Date(transaction.timestamp).toLocaleTimeString()}</div>
+                  </td>
+                  <td>{transaction.items.length}</td>
+                  <td>{transaction.paymentMethod}</td>
+                  <td >{transaction.isDelivery ? "Yes" : "No"}</td>
+                  <td>
+                    {transaction.handledBy
+                      ? `${transaction.handledBy.name} (${transaction.handledBy.role})`
+                      : "N/A"}
+                  </td>
+                  <td>₱{transaction.total.toFixed(2)}</td>
+                  <td>
+                    <button
+                      className="btn btn-outline-primary btn-sm me-1"
+                      onClick={() => setSelectedTransaction(transaction)}
+                    >
+                      <Eye size={16} />
+                    </button>
+                    <button className="btn btn-outline-dark btn-sm" onClick={() => printTransaction(transaction)}>
+                      <Printer size={16} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* bushit na modal*/}
@@ -305,39 +303,41 @@ export function TransactionHistory({ transactions, onDeleteAll, canDeleteAll = f
           </Modal.Header>
 
           <Modal.Body>
-            <p><strong>Customer:</strong> {selectedTransaction.customerName}</p>
-            <p><strong>ID:</strong> {selectedTransaction.id}</p>
-            <p><strong>Date & Time:</strong> {new Date(selectedTransaction.timestamp).toLocaleString()}</p>
-            <p><strong>Payment Method:</strong> {selectedTransaction.paymentMethod}</p>
-            <p><strong>Delivery:</strong> {selectedTransaction.isDelivery ? "Yes" : "No"}</p>
-            {selectedTransaction.isDelivery && (
-              <p><strong>Delivery Fee:</strong> ${selectedTransaction.deliveryFee?.toFixed(2)}</p>
-            )}
+            <div className="me-3 ms-3">
+              <p><strong>Customer:</strong> {selectedTransaction.customerName}</p>
+              <p><strong>ID:</strong> {selectedTransaction.id}</p>
+              <p><strong>Date & Time:</strong> {new Date(selectedTransaction.timestamp).toLocaleString()}</p>
+              <p><strong>Payment Method:</strong> {selectedTransaction.paymentMethod}</p>
+              <p><strong>Delivery:</strong> {selectedTransaction.isDelivery ? "Yes" : "No"}</p>
+              {selectedTransaction.isDelivery && (
+                <p><strong>Delivery Fee:</strong> ₱{selectedTransaction.deliveryFee?.toFixed(2)}</p>
+              )}
 
-            {selectedTransaction.handledBy && (
-              <>
-                <hr />
-                <p><strong>Processed By:</strong> {selectedTransaction.handledBy.name} ({selectedTransaction.handledBy.role})</p>
-                <p><strong>Email:</strong> {selectedTransaction.handledBy.email}</p>
-              </>
-            )}
+              {selectedTransaction.handledBy && (
+                <>
+                  <hr />
+                  <p><strong>Processed By:</strong> {selectedTransaction.handledBy.name} ({selectedTransaction.handledBy.role})</p>
+                  <p><strong>Email:</strong> {selectedTransaction.handledBy.email}</p>
+                </>
+              )}
 
-            <h6>Items:</h6>
-            <ul className="list-group mb-3">
-              {selectedTransaction.items.map((item, idx) => (
-                <li key={idx} className="list-group-item d-flex justify-content-between">
-                  <span>{item.product.name} x {item.quantity}</span>
-                  <span>${(item.product.price * item.quantity).toFixed(2)}</span>
-                </li>
-              ))}
-            </ul>
+              <h6>Items:</h6>
+              <ul className="list-group mb-3">
+                {selectedTransaction.items.map((item, idx) => (
+                  <li key={idx} className="list-group-item d-flex justify-content-between">
+                    <span>{item.product.name} x {item.quantity}</span>
+                    <span>₱{(item.product.price * item.quantity).toFixed(2)}</span>
+                  </li>
+                ))}
+              </ul>
 
-            <p><strong>Subtotal:</strong> ${selectedTransaction.subtotal.toFixed(2)}</p>
-            <p><strong>Tax:</strong> ${selectedTransaction.tax.toFixed(2)}</p>
-            {selectedTransaction.isDelivery && (
-              <p><strong>Delivery Fee:</strong> ${selectedTransaction.deliveryFee?.toFixed(2)}</p>
-            )}
-            <p className="fw-bold"><strong>Total:</strong> ${selectedTransaction.total.toFixed(2)}</p>
+              <p><strong>Subtotal:</strong> ₱{selectedTransaction.subtotal.toFixed(2)}</p>
+              <p><strong>Tax:</strong> ₱{selectedTransaction.tax.toFixed(2)}</p>
+              {selectedTransaction.isDelivery && (
+                <p><strong>Delivery Fee:</strong> ₱{selectedTransaction.deliveryFee?.toFixed(2)}</p>
+              )}
+              <p className="fw-bold"><strong>Total:</strong> ₱{selectedTransaction.total.toFixed(2)}</p>
+            </div>
           </Modal.Body>
 
           <Modal.Footer>

@@ -68,10 +68,10 @@ export function Login({ onLogin, onSwitchToSignUp }: LoginProps) {
     const users = AuthService.getUsers();
     const found = users.find(u => u.email === resetEmail);
 
-    if (!found) {
-      setResetError("No account found with this email.");
-      return;
-    }
+    // if (!found) {
+    //   setResetError("No account found with this email.");
+    //   return;
+    // }
 
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     setGeneratedCode(code);

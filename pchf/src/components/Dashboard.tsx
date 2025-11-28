@@ -170,21 +170,21 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
         style={{ borderBottom: "1px solid #ddd", paddingBottom: "10px" }}
       >
         <div className="d-flex flex-column">
-          <div className="d-flex align-items-center">
-            {CurrentUser?.role === "owner" && (
-              <Crown size={20} color="gold" className="me-2" />
-            )}
-            <h1
-              className="p-2 ps-3 rounded-3"
+          <div className="d-flex align-items-center mb-3">
+            <div className="d-flex m-0 p-2 ps-3 rounded-3"
               style={{
-                fontSize: "24px",
                 fontWeight: "bold",
-                backgroundColor: "white",
+                background: "white",
                 boxShadow: "2px 4px 8px rgba(0, 0, 0, 0.10)",
               }}
             >
-              Welcome back, {CurrentUser?.name || "User"}!
-            </h1>
+              {CurrentUser?.role === "owner" && (
+                <Crown size={40} color="gold" className="me-2" />
+              )}
+              <h1 className="fs-4 fw-bold mt-1">
+                Welcome back, {CurrentUser?.name || "User"}!
+              </h1>
+            </div>
           </div>
 
           <div className="d-flex">
@@ -272,9 +272,9 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
           >
             <div className="d-flex justify-content-between align-items-center">
               <h6>Today's Sales</h6>
-              <TrendingUp size={18} />
+              <TrendingUp size={18} className="text-primary" />
             </div>
-            <h3>₱{displayTodaySales.toFixed(2)}</h3>
+            <h3 className="text-primary">₱{displayTodaySales.toFixed(2)}</h3>
             <small>
               <TrendingUp size={14} /> +12% from yesterday
             </small>
@@ -287,9 +287,9 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
           >
             <div className="d-flex justify-content-between align-items-center">
               <h6>Transactions</h6>
-              <ShoppingCart size={18} />
+              <ShoppingCart size={18} className="text-success" />
             </div>
-            <h3>{displayTodayTransactions}</h3>
+            <h3 className="text-success">{displayTodayTransactions}</h3>
             <small>
               <Users size={14} /> {displayTodayItemsSold} items sold
             </small>
@@ -302,9 +302,9 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
           >
             <div className="d-flex justify-content-between align-items-center">
               <h6>Inventory Value</h6>
-              <Package size={18} />
+              <Package size={18} className="text-warning" />
             </div>
-            <h3>₱{displayInventoryValue.toFixed(2)}</h3>
+            <h3 className="text-warning">₱{displayInventoryValue.toFixed(2)}</h3>
             <small>{displayTotalStock} items in stock</small>
           </div>
         </div>
@@ -315,9 +315,9 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
           >
             <div className="d-flex justify-content-between align-items-center">
               <h6>Stock Alerts</h6>
-              <AlertTriangle size={18} color="orange" />
+              <AlertTriangle size={18} className="text-danger" />
             </div>
-            <h3 style={{ color: "orange" }}>
+            <h3 className="text-danger">
               {displayLowStockItems + displayOutOfStockItems}
             </h3>
             <small>{displayOutOfStockItems} out of stock</small>
@@ -378,7 +378,6 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
                   key={product.id || index}
                   className="d-flex justify-content-between align-items-center mb-2"
                   style={{
-                    borderBottom: "1px solid #eee",
                     paddingBottom: "5px",
                   }}
                 >
@@ -431,7 +430,7 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
           style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}
           >
             {/* Header */}
-            <div className="card-header">
+            <div className="card-header bg-transparent">
               <h6>
                 <Clock size={18} /> Recent Transactions
               </h6>
@@ -447,7 +446,7 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
                   key={transaction.id}
                   className="d-flex justify-content-between align-items-center mb-2"
                   style={{
-                    borderBottom: "1px solid #eee",
+                    background: "white",
                     paddingBottom: "5px",
                   }}
                 >
@@ -481,6 +480,93 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
         </div>
       </div>
 
+      <div className="mt-4">
+        <div className="card p-3 border-0 h-100"
+          style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}
+        >
+          {/* Header */}
+          <div className="card-header bg-transparent">
+            <h6>
+              <Clock size={18} /> Active log
+            </h6>
+          </div>
+
+          {/* Scrollable body for better user experience 😗😗*/}
+          <div
+            className="card-body"
+            style={{ maxHeight: "255px", overflowY: "auto" }}
+          >
+           
+
+          <div className="list-group border-0">
+
+            {/* Owner Login */}
+            <div className="list-group-item border-0 mb-2 d-flex justify-content-between align-items-start" style={{ borderRadius: "8px", padding: "12px"}}>
+              <div>
+                <strong>Juan Dela Cruz</strong> <span className="badge border text-dark ms-1">Owner</span><br />
+                <span className="text-muted">juan.owner@gmail.com</span><br />
+                <small>Status: Login</small><br />
+                <small>Time: 2025-11-28 08:32 AM</small>
+              </div>
+              <div className="text-end">
+                <small>IP: 192.168.1.14</small><br />
+                <small>Location: Cagayan de Oro City, PH</small><br />
+                <small>Lat / Long: 8.4542° N, 124.6319° E</small>
+              </div>
+            </div>
+
+            {/* Admin Login */}
+            <div className="list-group-item border-0 mb-2 d-flex justify-content-between align-items-start" style={{ borderRadius: "8px", padding: "12px"}}>
+              <div>
+                <strong>Maria Santos</strong> <span className="badge border text-dark ms-1">Admin</span><br />
+                <span className="text-muted">maria.admin@gmail.com</span><br />
+                <small>Status: Login</small><br />
+                <small>Time: 2025-11-28 09:15 AM</small>
+              </div>
+              <div className="text-end">
+                <small>IP: 192.168.1.22</small><br />
+                <small>Location: Valencia City, PH</small><br />
+                <small>Lat / Long: 7.9061° N, 125.0942° E</small>
+              </div>
+            </div>
+
+            {/* Cashier Logout */}
+            <div className="list-group-item border-0 mb-2 d-flex justify-content-between align-items-start" style={{ borderRadius: "8px", padding: "12px"}}>
+              <div>
+                <strong>Ana Mae Villarin</strong> <span className="badge border text-dark ms-1">Cashier</span><br />
+                <span className="text-muted">ana.cashier@gmail.com</span><br />
+                <small>Status: Logout</small><br />
+                <small>Time: 2025-11-28 03:38 PM</small>
+              </div>
+              <div className="text-end">
+                <small>IP: 192.168.1.33</small><br />
+                <small>Location: Malaybalay City, PH</small><br />
+                <small>Lat / Long: 8.1521° N, 125.1277° E</small>
+              </div>
+            </div>
+
+            {/* Additional stacked logs */}
+            <div className="list-group-item border-0 mb-2 d-flex justify-content-between align-items-start" style={{ borderRadius: "8px", padding: "12px"}}>
+              <div>
+                <strong>Juan Dela Cruz</strong> <span className="badge border text-dark ms-1">Owner</span><br />
+                <span className="text-muted">juan.owner@gmail.com</span><br />
+                <small>Status: Logout</small><br />
+                <small>Time: 2025-11-28 05:01 PM</small>
+              </div>
+              <div className="text-end">
+                <small>IP: 192.168.1.14</small><br />
+                <small>Location: Cagayan de Oro City, PH</small><br />
+                <small>Lat / Long: 8.4542° N, 124.6319° E</small>
+              </div>
+            </div>
+
+          </div>
+
+
+          </div>
+        </div>
+      </div>
+
       {/* Inventory Status ? wamani pulos unta pero naa naman sa user requirement 😶‍🌫️😶‍🌫️😶‍🌫️ */}
       <div className="mt-4">
         <div className="card p-3 border-0"
@@ -489,21 +575,21 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
           <h6>Inventory Status</h6>
           <div className="d-flex justify-content-between text-center">
             <div style={{ flex: 1 }}>
-              <h3 style={{ color: "green" }}>
+              <h3 style={{ color: "blue" }}>
                 {(displayTotalProducts ?? totalProducts) - (displayLowStockItems ?? lowStockItems) - (displayOutOfStockItems ?? outOfStockItems)}
               </h3>
               <small>Well Stocked</small>
             </div>
             <div style={{ flex: 1 }}>
-              <h3 style={{ color: "orange" }}>{displayLowStockItems ?? lowStockItems}</h3>
+              <h3 style={{ color: "green" }}>{displayLowStockItems ?? lowStockItems}</h3>
               <small>Low Stock</small>
             </div>
             <div style={{ flex: 1 }}>
-              <h3 style={{ color: "red" }}>{displayOutOfStockItems ?? outOfStockItems}</h3>
+              <h3 style={{ color: "orange" }}>{displayOutOfStockItems ?? outOfStockItems}</h3>
               <small>Out of Stock</small>
             </div>
             <div style={{ flex: 1 }}>
-              <h3>{displayTotalProducts ?? totalProducts}</h3>
+              <h3 style={{ color: "red" }}>{displayTotalProducts ?? totalProducts}</h3>
               <small>Total Products</small>
             </div>
           </div>

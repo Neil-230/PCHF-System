@@ -87,7 +87,7 @@ export function GoogleCallback() {
       toast.success(
         selectedRole === 'admin'
           ? 'Admin request submitted! Pending owner approval.'
-          : 'Account setup complete!'
+          : 'Account pending for approval!'
       );
       
       setShowRoleModal(false);

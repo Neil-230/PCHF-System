@@ -183,7 +183,7 @@ export function LoginUpdated({ onLogin, onSwitchToSignUp }: LoginProps) {
                 <CardContent className="">
                   <form onSubmit={handleSubmit}>
                     {error && (
-                      <Alert variant="destructive">
+                      <Alert variant="destructive" style={{display:"none"}}>
                         <AlertDescription>{error}</AlertDescription>
                       </Alert>
                     )}
@@ -227,24 +227,8 @@ export function LoginUpdated({ onLogin, onSwitchToSignUp }: LoginProps) {
                       <LogInIcon className="me-2" size={16}></LogInIcon>
                       {isLoading ? 'Signing in...' : 'Sign in'}
                     </Button>
-                    <div className="text-center mt-2">
-                      <button
-                        type="button"
-                        className="border border-0 rounded-2 w-100 text-sm"
-                        style={{
-                          border: "1px solid #dadce0",
-                          backgroundColor: "#fff",
-                          color: "#1f1f1f",
-                          cursor: "pointer",
-                        }}
-                        onClick={handleGoogleSignup}
-                      >
-                        <FcGoogle size={20} className="me-2" />
-                        Sign in with Google
-                      </button>
-                    </div>
 
-                    <div className="text-center mt-2">
+                    {/* <div className="text-center mt-2">
                       <button
                         type="button"
                         className="border border-0 rounded-2 w-100 text-sm text-light"
@@ -256,6 +240,22 @@ export function LoginUpdated({ onLogin, onSwitchToSignUp }: LoginProps) {
                       >
                         <FaFacebook size={20} className="me-2" />
                         Continue with Facebook
+                      </button>
+                    </div> */}
+                    <div className="text-center mt-2">
+                      <button
+                        type="button"
+                        className="border border rounded-2 w-100 text-sm"
+                        style={{
+                          border: "1px solid #dadce0",
+                          backgroundColor: "#fff",
+                          color: "#1f1f1f",
+                          cursor: "pointer",
+                        }}
+                        onClick={handleGoogleSignup}
+                      >
+                        <FcGoogle size={20} className="me-2" />
+                        Sign in with Google
                       </button>
                     </div>
 

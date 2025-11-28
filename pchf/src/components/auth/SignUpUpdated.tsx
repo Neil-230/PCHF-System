@@ -210,7 +210,7 @@ export function SignUpUpdated({ onSignUp, onSwitchToLogin }: SignUpProps) {
                     <div className=" text-center mt-1 mb-0">
                       <button
                         type="button"
-                        className="border border-0 bg-dark rounded-2 w-100 text-light text-sm"
+                        className="border border rounded-2 w-100 text-sm"
                         style={{
                           border: "1px solid #dadce0",
                           backgroundColor: "#fff",
