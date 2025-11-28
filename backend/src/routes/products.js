@@ -9,6 +9,16 @@ import { sendSMS } from '../services/smsService.js';
 
 const router = express.Router();
 
+const resolveClientVersion = (req) => {
+  if (req.body && (req.body.version ?? req.body.__v) !== undefined) {
+    return req.body.version ?? req.body.__v;
+  }
+  if (req.query && (req.query.version ?? req.query.__v) !== undefined) {
+    return req.query.version ?? req.query.__v;
+  }
+  return undefined;
+};
+
 // Get all products with optional filters
 router.get('/', verifyToken, authorize('product', 'read:any'), asyncHandler(async (req, res) => {
   const { q, category } = req.query;
@@ -59,7 +69,17 @@ router.post('/', verifyToken, authorize('product', 'create:any'), asyncHandler(a
 router.put('/:id', verifyToken, authorize('product', 'update:any'), asyncHandler(async (req, res) => {
   const product = await Product.findOne({ id: req.params.id });
   if (!product) return res.status(404).json({ error: 'Product not found' });
+  const clientVersion = resolveClientVersion(req);
+  if (clientVersion === undefined) {
+    return res.status(400).json({ error: 'Version is required to update product.' });
+  }
+  if (Number(clientVersion) !== product.__v) {
+    return res.status(409).json({ error: 'Conflict: product data is stale. Please refresh and retry.' });
+  }
+
   const updates = { ...req.body };
+  delete updates.version;
+  delete updates.__v;
   Object.assign(product, updates);
   product.updatedAt = new Date();
   try {
@@ -95,8 +115,18 @@ router.put('/:id', verifyToken, authorize('product', 'update:any'), asyncHandler
 
 // Delete product (owner/admin)
 router.delete('/:id', verifyToken, authorize('product', 'delete:any'), asyncHandler(async (req, res) => {
-  const deleted = await Product.findOneAndDelete({ id: req.params.id });
-  if (!deleted) return res.status(404).json({ error: 'Product not found' });
+  const product = await Product.findOne({ id: req.params.id });
+  if (!product) return res.status(404).json({ error: 'Product not found' });
+
+  const clientVersion = resolveClientVersion(req);
+  if (clientVersion === undefined) {
+    return res.status(400).json({ error: 'Version is required to delete product.' });
+  }
+  if (Number(clientVersion) !== product.__v) {
+    return res.status(409).json({ error: 'Conflict: product data is stale. Please refresh and retry.' });
+  }
+
+  await product.deleteOne();
   res.json({ message: 'Product deleted' });
 }));
 
