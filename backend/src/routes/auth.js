@@ -4,7 +4,7 @@ import passport from 'passport';
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 import crypto from 'crypto';
-import { User, PasswordReset, PendingAdmin, SystemSettings } from '../database/mongodb.js';
+import { User, PasswordReset, PendingAdmin, SystemSettings, UserActivityLog } from '../database/mongodb.js';
 import { sendVerificationEmail, sendPasswordResetEmail, sendAdminApprovalEmail } from '../services/emailService.js';
 import { verifyRecaptcha, verifyToken } from '../middleware/auth.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
@@ -69,6 +69,64 @@ const readCookie = (req, name) => {
     if (k === decodeURIComponent(name)) return decodeURIComponent(rest.join('='));
   }
   return undefined;
+};
+
+const buildAccessSnapshot = (ipinfo) => ({
+  ip: ipinfo?.ip || ipinfo?.publicIp || ipinfo?.clientIp || null,
+  country: ipinfo?.country || null,
+  region: ipinfo?.region || null,
+  city: ipinfo?.city || null,
+  loc: ipinfo?.loc || null,
+  org: ipinfo?.org || null,
+  timezone: ipinfo?.timezone || null,
+});
+
+const recordActivityLog = async (user, type, ipinfo, at) => {
+  if (!user) return;
+  try {
+    await UserActivityLog.create({
+      id: uuidv4(),
+      userId: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      type,
+      ...buildAccessSnapshot(ipinfo),
+      at: at || new Date(),
+    });
+  } catch (err) {
+    console.warn(`Failed to record ${type} activity for`, user.email, err?.message || err);
+  }
+};
+
+const recordLastLogin = async (user, ipinfo) => {
+  if (!user) return;
+  try {
+    const at = new Date();
+    user.lastLogin = {
+      ...buildAccessSnapshot(ipinfo),
+      at,
+    };
+    await user.save();
+    await recordActivityLog(user, 'login', ipinfo, at);
+  } catch (err) {
+    console.warn('Failed to record last login for', user.email, err?.message || err);
+  }
+};
+
+const recordLastLogout = async (user, ipinfo) => {
+  if (!user) return;
+  try {
+    const at = new Date();
+    user.lastLogout = {
+      ...buildAccessSnapshot(ipinfo),
+      at,
+    };
+    await user.save();
+    await recordActivityLog(user, 'logout', ipinfo, at);
+  } catch (err) {
+    console.warn('Failed to record last logout for', user.email, err?.message || err);
+  }
 };
 
 // ============ SIGNUP ============
@@ -238,22 +296,7 @@ router.post('/login', verifyRecaptcha, asyncHandler(async (req, res) => {
   }
 
   const token = generateToken(user);
-  // Persist last login audit info (best-effort)
-  try {
-    const ii = req.ipinfo;
-    if (ii) {
-      user.lastLogin = {
-        ip: ii.ip,
-        country: ii.country,
-        region: ii.region,
-        city: ii.city,
-        org: ii.org,
-        timezone: ii.timezone,
-        at: new Date(),
-      };
-      await user.save();
-    }
-  } catch {}
+  await recordLastLogin(user, req.ipinfo);
 
   res.json({
     message: 'Login successful',
@@ -311,6 +354,7 @@ router.get('/google/callback', (req, res, next) => {
     } catch (e) {
       console.error('Google callback pending check error:', e);
     }
+    await recordLastLogin(user, req.ipinfo);
     const token = generateToken(user);
     return res.redirect(`${FRONTEND}/auth/google-callback?token=${token}&user=${encodeURIComponent(JSON.stringify(user.toJSON()))}`);
   })(req, res, next);
@@ -363,6 +407,7 @@ router.get('/facebook/callback', (req, res, next) => {
     } catch (e) {
       console.error('Facebook callback pending check error:', e);
     }
+    await recordLastLogin(user, req.ipinfo);
     const token = generateToken(user);
     return res.redirect(`${FRONTEND}/auth/facebook-callback?token=${token}&user=${encodeURIComponent(JSON.stringify(user.toJSON()))}`);
   })(req, res, next);
@@ -483,6 +528,7 @@ router.post('/google-signup-role', asyncHandler(async (req, res) => {
     }
   }
 
+  await recordLastLogin(user, req.ipinfo);
   const token = generateToken(user);
   return res.json({
     message: 'Google signup successful',
@@ -611,6 +657,7 @@ router.post('/facebook-signup-role', asyncHandler(async (req, res) => {
     }
   }
 
+  await recordLastLogin(user, req.ipinfo);
   const token = generateToken(user);
   return res.json({
     message: 'Facebook signup successful',
@@ -759,7 +806,20 @@ router.get('/me', verifyToken, asyncHandler(async (req, res) => {
 }));
 
 // ============ LOGOUT (CLEAR SESSION) ============
-router.post('/logout', (req, res) => {
+router.post('/logout', verifyToken, asyncHandler(async (req, res) => {
+  let loggedOutAt = new Date();
+  try {
+    const user = await User.findOne({ id: req.user.id, isArchived: false });
+    if (user) {
+      await recordLastLogout(user, req.ipinfo);
+      if (user.lastLogout?.at) {
+        loggedOutAt = user.lastLogout.at;
+      }
+    }
+  } catch (err) {
+    console.warn('Failed to load user for logout logging:', err?.message || err);
+  }
+
   try {
     if (typeof req.logout === 'function' && req.session) {
       // passport 0.6+ requires callback
@@ -772,7 +832,8 @@ router.post('/logout', (req, res) => {
   } catch (e) {
     // ignore errors to keep logout idempotent
   }
-  return res.json({ message: 'Logged out' });
-});
+
+  return res.json({ message: 'Logged out', loggedOutAt });
+}));
 
 export default router;

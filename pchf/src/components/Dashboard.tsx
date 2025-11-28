@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { mockProducts } from "../data/mockData";
 import {
   TrendingUp,
@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
 import { Chart } from "react-google-charts";
 import { AuthService } from "../data/authData";
-import { useAuth } from "./auth/AuthWrapper"; //ayaw ni ninyo i delete for future updates ni
 import { toast } from "sonner";
 import type { User } from "../types/auth";
 import apiService from "../services/api";
@@ -29,6 +28,8 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
   const [pendingAdmins, setPendingAdmins] = useState<any[]>([]);
   const [metrics, setMetrics] = useState<any | null>(null);
   const [products, setProducts] = useState<any[]>([]);
+  const [activeLog, setActiveLog] = useState<any[]>([]);
+  const [isActiveLogLoading, setIsActiveLogLoading] = useState(false);
 
   // Load pending sign-ups (owner or admin)
   useEffect(() => {
@@ -85,6 +86,29 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
       .getProducts()
       .then(({ products }) => setProducts(products))
       .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    const loadActiveLog = async () => {
+      setIsActiveLogLoading(true);
+      try {
+        const { entries } = await apiService.getActiveLog();
+        if (!mounted) return;
+        setActiveLog(entries || []);
+      } catch {
+        if (!mounted) return;
+        setActiveLog([]);
+      } finally {
+        if (mounted) setIsActiveLogLoading(false);
+      }
+    };
+    loadActiveLog();
+    const interval = setInterval(loadActiveLog, 60 * 1000);
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
   }, []);
 
   
@@ -481,117 +505,96 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
       </div>
 
       <div className="mt-4">
-        <div className="card p-3 border-0 h-100"
-          style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}
+        <div
+          className="card p-3 border-0 h-100"
+          style={{ boxShadow: "2px 4px 8px  rgba(0, 0, 0, 0.10)" }}
         >
-          {/* Header */}
           <div className="card-header bg-transparent">
             <h6>
               <Clock size={18} /> Active log
             </h6>
           </div>
-
-          {/* Scrollable body for better user experience 😗😗*/}
-          <div
-            className="card-body"
-            style={{ maxHeight: "255px", overflowY: "auto" }}
-          >
-           
-
-          <div className="list-group border-0">
-
-            {/* Owner Login */}
-            <div className="list-group-item border-0 mb-2 d-flex justify-content-between align-items-start" style={{ borderRadius: "8px", padding: "12px"}}>
-              <div>
-                <strong>Juan Dela Cruz</strong> <span className="badge border text-dark ms-1">Owner</span><br />
-                <span className="text-muted">juan.owner@gmail.com</span><br />
-                <small>Status: Login</small><br />
-                <small>Time: 2025-11-28 08:32 AM</small>
-              </div>
-              <div className="text-end">
-                <small>IP: 192.168.1.14</small><br />
-                <small>Location: Cagayan de Oro City, PH</small><br />
-                <small>Lat / Long: 8.4542° N, 124.6319° E</small>
-              </div>
+          <div className="card-body" style={{ maxHeight: "255px", overflowY: "auto" }}>
+            <div className="list-group border-0">
+              {isActiveLogLoading && (
+                <div className="list-group-item border-0 text-center text-muted">
+                  Loading activity...
+                </div>
+              )}
+              {!isActiveLogLoading && activeLog.length === 0 && (
+                <div className="list-group-item border-0 text-center text-muted">
+                  No activity logs yet.
+                </div>
+              )}
+              {!isActiveLogLoading &&
+                activeLog.map((entry: any) => (
+                  <div
+                    key={`${entry.id}-${entry.timestamp}`}
+                    className="list-group-item border-0 mb-2 d-flex justify-content-between align-items-start"
+                    style={{ borderRadius: "8px", padding: "12px" }}
+                  >
+                    <div>
+                      <strong>{entry.name}</strong>{" "}
+                      <span className="badge border text-dark ms-1 text-capitalize">
+                        {entry.role}
+                      </span>
+                      <br />
+                      <span className="text-muted">{entry.email}</span>
+                      <br />
+                      <small>
+                        Status:{" "}
+                        <span
+                          className={`badge ${entry.status === 'Logout' ? 'bg-warning text-dark' : 'bg-success'}`}
+                        >
+                          {entry.status || "Login"}
+                        </span>
+                      </small>
+                      <br />
+                      <small>
+                        Time: {entry.timestamp ? new Date(entry.timestamp).toLocaleString() : "—" }
+                      </small>
+                    </div>
+                    <div className="text-end">
+                      <small>IP: {entry.ip || "N/A"}</small>
+                      <br />
+                      <small>Location: {entry.location || "Unavailable"}</small>
+                      <br />
+                      <small>
+                        Lat / Long:{" "}
+                        {Number.isFinite(entry.latitude) && Number.isFinite(entry.longitude)
+                          ? `${entry.latitude?.toFixed(4)}°, ${entry.longitude?.toFixed(4)}°`
+                          : "N/A"}
+                      </small>
+                    </div>
+                  </div>
+                ))}
             </div>
-
-            {/* Admin Login */}
-            <div className="list-group-item border-0 mb-2 d-flex justify-content-between align-items-start" style={{ borderRadius: "8px", padding: "12px"}}>
-              <div>
-                <strong>Maria Santos</strong> <span className="badge border text-dark ms-1">Admin</span><br />
-                <span className="text-muted">maria.admin@gmail.com</span><br />
-                <small>Status: Login</small><br />
-                <small>Time: 2025-11-28 09:15 AM</small>
-              </div>
-              <div className="text-end">
-                <small>IP: 192.168.1.22</small><br />
-                <small>Location: Valencia City, PH</small><br />
-                <small>Lat / Long: 7.9061° N, 125.0942° E</small>
-              </div>
-            </div>
-
-            {/* Cashier Logout */}
-            <div className="list-group-item border-0 mb-2 d-flex justify-content-between align-items-start" style={{ borderRadius: "8px", padding: "12px"}}>
-              <div>
-                <strong>Ana Mae Villarin</strong> <span className="badge border text-dark ms-1">Cashier</span><br />
-                <span className="text-muted">ana.cashier@gmail.com</span><br />
-                <small>Status: Logout</small><br />
-                <small>Time: 2025-11-28 03:38 PM</small>
-              </div>
-              <div className="text-end">
-                <small>IP: 192.168.1.33</small><br />
-                <small>Location: Malaybalay City, PH</small><br />
-                <small>Lat / Long: 8.1521° N, 125.1277° E</small>
-              </div>
-            </div>
-
-            {/* Additional stacked logs */}
-            <div className="list-group-item border-0 mb-2 d-flex justify-content-between align-items-start" style={{ borderRadius: "8px", padding: "12px"}}>
-              <div>
-                <strong>Juan Dela Cruz</strong> <span className="badge border text-dark ms-1">Owner</span><br />
-                <span className="text-muted">juan.owner@gmail.com</span><br />
-                <small>Status: Logout</small><br />
-                <small>Time: 2025-11-28 05:01 PM</small>
-              </div>
-              <div className="text-end">
-                <small>IP: 192.168.1.14</small><br />
-                <small>Location: Cagayan de Oro City, PH</small><br />
-                <small>Lat / Long: 8.4542° N, 124.6319° E</small>
-              </div>
-            </div>
-
-          </div>
-
-
           </div>
         </div>
       </div>
 
-      {/* Inventory Status ? wamani pulos unta pero naa naman sa user requirement 😶‍🌫️😶‍🌫️😶‍🌫️ */}
-      <div className="mt-4">
-        <div className="card p-3 border-0"
-          style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}
-          >
-          <h6>Inventory Status</h6>
-          <div className="d-flex justify-content-between text-center">
-            <div style={{ flex: 1 }}>
-              <h3 style={{ color: "blue" }}>
-                {(displayTotalProducts ?? totalProducts) - (displayLowStockItems ?? lowStockItems) - (displayOutOfStockItems ?? outOfStockItems)}
-              </h3>
-              <small>Well Stocked</small>
-            </div>
-            <div style={{ flex: 1 }}>
-              <h3 style={{ color: "green" }}>{displayLowStockItems ?? lowStockItems}</h3>
-              <small>Low Stock</small>
-            </div>
-            <div style={{ flex: 1 }}>
-              <h3 style={{ color: "orange" }}>{displayOutOfStockItems ?? outOfStockItems}</h3>
-              <small>Out of Stock</small>
-            </div>
-            <div style={{ flex: 1 }}>
-              <h3 style={{ color: "red" }}>{displayTotalProducts ?? totalProducts}</h3>
-              <small>Total Products</small>
-            </div>
+      <div className="card p-3 border-0 mt-4" style={{ boxShadow: "2px 4px 8px  rgba(0, 0, 0, 0.10)" }}>
+        <h6>Inventory Status</h6>
+        <div className="d-flex justify-content-between text-center">
+          <div style={{ flex: 1 }}>
+            <h3 style={{ color: "blue" }}>
+              {(displayTotalProducts ?? totalProducts) -
+                (displayLowStockItems ?? lowStockItems) -
+                (displayOutOfStockItems ?? outOfStockItems)}
+            </h3>
+            <small>Well Stocked</small>
+          </div>
+          <div style={{ flex: 1 }}>
+            <h3 style={{ color: "green" }}>{displayLowStockItems ?? lowStockItems}</h3>
+            <small>Low Stock</small>
+          </div>
+          <div style={{ flex: 1 }}>
+            <h3 style={{ color: "orange" }}>{displayOutOfStockItems ?? outOfStockItems}</h3>
+            <small>Out of Stock</small>
+          </div>
+          <div style={{ flex: 1 }}>
+            <h3 style={{ color: "red" }}>{displayTotalProducts ?? totalProducts}</h3>
+            <small>Total Products</small>
           </div>
         </div>
       </div>

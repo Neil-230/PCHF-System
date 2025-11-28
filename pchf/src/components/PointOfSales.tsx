@@ -75,6 +75,34 @@ export function PointOfSale({ onTransactionComplete, user }: PointOfSaleProps) {
   }, []);
 
   useEffect(() => {
+    let mounted = true;
+    const syncStoreSettings = async () => {
+      try {
+        const s = await apiService.getSystemSettings();
+        if (!mounted) return;
+        setStoreSettings((prev) => {
+          const updated = {
+            ...prev,
+            storeName: s.storeName || prev.storeName,
+            storeAddress: s.storeAddress || prev.storeAddress,
+            phone: s.phone || prev.phone,
+            email: s.email || prev.email,
+            footerMessage: s.footerMessage || prev.footerMessage,
+          };
+          localStorage.setItem("storeSettings", JSON.stringify(updated));
+          return updated;
+        });
+      } catch {
+        // leave existing fallback if API unavailable
+      }
+    };
+    syncStoreSettings();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
     apiService
       .getProducts()
       .then(({ products }) => {

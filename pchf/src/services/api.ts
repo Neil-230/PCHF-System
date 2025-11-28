@@ -284,6 +284,10 @@ class ApiService {
     return this.request('/dashboard/metrics');
   }
 
+  async getActiveLog(): Promise<{ entries: any[] }> {
+    return this.request('/dashboard/active-log');
+  }
+
   // ============ ACCOUNT DELETION (SELF) ============
   async getDeletionStatus(): Promise<{ scheduledFor: string | null; daysRemaining: number | null }> {
     return this.request('/users/me/deletion-status');

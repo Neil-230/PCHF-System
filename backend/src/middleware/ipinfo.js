@@ -21,45 +21,57 @@ const getClientIp = (req) => {
   const xff = (req.headers['x-forwarded-for'] || '').toString();
   if (xff) {
     const parts = xff.split(',').map((s) => stripIpv6Prefix(s.trim())).filter(Boolean);
-    if (parts.length) return parts[0];
+    if (parts.length) {
+      const firstPublic = parts.find((candidate) => !isPrivateIp(candidate));
+      return firstPublic || parts[0];
+    }
   }
-  return stripIpv6Prefix(req.ip || req.connection?.remoteAddress || '');
+  const direct = stripIpv6Prefix(req.headers['x-real-ip'] || req.ip || req.connection?.remoteAddress || '');
+  return direct;
 };
 
 export async function ipinfoEnricher(req, _res, next) {
   try {
     const token = process.env.IPINFO_TOKEN;
-    if (!token) {
+    const clientIp = getClientIp(req);
+    if (!clientIp) {
       return next();
     }
 
-    const ip = getClientIp(req);
-    if (!ip || isPrivateIp(ip)) {
-      return next();
-    }
-
+    const clientIsPrivate = isPrivateIp(clientIp);
+    const lookupIp = clientIsPrivate ? '' : clientIp;
     const now = Date.now();
-    const cached = cache.get(ip);
+    const cacheKey = lookupIp || 'self';
+    const cached = cache.get(cacheKey);
     if (cached && now - cached.ts < CACHE_TTL_MS) {
-      req.ipinfo = cached.data;
+      const resolved = {
+        ...cached.data,
+        ip: clientIsPrivate ? cached.data.publicIp : clientIp,
+        clientIp,
+      };
+      req.ipinfo = resolved;
       return next();
     }
 
-    const resp = await axios.get(`https://ipinfo.io/${encodeURIComponent(ip)}`, { params: { token } });
+    const resp = await axios.get(`https://ipinfo.io/${lookupIp ? encodeURIComponent(lookupIp) : ''}`, { params: token ? { token } : undefined });
     if (resp && resp.status === 200) {
       const d = resp.data || {};
-      const normalized = {
-        ip: d.ip,
+      const geoData = {
+        publicIp: d.ip || lookupIp || clientIp,
         city: d.city,
         region: d.region,
         country: d.country,
-        loc: d.loc, // "lat,lon"
-        org: d.org, // ASN + name
+        loc: d.loc,
+        org: d.org,
         timezone: d.timezone,
-        privacy: d.privacy, // may be undefined on free tier
+        privacy: d.privacy,
       };
-      cache.set(ip, { data: normalized, ts: now });
-      req.ipinfo = normalized;
+      cache.set(cacheKey, { data: geoData, ts: now });
+      req.ipinfo = {
+        ...geoData,
+        ip: clientIsPrivate ? geoData.publicIp : clientIp,
+        clientIp,
+      };
     }
 
     return next();

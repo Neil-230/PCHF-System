@@ -2,7 +2,7 @@ import express from 'express';
 import { verifyToken } from '../middleware/auth.js';
 import { authorize } from '../middleware/authorize.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
-import { Product, Transaction } from '../database/mongodb.js';
+import { Product, Transaction, User, UserActivityLog } from '../database/mongodb.js';
 
 const router = express.Router();
 
@@ -125,6 +125,36 @@ router.get('/metrics', verifyToken, authorize('dashboard', 'read:any'), asyncHan
       outOfStock: outOfStockList,
     },
   });
+}));
+
+router.get('/active-log', verifyToken, authorize('dashboard', 'read:any'), asyncHandler(async (_req, res) => {
+  const logs = await UserActivityLog.find({})
+    .sort({ at: -1 })
+    .limit(200)
+    .lean();
+
+  const entries = logs.map((log) => {
+    const locParts = typeof log.loc === 'string' ? log.loc.split(',').map((p) => p.trim()).filter(Boolean) : [];
+    const latitude = locParts.length >= 1 ? Number(locParts[0]) : null;
+    const longitude = locParts.length >= 2 ? Number(locParts[1]) : null;
+    const locationText = [log.city, log.region, log.country].filter(Boolean).join(', ') || null;
+    return {
+      id: log.userId,
+      name: log.name,
+      email: log.email,
+      role: log.role,
+      status: log.type === 'logout' ? 'Logout' : 'Login',
+      timestamp: log.at || null,
+      ip: log.ip || null,
+      location: locationText,
+      latitude: Number.isFinite(latitude) ? latitude : null,
+      longitude: Number.isFinite(longitude) ? longitude : null,
+      organization: log.org || null,
+      timezone: log.timezone || null,
+    };
+  }).filter((entry) => entry.timestamp);
+
+  res.json({ entries });
 }));
 
 export default router;

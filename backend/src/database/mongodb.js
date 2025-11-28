@@ -27,6 +27,17 @@ const userSchema = new mongoose.Schema({
     country: { type: String, default: null },
     region: { type: String, default: null },
     city: { type: String, default: null },
+    loc: { type: String, default: null },
+    org: { type: String, default: null },
+    timezone: { type: String, default: null },
+    at: { type: Date, default: null },
+  },
+  lastLogout: {
+    ip: { type: String, default: null },
+    country: { type: String, default: null },
+    region: { type: String, default: null },
+    city: { type: String, default: null },
+    loc: { type: String, default: null },
     org: { type: String, default: null },
     timezone: { type: String, default: null },
     at: { type: Date, default: null },
@@ -135,12 +146,30 @@ const systemSettingsSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now }
 }, { optimisticConcurrency: true });
 
+const userActivityLogSchema = new mongoose.Schema({
+  id: { type: String, unique: true, required: true },
+  userId: { type: String, required: true },
+  name: { type: String, required: true },
+  email: { type: String, required: true },
+  role: { type: String, required: true },
+  type: { type: String, enum: ['login', 'logout'], required: true },
+  ip: { type: String, default: null },
+  country: { type: String, default: null },
+  region: { type: String, default: null },
+  city: { type: String, default: null },
+  loc: { type: String, default: null },
+  org: { type: String, default: null },
+  timezone: { type: String, default: null },
+  at: { type: Date, default: Date.now },
+}, { timestamps: false });
+
 export const User = mongoose.model('User', userSchema);
 export const PasswordReset = mongoose.model('PasswordReset', passwordResetSchema);
 export const PendingAdmin = mongoose.model('PendingAdmin', pendingAdminSchema);
 export const Product = mongoose.model('Product', productSchema);
 export const Transaction = mongoose.model('Transaction', transactionSchema);
 export const SystemSettings = mongoose.model('SystemSettings', systemSettingsSchema);
+export const UserActivityLog = mongoose.model('UserActivityLog', userActivityLogSchema);
 
 export const connectDB = async () => {
   try {
