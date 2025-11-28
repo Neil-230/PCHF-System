@@ -39,6 +39,14 @@ router.put('/:id', verifyToken, asyncHandler(async (req, res) => {
   const user = await User.findOne({ id: req.params.id, isArchived: false });
   if (!user) return res.status(404).json({ error: 'User not found' });
 
+  const clientVersion = req.body.version ?? req.body.__v;
+  if (clientVersion === undefined) {
+    return res.status(400).json({ error: 'Version is required to update user.' });
+  }
+  if (Number(clientVersion) !== user.__v) {
+    return res.status(409).json({ error: 'Conflict: user data is stale. Please refresh and retry.' });
+  }
+
   Object.assign(user, updates);
   try {
     await user.save();
