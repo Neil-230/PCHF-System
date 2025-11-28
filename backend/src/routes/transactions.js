@@ -1,6 +1,5 @@
 import express from 'express';
 import mongoose from 'mongoose';
-import { v4 as uuidv4 } from 'uuid';
 import { User, Product, Transaction, SystemSettings } from '../database/mongodb.js';
 import { verifyToken } from '../middleware/auth.js';
 import { authorize } from '../middleware/authorize.js';
@@ -148,9 +147,18 @@ router.post('/', verifyToken, authorize('transaction', 'create:any'), asyncHandl
         }
       }
 
+      // Generate sequential transaction ID (e.g., t_0005)
+      const settings = await SystemSettings.findOne({ id: 'system' }).session(session);
+      const nextNumber = settings?.nextTransactionNumber || 1;
+      const transactionId = `t_${String(nextNumber).padStart(4, '0')}`;
+      if (settings) {
+        settings.nextTransactionNumber = nextNumber + 1;
+        await settings.save({ session });
+      }
+
       // Build transaction record
       txn = new Transaction({
-        id: uuidv4(),
+        id: transactionId,
         items: items.map(i => {
           const p = productMap.get(i.productId);
           return {

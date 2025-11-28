@@ -125,6 +125,7 @@ const systemSettingsSchema = new mongoose.Schema({
   notifyOutOfStock: { type: Boolean, default: false },
   lowStockThreshold: { type: Number, default: 10 },
   notificationMethod: { type: String, enum: ['email', 'sms', 'both'], default: 'email' },
+  nextTransactionNumber: { type: Number, default: 1 },
   // Cloud backup (Google Drive)
   backupEnabled: { type: Boolean, default: false },
   backupLastRun: { type: Date, default: null },
