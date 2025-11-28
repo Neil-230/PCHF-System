@@ -19,6 +19,7 @@ export function GoogleCallback() {
     const token = searchParams.get('token');
     const userStr = searchParams.get('user');
     const signupRequired = searchParams.get('signup') === 'required';
+    const isPending = searchParams.get('pending') === '1';
 
     if (token && userStr) {
       try {
@@ -31,6 +32,12 @@ export function GoogleCallback() {
         toast.error('Authentication failed');
         navigate('/login', { replace: true });
       }
+      return;
+    }
+
+    if (isPending) {
+      toast.error('Your account is awaiting owner/admin approval. Please try again later.');
+      navigate('/login', { replace: true });
       return;
     }
 

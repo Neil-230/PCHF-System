@@ -19,6 +19,20 @@ const resolveClientVersion = (req) => {
   return undefined;
 };
 
+const ensureProductVersionInitialized = async (product) => {
+  if (!product || typeof product.__v === 'number') {
+    return;
+  }
+  try {
+    const query = { _id: product._id, __v: { $exists: false } };
+    const update = { $set: { __v: 0 } };
+    await Product.updateOne(query, update);
+    product.__v = 0;
+  } catch (err) {
+    console.error(`Failed to initialize version for product ${product.id}:`, err);
+  }
+};
+
 // Get all products with optional filters
 router.get('/', verifyToken, authorize('product', 'read:any'), asyncHandler(async (req, res) => {
   const { q, category } = req.query;
@@ -31,6 +45,7 @@ router.get('/', verifyToken, authorize('product', 'read:any'), asyncHandler(asyn
     filter.category = category;
   }
   const products = await Product.find(filter).sort({ createdAt: -1 });
+  await Promise.all(products.map((p) => ensureProductVersionInitialized(p)));
   res.json({ products: products.map(p => p.toJSON()) });
 }));
 
@@ -38,6 +53,7 @@ router.get('/', verifyToken, authorize('product', 'read:any'), asyncHandler(asyn
 router.get('/:id', verifyToken, authorize('product', 'read:any'), asyncHandler(async (req, res) => {
   const product = await Product.findOne({ id: req.params.id });
   if (!product) return res.status(404).json({ error: 'Product not found' });
+  await ensureProductVersionInitialized(product);
   res.json({ product: product.toJSON() });
 }));
 
@@ -69,6 +85,7 @@ router.post('/', verifyToken, authorize('product', 'create:any'), asyncHandler(a
 router.put('/:id', verifyToken, authorize('product', 'update:any'), asyncHandler(async (req, res) => {
   const product = await Product.findOne({ id: req.params.id });
   if (!product) return res.status(404).json({ error: 'Product not found' });
+  await ensureProductVersionInitialized(product);
   const clientVersion = resolveClientVersion(req);
   if (clientVersion === undefined) {
     return res.status(400).json({ error: 'Version is required to update product.' });
@@ -117,6 +134,7 @@ router.put('/:id', verifyToken, authorize('product', 'update:any'), asyncHandler
 router.delete('/:id', verifyToken, authorize('product', 'delete:any'), asyncHandler(async (req, res) => {
   const product = await Product.findOne({ id: req.params.id });
   if (!product) return res.status(404).json({ error: 'Product not found' });
+  await ensureProductVersionInitialized(product);
 
   const clientVersion = resolveClientVersion(req);
   if (clientVersion === undefined) {
