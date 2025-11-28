@@ -25,11 +25,11 @@ export function GoogleCallback() {
         const user = JSON.parse(decodeURIComponent(userStr));
         apiService.setToken(token);
         toast.success('Login successful!');
-        navigate('/dashboard');
+        navigate('/dashboard', { replace: true });
       } catch (err) {
         console.error('Error parsing Google callback:', err);
         toast.error('Authentication failed');
-        navigate('/login');
+        navigate('/login', { replace: true });
       }
       return;
     }
@@ -41,12 +41,12 @@ export function GoogleCallback() {
         setShowRoleModal(true);
         toast.message('Complete signup to continue');
       } catch {
-        navigate('/login');
+        navigate('/login', { replace: true });
       }
       return;
     }
 
-    navigate('/login');
+    navigate('/login', { replace: true });
   }, [searchParams, navigate]);
 
   const handleRoleSelection = async () => {
@@ -84,7 +84,7 @@ export function GoogleCallback() {
       );
       
       setShowRoleModal(false);
-      navigate('/dashboard');
+      navigate('/dashboard', { replace: true });
     } catch (err: any) {
       toast.error(err.message || 'Failed to complete signup');
     } finally {
