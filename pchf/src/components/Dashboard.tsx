@@ -11,12 +11,16 @@ import {
   Crown,
   Check,
   X,
+  Search,
+  Trash2,
+  FileDown,
 } from "lucide-react";
 import { Chart } from "react-google-charts";
 import { AuthService } from "../data/authData";
 import { toast } from "sonner";
 import type { User } from "../types/auth";
 import apiService from "../services/api";
+
 
 interface DashboardProps {
   transactions: any[];
@@ -509,10 +513,41 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
           className="card p-3 border-0 h-100"
           style={{ boxShadow: "2px 4px 8px  rgba(0, 0, 0, 0.10)" }}
         >
-          <div className="card-header bg-transparent">
-            <h6>
+          <div className="card-header bg-transparent d-flex gap-2">
+            {/* ActiveLog HeadTitle_________ */}
+            <h6 className="mt-2 fw-bold me-auto">
               <Clock size={18} /> Active log
             </h6>
+            {/* ActiveLog Search_________ */}
+            <div className="flex-grow-0 position-relative border-0">
+              <Search
+                size={18}
+                style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", color: "#6c757d" }}
+              />
+              <input
+                type="text"
+                className="form-control ps-5"
+                placeholder="Search for spacific Account..."
+              />
+            </div>
+            {/* ActiveLog Clear Button_________ */}
+            <div className="d-flex gap-2">
+              <button
+                className="btn btn-dark d-flex align-items-center"
+                // onClick={IKAW NA BAHALA}
+              >
+                <Trash2 size={18} className="me-2" />
+                Clear Active Log
+              </button>
+            </div>
+            {/* ActiveLog PDF button */}
+            <button
+              className="btn btn-outline-secondary d-flex align-items-center"
+              // onClick={IKAW NA BAHALA}
+            >
+              <FileDown size={18} className="me-2" />
+              PDF
+            </button>
           </div>
           <div className="card-body" style={{ maxHeight: "255px", overflowY: "auto" }}>
             <div className="list-group border-0">
@@ -530,10 +565,10 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
                 activeLog.map((entry: any) => (
                   <div
                     key={`${entry.id}-${entry.timestamp}`}
-                    className="list-group-item border-0 mb-2 d-flex justify-content-between align-items-start"
+                    className="list-group-item border-0 mb-2 d-flex align-items-start"
                     style={{ borderRadius: "8px", padding: "12px" }}
                   >
-                    <div>
+                    <div className="me-auto">
                       <strong>{entry.name}</strong>{" "}
                       <span className="badge border text-dark ms-1 text-capitalize">
                         {entry.role}
@@ -554,7 +589,7 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
                         Time: {entry.timestamp ? new Date(entry.timestamp).toLocaleString() : "—" }
                       </small>
                     </div>
-                    <div className="text-end">
+                    <div className="text-end me-2">
                       <small>IP: {entry.ip || "N/A"}</small>
                       <br />
                       <small>Location: {entry.location || "Unavailable"}</small>
@@ -566,6 +601,14 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
                           : "N/A"}
                       </small>
                     </div>
+                    {/* <div className="ms-none mt-4">
+                      <button
+                        className="btn btn-outline-dark d-flex align-items-center"
+                      >
+                        <Trash2 size={18} className="me-0" />
+
+                      </button>
+                    </div> */}
                   </div>
                 ))}
             </div>

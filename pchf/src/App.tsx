@@ -151,7 +151,7 @@ export default function App() {
   const handleUserActivity = useCallback(() => {
     if (!user || !securitySettings.autoLogout) return;
     if (inactivityWarning) {
-      return; // require explicit button choice while modal is open
+      setInactivityWarning(false);
     }
     resetInactivityTimer();
   }, [inactivityWarning, resetInactivityTimer, securitySettings.autoLogout, user]);
@@ -300,14 +300,14 @@ export default function App() {
           <div className="modal-backdrop fade show"></div>
           <div className="modal d-block" role="dialog" aria-modal="true">
             <div className="modal-dialog modal-dialog-centered">
-              <div className="modal-content rounded-4 shadow-lg border-0">
+              <div className="modal-content rounded-2 shadow-lg border-0">
                 <div className="modal-body text-center p-4">
                   <h4 className="mb-2">Are you still active?</h4>
                   <p className="text-muted mb-4">
-                    You will be logged out in <strong>{countdown}</strong> seconds due to inactivity.
+                    You will be logged out in <strong className="text-dark">{countdown}</strong> seconds due to inactivity.
                   </p>
                   <div className="d-flex gap-2 justify-content-center">
-                    <button className="btn btn-primary" onClick={handleStayActive}>
+                    <button className="btn btn-dark" onClick={handleStayActive}>
                       Stay Logged In
                     </button>
                     <button className="btn btn-outline-danger" onClick={handleLogout}>

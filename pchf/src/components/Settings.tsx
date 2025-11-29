@@ -343,7 +343,7 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user,
           <p className="text-muted">Manage your store preferences and system configurations.</p>
         </div>
         <div>
-          <button className="btn btn-outline-secondary rounded-3 px-4 py-2 me-2 btn-sm" onClick={handleSaveSettings}>
+          <button className="btn btn-outline-dark rounded-3 px-4 py-2 me-2 btn-sm" onClick={handleSaveSettings}>
             <Save className="me-2"/>Save Settings
           </button>
           <button className="btn btn-outline-danger rounded-3 px-4 py-2" onClick={onLogout}>
@@ -352,13 +352,13 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user,
         </div>
       </div>
 
-      <div className="row">
+      <div className="row mb-4">
         <div className="col-md-8">
           {/* ---------- Store Settings ---------- */}
-          <div className="position-relative mb-4">
-            <div className="card border-0" style={{ borderRadius: "12px", boxShadow: "2px 4px 8px rgba(0,0,0,0.15)" }}>
-              <div className="card-header bg-transparent text-dark fw-bold fs-5">
-                <Store className="me-2"/>
+          <div className="position-relative">
+            <div className="card d-flex border-0 h-100" style={{ borderRadius: "12px", boxShadow: "2px 4px 8px rgba(0,0,0,0.15)" }}>
+              <div className="card-header bg-transparent text-dark fw-bold ">
+                <Store className="me-2" color="blue"/>
                 Store Information
               </div>
               <div className="card-body">
@@ -465,51 +465,15 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user,
               </div>
             )}
           </div>
-          
-          {/* NOTIFICATION SETTINGS */}
-          <div className="card mb-4 border-0" style={{ borderRadius: "12px", boxShadow: "2px 4px 8px rgba(0,0,0,0.15)" }}>
-            <div className="card-header bg-transparent text-dark fw-bold fs-5">
-              <Bell className="me-2"/>
-              Notifications
-            </div>
-            <div className="card-body">
-              <small className="text-muted">Please be informed that the Email used in </small><small className="text-muted"> notification is the Store Information settings</small>
-              <div className="form-check form-switch mb-2">
-                <input className="form-check-input" type="checkbox" checked={notifyLowStock}
-                  onChange={(e) => setNotifyLowStock(e.target.checked)} disabled={!canAccessStoreSettings} />
-                <label className="form-check-label">Notify on low stock</label>
-              </div>
-              <div className="form-check form-switch mb-3">
-                <input className="form-check-input" type="checkbox" checked={notifyOutOfStock}
-                  onChange={(e) => setNotifyOutOfStock(e.target.checked)} disabled={!canAccessStoreSettings} />
-                <label className="form-check-label">Notify when out of stock</label>
-              </div>
-              <div className="row">
-                <div className="col-md-6 mb-3">
-                  <label className="form-label">Low stock threshold</label>
-                  <input type="number" min={0} className="form-control" value={lowStockThreshold}
-                    onChange={(e) => setLowStockThreshold(e.target.value)} disabled={!canAccessStoreSettings} />
-                </div>
-                <div className="col-md-6 mb-3" style={{display:"none"}}>
-                  <label className="form-label">Notification method</label>
-                  <select className="form-select" value={notificationMethod}
-                    onChange={(e) => setNotificationMethod(e.target.value as any)} disabled={!canAccessStoreSettings}>
-                    <option value="email">Email</option>
-                    <option value="sms">SMS</option>
-                    <option value="both">Both</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
-        {/* ---------- Account Settings ---------- */}
+
+        {/* Account Settings */}
         <div className="col-md-4">
-          <div className="card mb-4 border-0" style={{ borderRadius: "12px", boxShadow: "2px 4px 8px rgba(0,0,0,0.15)" }}>
-            <div className="card-header bg-transparent fw-bold fs- ">
-              <Shield className="me-2"/>
-              Account Settings
-            </div>
+            <div className="card d-flex border-0 h-100" style={{ borderRadius: "12px", boxShadow: "2px 4px 8px rgba(0,0,0,0.15)" }}>
+              <div className="card-header bg-transparent fw-bold  ">
+                <Shield className="me-2 text-warning"/>
+                Account Management
+              </div>
             <div className="card-body">
               {currentRole === "owner" && (
                 <div className="form-check form-switch mb-2">
@@ -544,7 +508,7 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user,
               </div>
 
               {/* kani bay pwedi ni ninyo i implement na mag logout ang account depending on time */}
-              <div className="mb-0">
+              <div className="mb-3">
                 <label className="form-label">Session Timeout (minutes)</label>
                 <select className="form-select" value={securitySettings.sessionTimeout}
                   onChange={(e) => setSecuritySettings({ ...securitySettings, sessionTimeout: e.target.value })}>
@@ -556,15 +520,7 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user,
                 </select>
               </div>
               {/* you can delete the logout mechanism kong feel ninyo dina needed */}
-            </div>
-            
-            
-            {/* Chanepass */}
-            {/* <hr className="" /> */}
-            {/* <label className="fw-bold mb-3">Change your account password</label> */}
-            <div className="mb-5">
-              <button className="btn btn-secondary w-100" onClick={openChangePasswordModal}>Change password</button>
-            </div>
+
             {/* Delete Account */}
             {deletion && deletion.scheduledFor ? (
               <div className="d-flex flex-column gap-2">
@@ -594,19 +550,18 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user,
                 </button>
               </div>
             ) : (
-              <div className="d-flex flex-column gap-2">
-                <small className="text-muted">Please be informed that your account will be </small>
-                <small className="text-muted">moved to hold Status and confirm the removal</small>
-                <small className="text-muted">after 30 days</small>
+              <div className="d-flex flex-column gap-0">
+                <small className="text-muted">Please be informed that your account will </small>
+                <small className="text-muted">be moved to hold Status and confirm the removal after 30 day</small>
                 <input
                   type="text"
-                  className="form-control"
+                  className="form-control mt-2"
                   value={confirmDelete}
                   onChange={(e) => setConfirmDelete(e.target.value)}
                   placeholder="type Remove to confirm"
                 />
                 <button
-                  className="btn btn-secondary "
+                  className="btn btn-secondary mt-2"
                   disabled={loadingDeletion || confirmDelete !== "Remove"}
                   onClick={async () => {
                     setLoadingDeletion(true);
@@ -625,13 +580,68 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user,
                 </button>
               </div>
             )}
+
+            {/* Chanepass */}
+            {/* <hr className="" /> */}
+            {/* <label className="fw-bold mb-3">Change your account password</label> */}
+            <div className="mb-0 mt-2">
+              <button className="btn btn-outline-secondary w-100" onClick={openChangePasswordModal}>
+                Change password
+              </button>
+            </div>
+
+
+            </div>
           </div>
+        </div>
+      </div>
+      <div className="row">
+        <div className="col-md-8">
+          {/* NOTIFICATION SETTINGS */}
+          <div className="card mb-4 border-0 h-100" style={{ borderRadius: "12px", boxShadow: "2px 4px 8px rgba(0,0,0,0.15)" }}>
+            <div className="card-header bg-transparent text-dark fw-bold">
+              <Bell className="me-2" color="blue"/>
+              Notifications
+            </div>
+            <div className="card-body">
+              <small className="text-muted">Please be informed that the Email used in </small><small className="text-muted"> notification is the Store Information Email</small>
+              <div className="form-check form-switch mb-2 mt-4">
+                <input className="form-check-input" type="checkbox" checked={notifyLowStock}
+                  onChange={(e) => setNotifyLowStock(e.target.checked)} disabled={!canAccessStoreSettings} />
+                <label className="form-check-label">Notify on low stock</label>
+              </div>
+              <div className="form-check form-switch mb-3">
+                <input className="form-check-input" type="checkbox" checked={notifyOutOfStock}
+                  onChange={(e) => setNotifyOutOfStock(e.target.checked)} disabled={!canAccessStoreSettings} />
+                <label className="form-check-label">Notify when out of stock</label>
+              </div>
+              <div className="row">
+                <div className="col-md-6 mb-3">
+                  <label className="form-label">Low stock threshold</label>
+                  <input type="number" min={0} className="form-control" value={lowStockThreshold}
+                    onChange={(e) => setLowStockThreshold(e.target.value)} disabled={!canAccessStoreSettings} />
+                </div>
+                <div className="col-md-6 mb-3" style={{display:"none"}}>
+                  <label className="form-label">Notification method</label>
+                  <select className="form-select" value={notificationMethod}
+                    onChange={(e) => setNotificationMethod(e.target.value as any)} disabled={!canAccessStoreSettings}>
+                    <option value="email">Email</option>
+                    <option value="sms">SMS</option>
+                    <option value="both">Both</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        {/* ---------- Account Settings ---------- */}
+        <div className="col-md-4">
 
           {/* Backup Settings */}
-          <div className="card mb-4 border-0" style={{ borderRadius: "12px", boxShadow: "2px 4px 8px rgba(0,0,0,0.15)" }}>
+          <div className="card mb-4 border-0 h-100" style={{ borderRadius: "12px", boxShadow: "2px 4px 8px rgba(0,0,0,0.15)" }}>
             <div className="card-header bg-transparent text-dark fw-bold">
-              <Database className="me-2"/>
-              Backup Settings
+              <Database className="me-2 text-warning" />
+              Backup Data
             </div>
             <div className="card-body">
               <div className="form-check form-switch mb-2">
@@ -667,14 +677,14 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user,
                   ) : (
                     <div className="d-flex gap-2 flex-wrap align-items-center">
                       
-                      <button className="btn btn-outline-primary btn-sm w-100" 
+                      <button className="btn btn-outline-primary w-100" 
                         onClick={handleEnsureFolder} 
                         disabled={loadingDrive}
                       >
                         Ensure Backup Folder
                       </button>
                       
-                      <button className="btn btn-secondary btn-sm w-100" 
+                      <button className="btn btn-secondary w-100" 
                         onClick={handleRunBackup} 
                         disabled={loadingDrive}
                       >
