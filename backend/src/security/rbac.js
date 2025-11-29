@@ -6,6 +6,7 @@ const grantsObject = {
   owner: {
     dashboard: {
       'read:any': ['*'],
+      'delete:any': ['*'],
     },
     transaction: {
       'create:any': ['*'],
@@ -38,6 +39,7 @@ const grantsObject = {
   admin: {
     dashboard: {
       'read:any': ['*'],
+      'delete:any': ['*'],
     },
     transaction: {
       'create:any': ['*'],

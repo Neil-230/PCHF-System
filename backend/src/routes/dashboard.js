@@ -157,4 +157,9 @@ router.get('/active-log', verifyToken, authorize('dashboard', 'read:any'), async
   res.json({ entries });
 }));
 
+router.delete('/active-log', verifyToken, authorize('dashboard', 'delete:any'), asyncHandler(async (_req, res) => {
+  const result = await UserActivityLog.deleteMany({});
+  res.json({ message: 'Active log cleared successfully', deletedCount: result.deletedCount || 0 });
+}));
+
 export default router;

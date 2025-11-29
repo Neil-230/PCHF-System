@@ -39,8 +39,9 @@ class ApiService {
     localStorage.removeItem('authToken');
   }
 
-  private async ensureCsrfToken() {
-    if (this.csrfToken) return this.csrfToken;
+  private async ensureCsrfToken(): Promise<string> {
+    const existingToken = this.csrfToken;
+    if (existingToken) return existingToken;
     if (this.csrfPromise) return this.csrfPromise;
 
     this.csrfPromise = fetch(`${API_BASE_URL}/csrf-token`, {
@@ -55,11 +56,12 @@ class ApiService {
         return res.json();
       })
       .then((data) => {
-        if (!data?.csrfToken) {
+        const token = typeof data?.csrfToken === 'string' ? data.csrfToken : null;
+        if (!token) {
           throw new Error('Invalid CSRF token response');
         }
-        this.csrfToken = data.csrfToken;
-        return this.csrfToken;
+        this.csrfToken = token;
+        return token;
       })
       .finally(() => {
         this.csrfPromise = null;
@@ -290,6 +292,12 @@ class ApiService {
 
   async getActiveLog(): Promise<{ entries: any[] }> {
     return this.request('/dashboard/active-log');
+  }
+
+  async clearActiveLog(): Promise<{ message: string; deletedCount: number }> {
+    return this.request('/dashboard/active-log', {
+      method: 'DELETE',
+    });
   }
 
   // ============ ACCOUNT DELETION (SELF) ============

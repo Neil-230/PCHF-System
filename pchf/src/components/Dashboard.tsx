@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { mockProducts } from "../data/mockData";
 import {
   TrendingUp,
@@ -20,6 +20,8 @@ import { AuthService } from "../data/authData";
 import { toast } from "sonner";
 import type { User } from "../types/auth";
 import apiService from "../services/api";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 
 interface DashboardProps {
@@ -34,6 +36,9 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
   const [products, setProducts] = useState<any[]>([]);
   const [activeLog, setActiveLog] = useState<any[]>([]);
   const [isActiveLogLoading, setIsActiveLogLoading] = useState(false);
+  const [logSearch, setLogSearch] = useState("");
+  const [isClearingLog, setIsClearingLog] = useState(false);
+  const [isExportingLogPdf, setIsExportingLogPdf] = useState(false);
 
   // Load pending sign-ups (owner or admin)
   useEffect(() => {
@@ -114,6 +119,79 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
       clearInterval(interval);
     };
   }, []);
+
+  const filteredActiveLog = useMemo(() => {
+    const query = logSearch.trim().toLowerCase();
+    if (!query) return activeLog;
+    return activeLog.filter((entry) => {
+      const haystack = [
+        entry.name,
+        entry.email,
+        entry.role,
+        entry.status,
+        entry.ip,
+        entry.location,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(query);
+    });
+  }, [activeLog, logSearch]);
+
+  const handleClearActiveLog = async () => {
+    if (!activeLog.length) {
+      toast.info("There are no logs to clear right now.");
+      return;
+    }
+    if (!window.confirm("Clear all activity logs? This action cannot be undone.")) {
+      return;
+    }
+    setIsClearingLog(true);
+    try {
+      await apiService.clearActiveLog();
+      setActiveLog([]);
+      toast.success("Active log cleared successfully");
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to clear active log");
+    } finally {
+      setIsClearingLog(false);
+    }
+  };
+
+  const handleDownloadActiveLogPdf = async () => {
+    if (!filteredActiveLog.length) {
+      toast.info("No entries to export.");
+      return;
+    }
+    setIsExportingLogPdf(true);
+    try {
+      const doc = new jsPDF({ orientation: "landscape" });
+      doc.setFontSize(16);
+      doc.text("Active Log", 14, 15);
+      autoTable(doc, {
+        startY: 20,
+        head: [["Name", "Email", "Role", "Status", "Time", "IP", "Location"]],
+        body: filteredActiveLog.map((entry) => [
+          entry.name,
+          entry.email,
+          entry.role,
+          entry.status,
+          entry.timestamp ? new Date(entry.timestamp).toLocaleString() : "—",
+          entry.ip || "N/A",
+          entry.location || "Unavailable",
+        ]),
+        styles: { fontSize: 9 },
+        headStyles: { fillColor: [51, 51, 51] },
+      });
+      doc.save(`active-log-${new Date().toISOString().slice(0, 10)}.pdf`);
+      toast.success("PDF downloaded");
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to export PDF");
+    } finally {
+      setIsExportingLogPdf(false);
+    }
+  };
 
   
 
@@ -528,25 +606,29 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
                 type="text"
                 className="form-control ps-5"
                 placeholder="Search for spacific Account..."
+                value={logSearch}
+                onChange={(event) => setLogSearch(event.target.value)}
               />
             </div>
             {/* ActiveLog Clear Button_________ */}
             <div className="d-flex gap-2">
               <button
                 className="btn btn-dark d-flex align-items-center"
-                // onClick={IKAW NA BAHALA}
+                onClick={handleClearActiveLog}
+                disabled={isClearingLog}
               >
                 <Trash2 size={18} className="me-2" />
-                Clear Active Log
+                {isClearingLog ? "Clearing..." : "Clear Active Log"}
               </button>
             </div>
             {/* ActiveLog PDF button */}
             <button
               className="btn btn-outline-secondary d-flex align-items-center"
-              // onClick={IKAW NA BAHALA}
+              onClick={handleDownloadActiveLogPdf}
+              disabled={isExportingLogPdf}
             >
               <FileDown size={18} className="me-2" />
-              PDF
+              {isExportingLogPdf ? "Preparing..." : "PDF"}
             </button>
           </div>
           <div className="card-body" style={{ maxHeight: "255px", overflowY: "auto" }}>
@@ -561,8 +643,13 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
                   No activity logs yet.
                 </div>
               )}
+              {!isActiveLogLoading && activeLog.length > 0 && filteredActiveLog.length === 0 && (
+                <div className="list-group-item border-0 text-center text-muted">
+                  No matches for “{logSearch.trim()}”.
+                </div>
+              )}
               {!isActiveLogLoading &&
-                activeLog.map((entry: any) => (
+                filteredActiveLog.map((entry: any) => (
                   <div
                     key={`${entry.id}-${entry.timestamp}`}
                     className="list-group-item border-0 mb-2 d-flex align-items-start"
