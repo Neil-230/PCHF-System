@@ -548,6 +548,7 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user,
                 <label className="form-label">Session Timeout (minutes)</label>
                 <select className="form-select" value={securitySettings.sessionTimeout}
                   onChange={(e) => setSecuritySettings({ ...securitySettings, sessionTimeout: e.target.value })}>
+                   <option value="1">1</option>
                   <option value="5">5</option>
                   <option value="10">10</option>
                   <option value="15">15</option>
