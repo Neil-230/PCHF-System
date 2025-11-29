@@ -5,7 +5,7 @@ import { Label } from "../ui/label";
 import { CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Alert } from "../ui/alert";
 import { Select, SelectItem } from "../ui/select";
-import { Eye, EyeOff, MailCheck, Check} from "lucide-react";
+import { Eye, EyeOff, Check } from "lucide-react";
 import { toast } from "sonner";
 import { Modal } from "react-bootstrap";
 import "../css/signup.css";
@@ -13,11 +13,10 @@ import { FcGoogle } from "react-icons/fc";
 import apiService from "../../services/api";
 
 interface SignUpProps {
-  onSignUp: (name: string, email: string, password: string, role: "admin" | "cashier") => boolean;
   onSwitchToLogin: () => void;
 }
 
-export function SignUpUpdated({ onSignUp, onSwitchToLogin }: SignUpProps) {
+export function SignUpUpdated({ onSwitchToLogin }: SignUpProps) {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
@@ -30,6 +29,8 @@ export function SignUpUpdated({ onSignUp, onSwitchToLogin }: SignUpProps) {
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [verificationPending, setVerificationPending] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
 
   // Modal states
   const [showCodeModal, setShowCodeModal] = useState(false);
@@ -38,9 +39,23 @@ export function SignUpUpdated({ onSignUp, onSwitchToLogin }: SignUpProps) {
   // Verification
   const [enteredCode, setEnteredCode] = useState("");
 
-  const handleSendCode = async () => {
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setResendCooldown((prev) => Math.max(0, prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
+
+  const handleSendCode = async (isResend = false) => {
     if (!firstName || !lastName || !email) {
       toast.error("Please fill out all required fields first.");
+      return;
+    }
+
+    if (verificationPending && !isResend) {
+      toast.info("Verification already sent. Please check your email or resend the code.");
+      setShowCodeModal(true);
       return;
     }
 
@@ -48,8 +63,10 @@ export function SignUpUpdated({ onSignUp, onSwitchToLogin }: SignUpProps) {
     try {
       const tempPassword = Math.random().toString(36).slice(-8) + "Aa!";
       await apiService.signup(`${firstName} ${lastName}`, email, tempPassword, role);
-      toast.success("Verification code sent to your email!");
+      toast.success(isResend ? "Verification code resent." : "Verification code sent to your email!");
+      setVerificationPending(true);
       setShowCodeModal(true);
+      setResendCooldown(45);
     } catch (err: any) {
       toast.error(err.message || "Failed to send verification code");
     } finally {
@@ -69,6 +86,8 @@ export function SignUpUpdated({ onSignUp, onSwitchToLogin }: SignUpProps) {
       toast.success("Email verified successfully!");
       setShowCodeModal(false);
       setShowPasswordModal(true);
+      setVerificationPending(false);
+      setResendCooldown(0);
     } catch (err: any) {
       toast.error(err.message || "Invalid code. Please try again.");
     } finally {
@@ -124,6 +143,10 @@ export function SignUpUpdated({ onSignUp, onSwitchToLogin }: SignUpProps) {
     setConfirmPassword("");
     setEnteredCode("");
     setRole("cashier");
+    setVerificationPending(false);
+    setShowCodeModal(false);
+    setShowPasswordModal(false);
+    setResendCooldown(0);
   };
 
   return (
@@ -203,9 +226,35 @@ export function SignUpUpdated({ onSignUp, onSwitchToLogin }: SignUpProps) {
 
 
 
-                    <Button type="button" className="w-100 mt-3 bg-dark" onClick={handleSendCode} disabled={isLoading}>
-                      <Check className="me-2" size={16} /> {isLoading ? 'Sending...' : 'Confirm'}
+                    {verificationPending && (
+                      <Alert className="mt-3" variant="default">
+                        <div className="d-flex flex-column gap-1">
+                          <strong>Check your email</strong>
+                          <span>A verification code was sent to {email}. Use the link below to reopen the code prompt or resend the code.</span>
+                        </div>
+                      </Alert>
+                    )}
+
+                    <Button
+                      type="button"
+                      className="w-100 mt-3 bg-dark"
+                      onClick={() => handleSendCode()}
+                      disabled={isLoading || verificationPending}
+                    >
+                      <Check className="me-2" size={16} />
+                      {verificationPending ? 'Verification Pending' : isLoading ? 'Sending...' : 'Confirm'}
                     </Button>
+
+                    {verificationPending && !showCodeModal && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-100 mt-2"
+                        onClick={() => setShowCodeModal(true)}
+                      >
+                        Enter Verification Code
+                      </Button>
+                    )}
                   </form>
                     <div className=" text-center mt-1 mb-0">
                       <button
@@ -259,6 +308,17 @@ export function SignUpUpdated({ onSignUp, onSwitchToLogin }: SignUpProps) {
             value={enteredCode}
             onChange={(e) => setEnteredCode(e.target.value)}
           />
+          <div className="mt-3 text-center">
+            <Button
+              type="button"
+              variant="link"
+              className="p-0"
+              disabled={isLoading || resendCooldown > 0}
+              onClick={() => handleSendCode(true)}
+            >
+              {resendCooldown > 0 ? `Resend available in ${resendCooldown}s` : 'Resend code'}
+            </Button>
+          </div>
         </Modal.Body>
         <Modal.Footer>
           <Button variant="secondary" onClick={() => setShowCodeModal(false)}>

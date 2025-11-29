@@ -1,5 +1,5 @@
 import "./App.css";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import { Layout } from "./components/Layout";
@@ -7,6 +7,7 @@ import { Dashboard } from "./components/Dashboard";
 import { InventoryManagement } from "./components/InventoryManagement";
 import { TransactionHistory } from "./components/TransactionHistory";
 import { Settings } from "./components/Settings";
+import type { SecuritySettings } from "./components/Settings";
 import { PointOfSale } from "./components/PointOfSales";
 import { AuthWrapper } from "./components/auth/AuthWrapper";
 import type { Transaction } from "./types";
@@ -155,8 +156,42 @@ export default function App() {
   if (!user) return <AuthWrapper onAuthSuccess={handleAuthSuccess} />;
 
   return (
-    <Layout activeTab={activeTab} onTabChange={handleTabChange} user={user} onLogout={handleLogout}>
-      {renderContent()}
-    </Layout>
+    <>
+      <Layout
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+        user={user}
+        onLogout={handleLogout}
+        autoLogoutEnabled={securitySettings.autoLogout}
+        sessionTimeoutMinutes={Number(securitySettings.sessionTimeout) || 15}
+      >
+        {renderContent()}
+      </Layout>
+      {inactivityWarning && (
+        <>
+          <div className="modal-backdrop fade show"></div>
+          <div className="modal d-block" role="dialog" aria-modal="true">
+            <div className="modal-dialog modal-dialog-centered">
+              <div className="modal-content rounded-4 shadow-lg border-0">
+                <div className="modal-body text-center p-4">
+                  <h4 className="mb-2">Are you still active?</h4>
+                  <p className="text-muted mb-4">
+                    You will be logged out in <strong>{countdown}</strong> seconds due to inactivity.
+                  </p>
+                  <div className="d-flex gap-2 justify-content-center">
+                    <button className="btn btn-primary" onClick={handleStayActive}>
+                      Stay Logged In
+                    </button>
+                    <button className="btn btn-outline-danger" onClick={handleLogout}>
+                      Logout Now
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+    </>
   );
 }
