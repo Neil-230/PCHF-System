@@ -13,12 +13,24 @@ import type { Transaction } from "./types";
 import type { User } from "./types/auth";
 import { mockTransactions } from "./data/mockData";
 import apiService from "./services/api";
+import { useLocation, useNavigate } from "react-router-dom";
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("pos");
   const [transactions, setTransactions] = useState<Transaction[]>(mockTransactions);
+
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Initialize activeTab from URL on first render
+  useEffect(() => {
+    const path = location.pathname.replace("/", ""); // "dashboard" | "pos" | ...
+    if (path && path !== "login" && path !== "auth/google-callback" && path !== "auth/facebook-callback") {
+      setActiveTab(path);
+    }
+  }, [location.pathname]);
 
   useEffect(() => {
     const token = localStorage.getItem('authToken');
@@ -32,6 +44,7 @@ export default function App() {
         setUser(user);
         const defaultTab = user.role === 'cashier' ? 'pos' : 'dashboard';
         setActiveTab(defaultTab);
+        navigate(`/${defaultTab}`, { replace: true }); // make URL match default tab
       })
       .finally(() => setIsLoading(false));
   }, []);
@@ -39,7 +52,6 @@ export default function App() {
   const loadTransactions = async () => {
     try {
       const { transactions } = await apiService.getTransactions({ limit: 200 });
-      // Map backend items to frontend Transaction type
       const mapped: Transaction[] = transactions.map((t: any) => ({
         id: t.id,
         items: (t.items || []).map((i: any) => ({
@@ -62,20 +74,14 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (user) {
-      loadTransactions();
-    }
-  }, [user]);
-
-  useEffect(() => {
-    // Realtime disabled: rely on manual refreshes and navigation triggers
-    return () => {};
+    if (user) loadTransactions();
   }, [user]);
 
   const handleAuthSuccess = (authenticatedUser: User) => {
     setUser(authenticatedUser);
     const defaultTab = authenticatedUser.role === 'cashier' ? 'pos' : 'dashboard';
     setActiveTab(defaultTab);
+    navigate(`/${defaultTab}`, { replace: true });
   };
 
   const handleLogout = async () => {
@@ -85,11 +91,11 @@ export default function App() {
     apiService.clearToken();
     setUser(null);
     setActiveTab("pos");
+    navigate("/pos", { replace: true });
   };
 
   const handleTransactionComplete = (transaction: Transaction) => {
     setTransactions((prev) => [...prev, transaction]);
-    // Also refresh from backend to sync stock & history
     loadTransactions();
   };
 
@@ -103,9 +109,8 @@ export default function App() {
     const tabs = allowedTabs[user.role] || [];
     const nextTab = tabs.includes(tab) ? tab : tabs[0] || 'pos';
     setActiveTab(nextTab);
-    if (nextTab === 'transactions') {
-      loadTransactions();
-    }
+    navigate(`/${nextTab}`); // update URL
+    if (nextTab === 'transactions') loadTransactions();
   };
 
   const renderContent = () => {
@@ -123,23 +128,14 @@ export default function App() {
           <TransactionHistory
             transactions={transactions}
             onDeleteAll={async () => {
-              try {
-                await apiService.deleteTransactions();
-              } catch {}
+              try { await apiService.deleteTransactions(); } catch {}
               await loadTransactions();
             }}
             canDeleteAll={user.role === 'admin' || user.role === 'owner'}
           />
         );
       case "settings":
-        // ✅ FIX: Pass user prop here
-        return (
-          <Settings
-            onLogout={handleLogout}
-            onTabChange={handleTabChange}
-            user={user}
-          />
-        );
+        return <Settings onLogout={handleLogout} onTabChange={handleTabChange} user={user} />;
       default:
         return <Dashboard transactions={transactions} CurrentUser={user} />;
     }
@@ -156,9 +152,7 @@ export default function App() {
     );
   }
 
-  if (!user) {
-    return <AuthWrapper onAuthSuccess={handleAuthSuccess} />;
-  }
+  if (!user) return <AuthWrapper onAuthSuccess={handleAuthSuccess} />;
 
   return (
     <Layout activeTab={activeTab} onTabChange={handleTabChange} user={user} onLogout={handleLogout}>
