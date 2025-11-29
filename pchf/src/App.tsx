@@ -151,7 +151,7 @@ export default function App() {
   const handleUserActivity = useCallback(() => {
     if (!user || !securitySettings.autoLogout) return;
     if (inactivityWarning) {
-      setInactivityWarning(false);
+      return; // require explicit button choice while modal is open
     }
     resetInactivityTimer();
   }, [inactivityWarning, resetInactivityTimer, securitySettings.autoLogout, user]);
