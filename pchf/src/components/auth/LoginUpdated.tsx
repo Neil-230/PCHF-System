@@ -58,9 +58,15 @@ export function LoginUpdated({ onLogin, onSwitchToSignUp }: LoginProps) {
         navigate('/dashboard');
       }
     } catch (err: any) {
-      const errorMsg = err.message || 'Login failed. Please try again.';
-      setError(errorMsg);
-      toast.error(errorMsg);
+      const rawMessage = (err?.body?.error || err?.message || '').toLowerCase();
+      let friendly = err?.message || 'Login failed. Please try again.';
+      if (rawMessage.includes('google sign-in')) {
+        friendly = 'This email is linked to Google Sign-In. Please continue using the Google button to log in.';
+      } else if (rawMessage.includes('facebook login')) {
+        friendly = 'This email is linked to Facebook Login. Please continue using the Facebook option to log in.';
+      }
+      setError(friendly);
+      toast.error(friendly);
     } finally {
       setIsLoading(false);
     }

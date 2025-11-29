@@ -99,6 +99,32 @@ const recordActivityLog = async (user, type, ipinfo, at) => {
   }
 };
 
+const hasPasswordLogin = (user) => {
+  if (!user) return false;
+
+  if (Array.isArray(user.loginMethods)) {
+    if (user.loginMethods.includes('password')) {
+      return true;
+    }
+    if (user.loginMethods.length > 0) {
+      return false;
+    }
+  }
+
+  if (user.passwordCreatedManually === false) {
+    return false;
+  }
+
+  return !!user.password;
+};
+
+const describeSocialProvider = (user) => {
+  if (!user) return 'social';
+  if (user.googleId) return 'Google';
+  if (user.facebookId) return 'Facebook';
+  return 'social';
+};
+
 const recordLastLogin = async (user, ipinfo) => {
   if (!user) return;
   try {
@@ -127,6 +153,33 @@ const recordLastLogout = async (user, ipinfo) => {
   } catch (err) {
     console.warn('Failed to record last logout for', user.email, err?.message || err);
   }
+};
+
+const logAuthEvent = (type, details = {}) => {
+  try {
+    console.info('[auth]', JSON.stringify({
+      event: type,
+      timestamp: new Date().toISOString(),
+      ...details,
+    }));
+  } catch (err) {
+    console.info('[auth]', type, details);
+  }
+};
+
+const sendVerificationCodeWithRetry = async (email, code, attempts = 2) => {
+  let lastError;
+  for (let i = 1; i <= Math.max(1, attempts); i += 1) {
+    try {
+      await sendVerificationEmail(email, code);
+      logAuthEvent('verification_email_sent', { email, attempt: i });
+      return;
+    } catch (err) {
+      lastError = err;
+      logAuthEvent('verification_email_failure', { email, attempt: i, error: err?.message || String(err) });
+    }
+  }
+  throw lastError || new Error('Failed to send verification email');
 };
 
 // ============ SIGNUP ============
@@ -159,37 +212,58 @@ router.post('/signup', asyncHandler(async (req, res) => {
     }
   }
 
-  // Check if user exists
   const existingUser = await User.findOne({ email, isArchived: false });
-  if (existingUser) {
-    const hasGoogleOnly = !!existingUser.googleId && Array.isArray(existingUser.loginMethods) && !existingUser.loginMethods.includes('password');
-    if (hasGoogleOnly) {
-      return res.status(409).json({ error: 'This email is registered using Google Sign-In. Please use Google to continue.' });
-    }
-    if (existingUser.password) {
-      return res.status(409).json({ error: 'This email already exists. Please log in instead.' });
-    }
+  const hasGoogleOnly = !!existingUser?.googleId && Array.isArray(existingUser.loginMethods) && !existingUser.loginMethods.includes('password');
+  if (hasGoogleOnly) {
+    logAuthEvent('signup_blocked_google_only', { email });
+    return res.status(409).json({ error: 'This email is registered using Google Sign-In. Please use Google to continue.' });
   }
 
   // Hash password
   const hashedPassword = await bcrypt.hash(password, 12);
 
-  // Create user
-  const user = new User({
-    id: uuidv4(),
-    name,
-    email,
-    password: hashedPassword,
-    role: role || 'cashier',
-    googleId: undefined,
-    loginMethods: ['password'],
-    passwordCreatedManually: false,
-    isVerified: false,
-  });
+  let user;
+  let reusedUnverifiedAccount = false;
+  if (existingUser) {
+    if (existingUser.isVerified) {
+      logAuthEvent('signup_blocked_existing_verified', { email });
+      return res.status(409).json({ error: 'This email already exists. Please log in instead.' });
+    }
 
-  await user.save();
+    // Allow re-attempt for unverified accounts (e.g., expired code / failed email)
+    existingUser.name = name;
+    existingUser.password = hashedPassword;
+    existingUser.role = role || existingUser.role || 'cashier';
+    existingUser.passwordCreatedManually = false;
+    if (!Array.isArray(existingUser.loginMethods)) {
+      existingUser.loginMethods = [];
+    }
+    if (!existingUser.loginMethods.includes('password')) {
+      existingUser.loginMethods.push('password');
+    }
+    await existingUser.save();
+    user = existingUser;
+    reusedUnverifiedAccount = true;
+    logAuthEvent('signup_reuse_unverified', { email, role: user.role });
+  } else {
+    user = new User({
+      id: uuidv4(),
+      name,
+      email,
+      password: hashedPassword,
+      role: role || 'cashier',
+      googleId: undefined,
+      loginMethods: ['password'],
+      passwordCreatedManually: false,
+      isVerified: false,
+    });
+
+    await user.save();
+    logAuthEvent('signup_created_pending_verification', { email, role: user.role });
+  }
 
   // Send verification email
+  await PasswordReset.deleteMany({ email });
   const code = generateCode();
   const passwordReset = new PasswordReset({
     id: uuidv4(),
@@ -201,10 +275,14 @@ router.post('/signup', asyncHandler(async (req, res) => {
   await passwordReset.save();
 
   try {
-    await sendVerificationEmail(email, code);
-    console.log('Verification email sent successfully to:', email);
+    await sendVerificationCodeWithRetry(email, code, 3);
   } catch (err) {
     console.error('Email sending failed:', err);
+    await PasswordReset.deleteMany({ email, code });
+    if (!reusedUnverifiedAccount) {
+      await User.deleteOne({ email });
+    }
+    logAuthEvent('signup_failed_verification_delivery', { email, error: err?.message || String(err) });
     return res.status(500).json({ error: 'Failed to send verification email' });
   }
 
@@ -254,6 +332,7 @@ router.post('/login', verifyRecaptcha, asyncHandler(async (req, res) => {
 
   const user = await User.findOne({ email, isArchived: false });
   if (!user) {
+    logAuthEvent('login_failed_no_account', { email });
     return res.status(404).json({ error: 'No account found with this email.' });
   }
 
@@ -265,18 +344,22 @@ router.post('/login', verifyRecaptcha, asyncHandler(async (req, res) => {
   const googleOnly = !!user.googleId && Array.isArray(user.loginMethods) && !user.loginMethods.includes('password');
   const facebookOnly = !!user.facebookId && Array.isArray(user.loginMethods) && !user.loginMethods.includes('password');
   if (googleOnly) {
+    logAuthEvent('login_blocked_google_only', { email });
     return res.status(400).json({ error: 'You signed up with Google. Please use Google Sign-In.' });
   }
   if (facebookOnly) {
+    logAuthEvent('login_blocked_facebook_only', { email });
     return res.status(400).json({ error: 'You signed up with Facebook. Please use Facebook Login.' });
   }
 
   const isPasswordValid = await bcrypt.compare(password, user.password);
   if (!isPasswordValid) {
+    logAuthEvent('login_failed_bad_password', { email });
     return res.status(401).json({ error: 'Incorrect password.' });
   }
 
   if (!user.isVerified) {
+    logAuthEvent('login_blocked_unverified', { email });
     return res.status(403).json({ error: 'Please verify your email before logging in.' });
   }
 
@@ -291,6 +374,7 @@ router.post('/login', verifyRecaptcha, asyncHandler(async (req, res) => {
     // Owner exists — if pending, block login for any role
     const pending = await PendingAdmin.findOne({ email: user.email });
     if (pending) {
+      logAuthEvent('login_blocked_pending_approval', { email });
       return res.status(403).json({ error: 'Please wait for an owner or admin to approve your account.' });
     }
   }
@@ -298,6 +382,7 @@ router.post('/login', verifyRecaptcha, asyncHandler(async (req, res) => {
   const token = generateToken(user);
   await recordLastLogin(user, req.ipinfo);
 
+  logAuthEvent('login_success', { email, role: user.role });
   res.json({
     message: 'Login successful',
     token,
@@ -436,29 +521,22 @@ router.post('/google-signup-role', asyncHandler(async (req, res) => {
     // Attempt merge by email
     const byEmail = await User.findOne({ email, isArchived: false });
     if (byEmail) {
-      // If existing manual account
-      if (!byEmail.googleId) {
-        if (!byEmail.isVerified) {
-          return res.status(403).json({ error: 'Please verify your email before linking Google.' });
-        }
-        byEmail.googleId = googleId;
-        if (!Array.isArray(byEmail.loginMethods)) byEmail.loginMethods = [];
-        if (!byEmail.loginMethods.includes('google')) byEmail.loginMethods.push('google');
-        // Keep existing role unless user is selecting admin and owner approval flow applies
-        if (role === 'admin') {
-          const hasOwner = await User.findOne({ role: 'owner', isArchived: false });
-          if (!hasOwner) {
-            byEmail.role = 'owner';
-          } else {
-            byEmail.role = 'admin';
-          }
-        }
-        await byEmail.save();
-        user = byEmail;
-      } else {
-        // Another Google account with same email (shouldn't happen normally)
-        user = byEmail;
+      const hasManual = hasPasswordLogin(byEmail);
+      if (!byEmail.isVerified) {
+        logAuthEvent('google_signup_blocked_unverified_manual', { email });
+        return res.status(403).json({ error: 'Please verify your email before linking Google.' });
       }
+      if (hasManual) {
+        logAuthEvent('google_signup_blocked_manual_only', { email });
+        return res.status(409).json({ error: 'This email already has an email/password login. Please continue signing in manually.' });
+      }
+
+      // Allow re-link only if account is strictly social without password (edge case)
+      byEmail.googleId = googleId;
+      if (!Array.isArray(byEmail.loginMethods)) byEmail.loginMethods = [];
+      if (!byEmail.loginMethods.includes('google')) byEmail.loginMethods.push('google');
+      user = byEmail;
+      await user.save();
     } else {
       // Gate new Google-based signups unless owner doesn't exist
       const hasOwner = await User.findOne({ role: 'owner', isArchived: false });
@@ -560,32 +638,21 @@ router.post('/facebook-signup-role', asyncHandler(async (req, res) => {
     // Attempt merge by email
     const byEmail = await User.findOne({ email, isArchived: false });
     if (byEmail) {
-      // If existing manual account
-      if (!byEmail.facebookId) {
-        if (!byEmail.isVerified) {
-          return res.status(403).json({ error: 'Please verify your email before linking Facebook.' });
-        }
-        byEmail.facebookId = facebookId;
-        if (!Array.isArray(byEmail.loginMethods)) byEmail.loginMethods = [];
-        if (!byEmail.loginMethods.includes('facebook')) byEmail.loginMethods.push('facebook');
-        // Keep existing role unless user is selecting admin and owner approval flow applies
-        if (role === 'admin') {
-          const hasOwner = await User.findOne({ role: 'owner', isArchived: false });
-          if (!hasOwner) {
-            byEmail.role = 'owner';
-          } else {
-            byEmail.role = 'admin';
-          }
-        } else if (role === 'cashier') {
-          // Optionally update to cashier if desired; otherwise keep existing
-          byEmail.role = byEmail.role || 'cashier';
-        }
-        await byEmail.save();
-        user = byEmail;
-      } else {
-        // Another Facebook account with same email (shouldn't happen normally)
-        user = byEmail;
+      const hasManual = hasPasswordLogin(byEmail);
+      if (!byEmail.isVerified) {
+        logAuthEvent('facebook_signup_blocked_unverified_manual', { email });
+        return res.status(403).json({ error: 'Please verify your email before linking Facebook.' });
       }
+      if (hasManual) {
+        logAuthEvent('facebook_signup_blocked_manual_only', { email });
+        return res.status(409).json({ error: 'This email already has an email/password login. Please continue signing in manually.' });
+      }
+
+      byEmail.facebookId = facebookId;
+      if (!Array.isArray(byEmail.loginMethods)) byEmail.loginMethods = [];
+      if (!byEmail.loginMethods.includes('facebook')) byEmail.loginMethods.push('facebook');
+      user = byEmail;
+      await user.save();
     } else {
       // Gate new Facebook-based signups unless owner doesn't exist
       const hasOwner = await User.findOne({ role: 'owner', isArchived: false });
@@ -679,6 +746,11 @@ router.post('/forgot-password', asyncHandler(async (req, res) => {
     return res.status(404).json({ error: 'User not found' });
   }
 
+  if (!hasPasswordLogin(user)) {
+    const provider = describeSocialProvider(user);
+    return res.status(400).json({ error: `Password resets are disabled for ${provider} sign-in accounts. Please continue using ${provider} to access your account.` });
+  }
+
   const code = generateCode();
   const passwordReset = new PasswordReset({
     id: uuidv4(),
@@ -748,6 +820,11 @@ router.post('/reset-password', asyncHandler(async (req, res) => {
   const user = await User.findOne({ email, isArchived: false });
   if (!user) {
     return res.status(400).json({ error: 'User not found' });
+  }
+
+  if (!hasPasswordLogin(user)) {
+    const provider = describeSocialProvider(user);
+    return res.status(400).json({ error: `Password resets are disabled for ${provider} sign-in accounts. Please continue using ${provider} to access your account.` });
   }
 
   const hashed = await bcrypt.hash(newPassword, 12);
@@ -834,6 +911,17 @@ router.post('/logout', verifyToken, asyncHandler(async (req, res) => {
   }
 
   return res.json({ message: 'Logged out', loggedOutAt });
+}));
+
+// ============ CLIENT-REPORTED TIMEOUT LOG ============
+router.post('/timeout-logout', verifyToken, asyncHandler(async (req, res) => {
+  const user = await User.findOne({ id: req.user.id, isArchived: false });
+  if (!user) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+
+  await recordActivityLog(user, 'timeout_logout', req.ipinfo, new Date());
+  res.json({ message: 'Timeout recorded' });
 }));
 
 export default router;

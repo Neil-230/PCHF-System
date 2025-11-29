@@ -186,6 +186,10 @@ class ApiService {
     return this.request('/auth/logout', { method: 'POST' });
   }
 
+  async recordTimeoutLogout(): Promise<{ message: string }> {
+    return this.request('/auth/timeout-logout', { method: 'POST' });
+  }
+
   // ============ USER ENDPOINTS ============
 
   async getAllUsers(): Promise<{ users: User[] }> {

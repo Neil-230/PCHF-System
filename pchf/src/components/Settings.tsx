@@ -33,7 +33,7 @@ interface StoreSettings {
 //   sound: boolean;
 // }
 
-interface SecuritySettings {
+export interface SecuritySettings {
   requirePin: boolean;
   autoLogout: boolean;
   sessionTimeout: string;
@@ -48,6 +48,7 @@ interface SettingsProps {
     email: string;
     role: "owner" | "admin" | "cashier";
   };
+  onSecuritySettingsChange?: (settings: SecuritySettings) => void;
 }
 
 /* ---------- Inline SVGs ---------- */
@@ -72,7 +73,7 @@ const KeySVG = () => (
 );
 
 /* ---------- Component ---------- */
-export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user }) => {
+export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user, onSecuritySettingsChange }) => {
   const currentRole = user?.role ?? "unknown";
   const isCashier = currentRole === "cashier";
   const canAccessStoreSettings = currentRole === "admin" || currentRole === "owner";
@@ -118,6 +119,11 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user 
   useEffect(() => {
     apiService.getDeletionStatus().then(setDeletion).catch(() => setDeletion(null));
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem("securitySettings", JSON.stringify(securitySettings));
+    onSecuritySettingsChange?.(securitySettings);
+  }, [securitySettings, onSecuritySettingsChange]);
 
   useEffect(() => {
     apiService.getSystemSettings()
@@ -214,7 +220,6 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user 
   /* ---------- Save Settings ---------- */
   const handleSaveSettings = async () => {
     if (isCashier) {
-      localStorage.setItem("securitySettings", JSON.stringify(securitySettings));
       toast.info("Only Security Settings were updated (Cashier mode).");
       setTimeout(() => onTabChange("dashboard"), 800);
       return;
@@ -238,13 +243,11 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user 
         notificationMethod,
       });
       localStorage.setItem("storeSettings", JSON.stringify(storeSettings));
-      localStorage.setItem("securitySettings", JSON.stringify(securitySettings));
       toast.success("Settings saved successfully!");
     } catch (e: any) {
       toast.error(e?.message || "Failed to save settings");
       // still persist locally for POS fallback
       localStorage.setItem("storeSettings", JSON.stringify(storeSettings));
-      localStorage.setItem("securitySettings", JSON.stringify(securitySettings));
     }
 
     setTimeout(() => onTabChange("dashboard"), 800);

@@ -21,6 +21,22 @@ export function GoogleCallback() {
     const userStr = searchParams.get('user');
     const signupRequired = searchParams.get('signup') === 'required';
     const isPending = searchParams.get('pending') === '1';
+    const errorCode = searchParams.get('error');
+    const errorMessage = searchParams.get('message');
+
+    if (errorCode) {
+      if (!didToast.current) {
+        const friendlyMap: Record<string, string> = {
+          invalid_state: 'The sign-in session expired. Please try again.',
+          oauth_failed: 'We could not complete the social login. Please try again or use email/password.',
+        };
+        const decoded = errorMessage ? decodeURIComponent(errorMessage) : '';
+        toast.error(decoded || friendlyMap[errorCode] || 'Unable to complete social login. Please try again.');
+        didToast.current = true;
+      }
+      navigate('/login', { replace: true });
+      return;
+    }
 
     if (token && userStr) {
       try {
@@ -57,7 +73,7 @@ export function GoogleCallback() {
         setSocialData(minimal);
         setShowRoleModal(true);
         if(!didToast.current) {
-          toast.success('Complete signup to continue');
+          toast.info('Almost there! Choose a role so we can finish creating your account.');
         }
         didToast.current = true;
       } catch {
@@ -106,7 +122,7 @@ export function GoogleCallback() {
       setShowRoleModal(false);
       navigate('/dashboard', { replace: true });
     } catch (err: any) {
-      toast.error(err.message || 'Failed to complete signup');
+      toast.error(err.message || 'Failed to complete signup. If you created an email/password account already, please finish verification there.');
     } finally {
       setIsLoading(false);
     }
@@ -115,11 +131,18 @@ export function GoogleCallback() {
   return (
     <Modal show={showRoleModal} centered backdrop="static">
       <Modal.Header>
-        <Modal.Title>Select Your Role</Modal.Title>
+        <Modal.Title>Finish setting up your account</Modal.Title>
       </Modal.Header>
       <Modal.Body>
-        <p className="mb-3">Welcome! Please select your role to complete your account setup.</p>
-        <Label htmlFor="role" className="fw-bold">Role</Label>
+        <p className="mb-3">
+          We received your profile from {socialData?.googleId ? 'Google' : 'Facebook'}. To finish creating your account you must
+          pick a role. After this step you’ll always sign in using {socialData?.googleId ? 'Google' : 'Facebook'}.
+        </p>
+        <ul className="small text-muted mb-3 ps-3">
+          <li>Admins require owner approval before they can log in.</li>
+          <li>If you already created an email/password account, go back and finish verification there instead of linking.</li>
+        </ul>
+        <Label htmlFor="role" className="fw-bold">Choose Role</Label>
         <Select
           value={selectedRole}
           onChange={(value) => setSelectedRole(value as 'admin' | 'cashier')}
@@ -128,7 +151,11 @@ export function GoogleCallback() {
           <SelectItem value="admin">Admin</SelectItem>
         </Select>
       </Modal.Body>
-      <Modal.Footer>
+      <Modal.Footer className="d-flex justify-content-between align-items-center">
+        <small className="text-muted">
+          Need to use email/password instead?
+          <Button variant="link" className="p-0 ms-1" onClick={() => navigate('/login', { replace: true })}>Go back</Button>
+        </small>
         <Button 
           className="bg-dark" 
           onClick={handleRoleSelection}

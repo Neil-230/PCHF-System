@@ -1,5 +1,5 @@
 import "./App.css";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import { Layout } from "./components/Layout";
@@ -7,6 +7,7 @@ import { Dashboard } from "./components/Dashboard";
 import { InventoryManagement } from "./components/InventoryManagement";
 import { TransactionHistory } from "./components/TransactionHistory";
 import { Settings } from "./components/Settings";
+import type { SecuritySettings } from "./components/Settings";
 import { PointOfSale } from "./components/PointOfSales";
 import { AuthWrapper } from "./components/auth/AuthWrapper";
 import type { Transaction } from "./types";
@@ -19,6 +20,25 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("pos");
   const [transactions, setTransactions] = useState<Transaction[]>(mockTransactions);
+  const defaultSecurity: SecuritySettings = {
+    requirePin: true,
+    autoLogout: true,
+    sessionTimeout: "15",
+    dataBackup: false,
+  };
+  const [securitySettings, setSecuritySettings] = useState<SecuritySettings>(() => {
+    try {
+      const saved = localStorage.getItem("securitySettings");
+      if (saved) {
+        return { ...defaultSecurity, ...JSON.parse(saved) };
+      }
+    } catch {}
+    return defaultSecurity;
+  });
+  const [inactivityWarning, setInactivityWarning] = useState(false);
+  const [countdown, setCountdown] = useState(10);
+  const inactivityTimeoutRef = useRef<number | null>(null);
+  const countdownIntervalRef = useRef<number | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem('authToken');
@@ -78,14 +98,113 @@ export default function App() {
     setActiveTab(defaultTab);
   };
 
-  const handleLogout = async () => {
+  const clearInactivityTimeout = () => {
+    if (inactivityTimeoutRef.current) {
+      window.clearTimeout(inactivityTimeoutRef.current);
+      inactivityTimeoutRef.current = null;
+    }
+  };
+
+  const clearCountdownInterval = () => {
+    if (countdownIntervalRef.current) {
+      window.clearInterval(countdownIntervalRef.current);
+      countdownIntervalRef.current = null;
+    }
+  };
+
+  const handleLogout = useCallback(async () => {
+    clearInactivityTimeout();
+    clearCountdownInterval();
+    setInactivityWarning(false);
     try {
       await apiService.logout();
     } catch {}
     apiService.clearToken();
     setUser(null);
     setActiveTab("pos");
-  };
+  }, []);
+
+  const triggerInactivityPrompt = useCallback(() => {
+    if (!user) return;
+    setCountdown(10);
+    setInactivityWarning(true);
+  }, [user]);
+
+  const resetInactivityTimer = useCallback(() => {
+    clearInactivityTimeout();
+    if (!user || !securitySettings.autoLogout) return;
+    const minutes = Number(securitySettings.sessionTimeout) || 15;
+    inactivityTimeoutRef.current = window.setTimeout(
+      triggerInactivityPrompt,
+      Math.max(1, minutes) * 60 * 1000
+    );
+  }, [securitySettings, triggerInactivityPrompt, user]);
+
+  const handleUserActivity = useCallback(() => {
+    if (!user || !securitySettings.autoLogout) return;
+    if (inactivityWarning) {
+      setInactivityWarning(false);
+    }
+    resetInactivityTimer();
+  }, [inactivityWarning, resetInactivityTimer, securitySettings.autoLogout, user]);
+
+  useEffect(() => {
+    if (!user || !securitySettings.autoLogout) {
+      clearInactivityTimeout();
+      setInactivityWarning(false);
+      return;
+    }
+    resetInactivityTimer();
+    const events: (keyof WindowEventMap)[] = [
+      "mousemove",
+      "keydown",
+      "click",
+      "scroll",
+      "touchstart",
+    ];
+    events.forEach((evt) => window.addEventListener(evt, handleUserActivity));
+    return () => {
+      events.forEach((evt) => window.removeEventListener(evt, handleUserActivity));
+      clearInactivityTimeout();
+    };
+  }, [handleUserActivity, resetInactivityTimer, securitySettings.autoLogout, user]);
+
+  const handleSecuritySettingsChange = useCallback((settings: SecuritySettings) => {
+    setSecuritySettings(settings);
+  }, []);
+
+  const handleStayActive = useCallback(() => {
+    setInactivityWarning(false);
+    resetInactivityTimer();
+  }, [resetInactivityTimer]);
+
+  const handleTimeoutLogout = useCallback(async () => {
+    try {
+      await apiService.recordTimeoutLogout();
+    } catch {}
+    await handleLogout();
+  }, [handleLogout]);
+
+  useEffect(() => {
+    if (!inactivityWarning) {
+      clearCountdownInterval();
+      setCountdown(10);
+      return;
+    }
+    clearCountdownInterval();
+    countdownIntervalRef.current = window.setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearCountdownInterval();
+          setInactivityWarning(false);
+          handleTimeoutLogout();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearCountdownInterval();
+  }, [handleTimeoutLogout, inactivityWarning]);
 
   const handleTransactionComplete = (transaction: Transaction) => {
     setTransactions((prev) => [...prev, transaction]);
@@ -138,6 +257,7 @@ export default function App() {
             onLogout={handleLogout}
             onTabChange={handleTabChange}
             user={user}
+            onSecuritySettingsChange={handleSecuritySettingsChange}
           />
         );
       default:
@@ -161,8 +281,42 @@ export default function App() {
   }
 
   return (
-    <Layout activeTab={activeTab} onTabChange={handleTabChange} user={user} onLogout={handleLogout}>
-      {renderContent()}
-    </Layout>
+    <>
+      <Layout
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+        user={user}
+        onLogout={handleLogout}
+        autoLogoutEnabled={securitySettings.autoLogout}
+        sessionTimeoutMinutes={Number(securitySettings.sessionTimeout) || 15}
+      >
+        {renderContent()}
+      </Layout>
+      {inactivityWarning && (
+        <>
+          <div className="modal-backdrop fade show"></div>
+          <div className="modal d-block" role="dialog" aria-modal="true">
+            <div className="modal-dialog modal-dialog-centered">
+              <div className="modal-content rounded-4 shadow-lg border-0">
+                <div className="modal-body text-center p-4">
+                  <h4 className="mb-2">Are you still active?</h4>
+                  <p className="text-muted mb-4">
+                    You will be logged out in <strong>{countdown}</strong> seconds due to inactivity.
+                  </p>
+                  <div className="d-flex gap-2 justify-content-center">
+                    <button className="btn btn-primary" onClick={handleStayActive}>
+                      Stay Logged In
+                    </button>
+                    <button className="btn btn-outline-danger" onClick={handleLogout}>
+                      Logout Now
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+    </>
   );
 }

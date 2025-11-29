@@ -1,7 +1,6 @@
 import "./css/layout.css";
 import { useState, useEffect } from "react";
 import { // Iconssssssssss 
-  ShoppingCart,
   Package,
   BarChart3,
   AlertTriangle,
@@ -11,8 +10,7 @@ import { // Iconssssssssss
   LogOut,
   Home,
   Menu,
-  User,
-  ShieldIcon,
+  Clock3,
 } from "lucide-react";
 import apiService from "../services/api";
 
@@ -26,6 +24,8 @@ interface LayoutProps {
     role: string; // any, owner, admin, cashier. NOTE. String ni sya
   };
   onLogout: () => void;
+  autoLogoutEnabled?: boolean;
+  sessionTimeoutMinutes?: number;
 }
 
 //Upadetes navigation bar dependi sa owner
@@ -37,7 +37,7 @@ const navigation = [
   { id: "settings", label: "Settings", icon: Settings, roles: ["admin", "cashier", "owner"] },
 ];
 
-export function Layout({ children, activeTab, onTabChange, user, onLogout }: LayoutProps) {
+export function Layout({ children, activeTab, onTabChange, user, onLogout, autoLogoutEnabled, sessionTimeoutMinutes }: LayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [notifLow, setNotifLow] = useState<any[]>([]);
   const [notifOut, setNotifOut] = useState<any[]>([]);
@@ -159,6 +159,16 @@ export function Layout({ children, activeTab, onTabChange, user, onLogout }: Lay
 
           {/* Right side */}
           <div className="ms-auto d-flex align-items-center gap-3">
+            {autoLogoutEnabled && (
+              <div
+                className="d-flex align-items-center text-light small gap-2 px-2 py-1 rounded-pill"
+                style={{ backgroundColor: "rgba(255, 193, 7, 0.15)", border: "1px solid rgba(255, 193, 7, 0.4)" }}
+                title={`Auto logout after ${sessionTimeoutMinutes || 15} minutes of inactivity`}
+              >
+                <Clock3 size={14} className="text-warning" />
+                <span className="text-warning">Auto logout {sessionTimeoutMinutes || 15}m</span>
+              </div>
+            )}
             {/* Notifications */}
             <div className="dropdown">
               <button className="btn position-relative mt-2" data-bs-toggle="dropdown">
