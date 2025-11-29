@@ -55,7 +55,6 @@ export function LoginUpdated({ onLogin, onSwitchToSignUp }: LoginProps) {
         apiService.setToken(response.token);
         toast.success('Login successful!');
         onLogin(email, password);
-        navigate('/dashboard');
       }
     } catch (err: any) {
       const rawMessage = (err?.body?.error || err?.message || '').toLowerCase();

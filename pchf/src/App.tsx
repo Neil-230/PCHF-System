@@ -14,13 +14,36 @@ import type { Transaction } from "./types";
 import type { User } from "./types/auth";
 import { mockTransactions } from "./data/mockData";
 import apiService from "./services/api";
+import { toast } from "sonner";
 import { useLocation, useNavigate } from "react-router-dom";
+
+const ROLE_ALLOWED_TABS: Record<User["role"], string[]> = {
+  owner: ["dashboard", "pos", "inventory", "transactions", "alerts", "settings"],
+  admin: ["dashboard", "pos", "inventory", "transactions", "alerts", "settings"],
+  cashier: ["pos", "transactions", "settings"],
+};
+
+const DEFAULT_TAB_FOR_ROLE: Record<User["role"], string> = {
+  owner: "dashboard",
+  admin: "dashboard",
+  cashier: "pos",
+};
+
+const extractTabFromPath = (pathname: string): string | null => {
+  const withoutQuery = pathname.split("?")[0];
+  const segment = withoutQuery.replace(/^\/+/, "").split("/")[0];
+  if (!segment || segment === "login" || segment.startsWith("auth")) {
+    return null;
+  }
+  return segment;
+};
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("pos");
   const [transactions, setTransactions] = useState<Transaction[]>(mockTransactions);
+  const [hasSyncedRoute, setHasSyncedRoute] = useState(false);
   const defaultSecurity: SecuritySettings = {
     requirePin: true,
     autoLogout: true,
@@ -44,14 +67,6 @@ export default function App() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Initialize activeTab from URL on first render
-  useEffect(() => {
-    const path = location.pathname.replace("/", ""); // "dashboard" | "pos" | ...
-    if (path && path !== "login" && path !== "auth/google-callback" && path !== "auth/facebook-callback") {
-      setActiveTab(path);
-    }
-  }, [location.pathname]);
-
   useEffect(() => {
     const token = localStorage.getItem('authToken');
     if (!token) {
@@ -62,12 +77,37 @@ export default function App() {
       .getCurrentUser()
       .then(({ user }) => {
         setUser(user);
-        const defaultTab = user.role === 'cashier' ? 'pos' : 'dashboard';
-        setActiveTab(defaultTab);
-        navigate(`/${defaultTab}`, { replace: true }); // make URL match default tab
       })
       .finally(() => setIsLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    const allowedTabs = ROLE_ALLOWED_TABS[user.role] || [];
+    const fallbackTab = DEFAULT_TAB_FOR_ROLE[user.role] || 'dashboard';
+    const desiredTab = extractTabFromPath(location.pathname);
+
+    if (desiredTab && allowedTabs.includes(desiredTab)) {
+      if (activeTab !== desiredTab) {
+        setActiveTab(desiredTab);
+      }
+      if (!hasSyncedRoute) setHasSyncedRoute(true);
+      return;
+    }
+
+    if (desiredTab && hasSyncedRoute) {
+      toast.error("You don't have access to that section.");
+    }
+
+    if (activeTab !== fallbackTab) {
+      setActiveTab(fallbackTab);
+    }
+    const targetPath = `/${fallbackTab}`;
+    if (location.pathname !== targetPath) {
+      navigate(targetPath, { replace: true });
+    }
+    if (!hasSyncedRoute) setHasSyncedRoute(true);
+  }, [activeTab, hasSyncedRoute, location.pathname, navigate, user]);
 
   const loadTransactions = async () => {
     try {
@@ -99,9 +139,14 @@ export default function App() {
 
   const handleAuthSuccess = (authenticatedUser: User) => {
     setUser(authenticatedUser);
-    const defaultTab = authenticatedUser.role === 'cashier' ? 'pos' : 'dashboard';
-    setActiveTab(defaultTab);
-    navigate(`/${defaultTab}`, { replace: true });
+    const allowedTabs = ROLE_ALLOWED_TABS[authenticatedUser.role] || [];
+    const fallbackTab = DEFAULT_TAB_FOR_ROLE[authenticatedUser.role] || 'dashboard';
+    const requestedTab = extractTabFromPath(location.pathname);
+    const nextTab = requestedTab && allowedTabs.includes(requestedTab)
+      ? requestedTab
+      : fallbackTab;
+    setActiveTab(nextTab);
+    navigate(`/${nextTab}`, { replace: true });
   };
 
   const clearInactivityTimeout = () => {
@@ -128,6 +173,7 @@ export default function App() {
     apiService.clearToken();
     setUser(null);
     setActiveTab("pos");
+    setHasSyncedRoute(false);
     navigate("/pos", { replace: true });
   }, [navigate]);
 
@@ -221,13 +267,9 @@ export default function App() {
 
   const handleTabChange = (tab: string) => {
     if (!user) return;
-    const allowedTabs: Record<string, string[]> = {
-      admin: ["dashboard", "pos", "inventory", "transactions", "alerts", "settings"],
-      cashier: ["pos", "transactions", "settings"],
-      owner: ["dashboard", "pos", "inventory", "transactions", "alerts", "settings"],
-    };
-    const tabs = allowedTabs[user.role] || [];
-    const nextTab = tabs.includes(tab) ? tab : tabs[0] || 'pos';
+    const tabs = ROLE_ALLOWED_TABS[user.role] || [];
+    const fallback = DEFAULT_TAB_FOR_ROLE[user.role] || 'pos';
+    const nextTab = tabs.includes(tab) ? tab : fallback;
     setActiveTab(nextTab);
     navigate(`/${nextTab}`); // update URL
     if (nextTab === 'transactions') loadTransactions();
