@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Modal } from 'react-bootstrap';
@@ -14,6 +14,7 @@ export function GoogleCallback() {
   const [selectedRole, setSelectedRole] = useState<'admin' | 'cashier'>('cashier');
   const [isLoading, setIsLoading] = useState(false);
   const [socialData, setSocialData] = useState<any>(null);
+  const didToast = useRef(false);
 
   useEffect(() => {
     const token = searchParams.get('token');
@@ -25,18 +26,27 @@ export function GoogleCallback() {
       try {
         const user = JSON.parse(decodeURIComponent(userStr));
         apiService.setToken(token);
-        toast.success('Login successful!');
+        if(!didToast.current) {
+          toast.success('Login successful!');
+          didToast.current = true;
+        }
         navigate('/dashboard', { replace: true });
       } catch (err) {
         console.error('Error parsing Google callback:', err);
-        toast.error('Authentication failed');
+        if(!didToast.current) {
+          toast.error('Authentication failed');
+        }
+        didToast.current = true;
         navigate('/login', { replace: true });
       }
       return;
     }
 
     if (isPending) {
-      toast.error('Your account is awaiting owner/admin approval. Please try again later.');
+        if (!didToast.current){
+          toast.error('Your account is awaiting owner/admin approval. Please try again later.');
+        }
+      didToast.current = true;
       navigate('/login', { replace: true });
       return;
     }
@@ -46,7 +56,10 @@ export function GoogleCallback() {
         const minimal = JSON.parse(decodeURIComponent(userStr));
         setSocialData(minimal);
         setShowRoleModal(true);
-        toast.message('Complete signup to continue');
+        if(!didToast.current) {
+          toast.success('Complete signup to continue');
+        }
+        didToast.current = true;
       } catch {
         navigate('/login', { replace: true });
       }

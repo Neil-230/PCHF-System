@@ -13,6 +13,7 @@ loadRecaptcha();
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
+      <Toaster richColors position="top-center"/>
       <Routes>
         <Route path="/" element={<App />} />
         <Route path="/login" element={<App />} />
@@ -21,7 +22,6 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/auth/facebook-callback" element={<GoogleCallback />} />
         <Route path="*" element={<App />} />
       </Routes>
-      <Toaster richColors position="top-center"/>
     </BrowserRouter>
   </StrictMode>,
 )

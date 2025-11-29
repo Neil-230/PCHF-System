@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { Product, CartItem } from "../types";
 import { mockProducts, categories } from "../data/mockData";
 import { Search, Trash2 } from "lucide-react";
@@ -8,7 +8,7 @@ import { Badge } from "./ui/Badge";
 import { CardTitle, CardHeader, CardContent } from "./ui/card";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { toast } from "react-hot-toast"; //toasterrrrrrr
+import { toast } from "sonner";
 import apiService from "../services/api";
 
 
@@ -60,6 +60,7 @@ export function PointOfSale({ onTransactionComplete, user }: PointOfSaleProps) {
   const [cashAmount, setCashAmount] = useState("");
   const [taxRate, setTaxRate] = useState("0"); //tax rate 0 for default
   const [deliveryFeeValue, setDeliveryFeeValue] = useState(50); //Default fee 50php
+  // const didToast = useRef(false);
 
   const [storeSettings, setStoreSettings] = useState({
     storeName: "My Store",
@@ -142,6 +143,7 @@ export function PointOfSale({ onTransactionComplete, user }: PointOfSaleProps) {
       return;
     }
     setHasEnteredName(true);
+    toast.success("You can Continue with your transactions");
     setIsNameDialogOpen(false);
   };
   //handle submit Keymap 

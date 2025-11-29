@@ -470,6 +470,7 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user 
               Notifications
             </div>
             <div className="card-body">
+              <small className="text-muted">Please be informed that the Email used in </small><small className="text-muted"> notification is the Store Information settings</small>
               <div className="form-check form-switch mb-2">
                 <input className="form-check-input" type="checkbox" checked={notifyLowStock}
                   onChange={(e) => setNotifyLowStock(e.target.checked)} disabled={!canAccessStoreSettings} />
@@ -486,7 +487,7 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user 
                   <input type="number" min={0} className="form-control" value={lowStockThreshold}
                     onChange={(e) => setLowStockThreshold(e.target.value)} disabled={!canAccessStoreSettings} />
                 </div>
-                <div className="col-md-6 mb-3">
+                <div className="col-md-6 mb-3" style={{display:"none"}}>
                   <label className="form-label">Notification method</label>
                   <select className="form-select" value={notificationMethod}
                     onChange={(e) => setNotificationMethod(e.target.value as any)} disabled={!canAccessStoreSettings}>
@@ -590,7 +591,9 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user 
               </div>
             ) : (
               <div className="d-flex flex-column gap-2">
-                <small className="text-muted">Account Removal will be confirmed after 30 Days</small>
+                <small className="text-muted">Please be informed that your account will be </small>
+                <small className="text-muted">moved to hold Status and confirm the removal</small>
+                <small className="text-muted">after 30 days</small>
                 <input
                   type="text"
                   className="form-control"

@@ -310,7 +310,7 @@ export function LoginUpdated({ onLogin, onSwitchToSignUp }: LoginProps) {
               <button type="button" className="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div className="modal-body ">
-              {resetError && <div className="alert alert-danger">{resetError}</div>}
+              {resetError && <div className="alert alert-danger" style={{display:"none"}}>{resetError}</div>}
 
               {step === "email" && (
                 <>
