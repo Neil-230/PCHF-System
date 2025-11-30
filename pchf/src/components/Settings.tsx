@@ -358,7 +358,7 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user,
           <div className="position-relative">
             <div className="card d-flex border-0 h-100" style={{ borderRadius: "12px", boxShadow: "2px 4px 8px rgba(0,0,0,0.15)" }}>
               <div className="card-header bg-transparent text-dark fw-bold ">
-                <Store className="me-2" color="blue"/>
+                <Store className="me-2 text-primary"/>
                 Store Information
               </div>
               <div className="card-body">
@@ -492,7 +492,10 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user,
                       }
                     }}
                     disabled={signupsOpen === null}
-                  />
+                    style={{
+                    backgroundColor: signupsOpen ? "#212529" : "#fff",
+                    borderColor: "#6c757d",
+                  }}/>
                   <label className="form-check-label">Allow new sign-up</label>
                 </div>
               )}
@@ -503,7 +506,11 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user,
               </div> */}
               <div className="form-check form-switch mb-2">
                 <input className="form-check-input" type="checkbox" checked={securitySettings.autoLogout}
-                  onChange={(e) => setSecuritySettings({ ...securitySettings, autoLogout: e.target.checked })} />
+                  onChange={(e) => setSecuritySettings({ ...securitySettings, autoLogout: e.target.checked })}
+                    style={{
+                    backgroundColor: securitySettings.autoLogout ? "#212529" : "#ffffffff",
+                    borderColor: "#6c757d",
+                  }}/>
                 <label className="form-check-label">Auto Logout on Inactivity</label>
               </div>
 
@@ -595,70 +602,45 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user,
           </div>
         </div>
       </div>
+
+      
       <div className="row">
         <div className="col-md-8">
-          {/* NOTIFICATION SETTINGS */}
-          <div className="card mb-4 border-0 h-100" style={{ borderRadius: "12px", boxShadow: "2px 4px 8px rgba(0,0,0,0.15)" }}>
-            <div className="card-header bg-transparent text-dark fw-bold">
-              <Bell className="me-2" color="blue"/>
-              Notifications
-            </div>
-            <div className="card-body">
-              <small className="text-muted">Please be informed that the Email used in </small><small className="text-muted"> notification is the Store Information Email</small>
-              <div className="form-check form-switch mb-2 mt-4">
-                <input className="form-check-input" type="checkbox" checked={notifyLowStock}
-                  onChange={(e) => setNotifyLowStock(e.target.checked)} disabled={!canAccessStoreSettings} />
-                <label className="form-check-label">Notify on low stock</label>
-              </div>
-              <div className="form-check form-switch mb-3">
-                <input className="form-check-input" type="checkbox" checked={notifyOutOfStock}
-                  onChange={(e) => setNotifyOutOfStock(e.target.checked)} disabled={!canAccessStoreSettings} />
-                <label className="form-check-label">Notify when out of stock</label>
-              </div>
-              <div className="row">
-                <div className="col-md-6 mb-3">
-                  <label className="form-label">Low stock threshold</label>
-                  <input type="number" min={0} className="form-control" value={lowStockThreshold}
-                    onChange={(e) => setLowStockThreshold(e.target.value)} disabled={!canAccessStoreSettings} />
-                </div>
-                <div className="col-md-6 mb-3" style={{display:"none"}}>
-                  <label className="form-label">Notification method</label>
-                  <select className="form-select" value={notificationMethod}
-                    onChange={(e) => setNotificationMethod(e.target.value as any)} disabled={!canAccessStoreSettings}>
-                    <option value="email">Email</option>
-                    <option value="sms">SMS</option>
-                    <option value="both">Both</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        {/* ---------- Account Settings ---------- */}
-        <div className="col-md-4">
-
           {/* Backup Settings */}
           <div className="card mb-4 border-0 h-100" style={{ borderRadius: "12px", boxShadow: "2px 4px 8px rgba(0,0,0,0.15)" }}>
             <div className="card-header bg-transparent text-dark fw-bold">
-              <Database className="me-2 text-warning" />
+              <Database className="me-2 text-primary" />
               Backup Data
             </div>
             <div className="card-body">
               <div className="form-check form-switch mb-2">
-                <input className="form-check-input" type="checkbox" checked={securitySettings.dataBackup}
+                <input
+                  className="form-check-input"
+                  type="checkbox"
+                  checked={securitySettings.dataBackup}
                   onChange={async (e) => {
                     const enabled = e.target.checked;
                     setSecuritySettings({ ...securitySettings, dataBackup: enabled });
+
                     if (!canAccessStoreSettings) return;
+
                     try {
                       const res = await apiService.setBackupEnabled(enabled);
                       setDriveStatus((prev) => ({ ...prev, backupEnabled: res.backupEnabled }));
-                      toast.success(res.backupEnabled ? 'Automatic backup enabled' : 'Automatic backup disabled');
+                      toast.success(res.backupEnabled ? "Automatic backup enabled" : "Automatic backup disabled");
                     } catch (err: any) {
-                      toast.error(err?.message || 'Failed to update backup setting');
+                      toast.error(err?.message || "Failed to update backup setting");
                     }
                   }}
                   disabled={!canAccessStoreSettings || !driveStatus.connected}
+                  style={{
+                    backgroundColor: !canAccessStoreSettings || !driveStatus.connected
+                      ? "#adb5bd"                           // Disabled  gray
+                      : securitySettings.dataBackup
+                      ? "#212529"                           // ON  black
+                      : "#ffffff",                          // OFF  white
+                    borderColor: "#6c757d",
+                  }}
                 />
                 <label className="form-check-label">Automatic Data Backup</label>
               </div>
@@ -677,7 +659,7 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user,
                   ) : (
                     <div className="d-flex gap-2 flex-wrap align-items-center">
                       
-                      <button className="btn btn-outline-primary w-100" 
+                      <button className="btn btn-outline-dark w-100" 
                         onClick={handleEnsureFolder} 
                         disabled={loadingDrive}
                       >
@@ -707,9 +689,54 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user,
             </div>
           </div>
         </div>
+        <div className="col-md-4">
+          {/* NOTIFICATION SETTINGS */}
+          <div className="card mb-4 border-0 h-100" style={{ borderRadius: "12px", boxShadow: "2px 4px 8px rgba(0,0,0,0.15)" }}>
+            <div className="card-header bg-transparent text-dark fw-bold">
+              <Bell className="me-2 text-warning"/>
+              Notifications
+            </div>
+            <div className="card-body">
+              <small className="text-muted">Please be informed that the Email used in </small><small className="text-muted"> notification is the Store Information Email</small>
+              <div className="form-check form-switch mb-2 mt-4">
+                <input className="form-check-input" type="checkbox" checked={notifyLowStock}
+                  onChange={(e) => setNotifyLowStock(e.target.checked)} disabled={!canAccessStoreSettings}
+                  style={{
+                    backgroundColor: notifyLowStock ? "#212529" : "#fff",
+                    borderColor: "#6c757d",
+                  }}/>
+                <label className="form-check-label">Notify on low stock</label>
+              </div>
+              <div className="form-check form-switch mb-3">
+                <input className="form-check-input" type="checkbox" checked={notifyOutOfStock}
+                  onChange={(e) => setNotifyOutOfStock(e.target.checked)} disabled={!canAccessStoreSettings}
+                  style={{
+                    backgroundColor: notifyOutOfStock ? "#212529" : "#fff",
+                    borderColor: "#6c757d",
+                  }}/>
+                <label className="form-check-label">Notify when out of stock</label>
+              </div>
+              <div className="row">
+                <div className="col-md-12 mb-3">
+                  <label className="form-label">Low stock threshold</label>
+                  <input type="number" min={0} className="form-control" value={lowStockThreshold}
+                    onChange={(e) => setLowStockThreshold(e.target.value)} disabled={!canAccessStoreSettings} />
+                </div>
+                <div className="col-md-6 mb-3" style={{display:"none"}}> {/* <-- this is for soooner updates*/}
+                  <label className="form-label">Notification method</label>
+                  <select className="form-select" value={notificationMethod}
+                    onChange={(e) => setNotificationMethod(e.target.value as any)} disabled={!canAccessStoreSettings}>
+                    <option value="email">Email</option>
+                    <option value="sms">SMS</option>
+                    <option value="both">Both</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
       {/* ---------- Buttons ---------- */}
-
       {/* ---------- Modal hasola sa modal uy, pwedi mani himoun og object pero ngano mag bout mankag ako ning i individual ---------- */}
       {modalOpen && (
         <>
