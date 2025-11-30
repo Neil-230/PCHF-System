@@ -17,8 +17,18 @@ export function TransactionHistory({ transactions, onDeleteAll, canDeleteAll = f
   const [dateTo, setDateTo] = useState("");
   const printAreaRef = useRef<HTMLDivElement>(null);
 
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+
   const filteredTransactions = transactions.filter((transaction) => {
-    const matchesSearch = transaction.id.toLowerCase().includes(searchQuery.toLowerCase());
+    let matchesSearch = true;
+    if (normalizedQuery) {
+      const handler = transaction.handledBy
+        ? `${transaction.handledBy.name} ${transaction.handledBy.email || ""}`
+        : "";
+      const haystack = `${transaction.id} ${transaction.customerName || ""} ${handler}`.toLowerCase();
+      matchesSearch = haystack.includes(normalizedQuery);
+    }
+
     let matchesDate = true;
     if (dateFrom || dateTo) {
       const transactionDate = new Date(transaction.timestamp);
@@ -214,7 +224,7 @@ export function TransactionHistory({ transactions, onDeleteAll, canDeleteAll = f
           <input
             type="text"
             className="form-control ps-5"
-            placeholder="Search by transaction ID..."
+            placeholder="Search by ID, customer, or processor..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
