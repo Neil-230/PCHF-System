@@ -745,17 +745,17 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user,
             style={{ backgroundColor: "rgba(239, 252, 255, 0.31)" }}
           >
             <div className="modal-dialog modal-dialog-centered">
-              <div className="modal-content rounded-4 shadow-lg border-0">
+              <div className="modal-content rounded-3 shadow-lg border-0">
                 <div className="modal-body p-4 text-center">
-                  <div className="mb-3">
+                  {/* <div className="mb-3">
                     {cpStep === "verify" && <LockSVG />}
                     {cpStep === "code" && <CodeSVG />}
                     {cpStep === "new" && <KeySVG />}
-                  </div>
-                  <h4 className="mb-2">
+                  </div> */}
+                  <h4 className="mb-2 fw-bold mb-4">
                     {cpStep === "verify" ? "Change Password" : cpStep === "code" ? "Verification" : "Set New Password"}
                   </h4>
-                  <div className="border-top my-3"></div>
+                  {/* <div className="border-top my-3"></div> */}
 
                   {cpStep === "verify" && (
                     <>
