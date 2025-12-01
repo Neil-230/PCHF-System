@@ -263,6 +263,7 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user,
   const [cpNewPassword, setCpNewPassword] = useState("");
   const [cpConfirmPassword, setCpConfirmPassword] = useState("");
   const [cpMessage, setCpMessage] = useState<string | null>(null);
+  const [cpLoading, setCpLoading] = useState(false);
 
   useEffect(() => {
     AuthService.initializeUsers();
@@ -271,7 +272,7 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user,
   const openChangePasswordModal = () => {
     setModalOpen(true);
     setCpStep("verify");
-    setCpEmail("");
+    setCpEmail(user?.email || "");
     setCpOldPassword("");
     setCpCodeInput("");
     setGeneratedCode("");
@@ -287,50 +288,63 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user,
 
   /* ---------- Password Handling ---------- */
   //kamo na bahala modify sa combination sa password
-  const handleSendCode = () => {
+  const handleSendCode = async () => {
     setCpMessage(null);
-    const currentUser = AuthService.getCurrentUser();
-    if (!currentUser) {
-      setCpMessage("No current user is logged in.");
-      return;
+    setCpLoading(true);
+    try {
+      if (!cpEmail.trim()) {
+        setCpMessage("Email is required.");
+        return;
+      }
+      await apiService.forgotPassword(cpEmail.trim());
+      setCpMessage(`Verification code sent to ${cpEmail.trim()}.`);
+      setCpStep("code");
+    } catch (err: any) {
+      setCpMessage(err?.message || "Failed to send code.");
+    } finally {
+      setCpLoading(false);
     }
-    if (!cpEmail.trim() || cpEmail.trim() !== currentUser.email) {
-      setCpMessage("Invalid email.");
-      return;
-    }
-    if (!cpOldPassword || !AuthService.login(cpEmail.trim(), cpOldPassword)) {
-      setCpMessage("Incorrect password.");
-      return;
-    }
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    setGeneratedCode(code);
-    setCpMessage(`Verification code sent to ${cpEmail} (demo code: ${code})`);
-    setCpStep("code");
   };
 
 
-  const handleVerifyCode = () => {
-    if (cpCodeInput.trim() !== generatedCode) {
-      setCpMessage("Verification code is incorrect.");
-      return;
+  const handleVerifyCode = async () => {
+    setCpMessage(null);
+    setCpLoading(true);
+    try {
+      if (!cpEmail.trim() || !cpCodeInput.trim()) {
+        setCpMessage("Email and code are required.");
+        return;
+      }
+      await apiService.verifyResetCode(cpEmail.trim(), cpCodeInput.trim());
+      setCpStep("new");
+    } catch (err: any) {
+      setCpMessage(err?.message || "Verification failed.");
+    } finally {
+      setCpLoading(false);
     }
-    setCpStep("new");
   };
 
-  const handleChangePassword = () => {
+  const handleChangePassword = async () => {
     if (cpNewPassword !== cpConfirmPassword) {
       setCpMessage("Passwords do not match.");
       return;
     }
     if (cpNewPassword.length < 8) {
-      setCpMessage("Password too short.");
+      setCpMessage("Password too short (min 8).");
       return;
     }
-    const currentUser = AuthService.getCurrentUser();
-    if (currentUser) {
-      (defaultPasswords as Record<string, string>)[currentUser.email] = cpNewPassword;
-      toast.success("Password changed successfully (demo).");
-      setTimeout(() => closeChangePasswordModal(), 800);
+
+    setCpLoading(true);
+    try {
+      await apiService.resetPassword(cpEmail.trim(), cpCodeInput.trim(), cpNewPassword);
+      toast.success("Password updated successfully.");
+      setTimeout(() => {
+        closeChangePasswordModal();
+      }, 500);
+    } catch (err: any) {
+      setCpMessage(err?.message || "Failed to change password.");
+    } finally {
+      setCpLoading(false);
     }
   };
 

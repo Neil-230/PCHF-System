@@ -5,6 +5,11 @@ export interface User {
   role: 'admin' | 'cashier' | 'owner';
   createdAt: string;
   approved?: boolean;
+  loginMethods?: string[];
+  passwordCreatedManually?: boolean;
+  googleId?: string | null;
+  facebookId?: string | null;
+  isVerified?: boolean;
 }
 
 export interface PendingAdmin {

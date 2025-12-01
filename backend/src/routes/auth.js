@@ -872,6 +872,43 @@ router.post('/reset-password', asyncHandler(async (req, res) => {
   return res.json({ message: 'Password reset successfully' });
 }));
 
+router.post('/change-password', verifyToken, asyncHandler(async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ error: 'Current and new password are required' });
+  }
+
+  if (newPassword.length < 6) {
+    return res.status(400).json({ error: 'New password must be at least 6 characters' });
+  }
+
+  const user = await User.findOne({ id: req.user.id, isArchived: false });
+  if (!user) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+
+  if (!hasPasswordLogin(user)) {
+    const provider = describeSocialProvider(user);
+    return res.status(400).json({ error: `Password changes are disabled for ${provider} sign-in accounts.` });
+  }
+
+  const isCurrentValid = await bcrypt.compare(currentPassword, user.password);
+  if (!isCurrentValid) {
+    return res.status(401).json({ error: 'Current password is incorrect' });
+  }
+
+  const hashed = await bcrypt.hash(newPassword, 12);
+  user.password = hashed;
+  user.passwordCreatedManually = true;
+  if (Array.isArray(user.loginMethods) && !user.loginMethods.includes('password')) {
+    user.loginMethods.push('password');
+  }
+  await user.save();
+
+  res.json({ message: 'Password updated successfully' });
+}));
+
 // ============ GET CURRENT USER ============
 router.get('/me', verifyToken, asyncHandler(async (req, res) => {
   const user = await User.findOne({ id: req.user.id, isArchived: false });
