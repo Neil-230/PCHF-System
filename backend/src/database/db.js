@@ -1,3 +1,4 @@
+// Lightweight in-memory store used for tests/prototypes; mirrors Mongo models at a high level.
 import User from '../models/User.js';
 import PasswordReset from '../models/PasswordReset.js';
 

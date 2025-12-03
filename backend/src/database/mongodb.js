@@ -1,3 +1,4 @@
+// Centralized Mongo connection + schema exports (User, Product, Transaction, SystemSettings, etc.).
 import mongoose from 'mongoose';
 
 // MongoDB’s MVCC is enabled via optimisticConcurrency so each write checks the __v version key

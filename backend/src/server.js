@@ -1,3 +1,5 @@
+// Entry point: wires environment variables, Express middleware, Passport, CSRF, routes, and schedulers.
+// Useful when tracing request flow or startup logic.
 // Load environment variables FIRST before any other imports
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
