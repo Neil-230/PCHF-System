@@ -74,6 +74,11 @@ const grantsObject = {
     product: {
       'read:any': ['*'],
     },
+      transaction: {
+      'create:any': ['*'],
+      'read:any': ['*'],
+      'delete:any': ['*'],
+    },
     // no settings updates
   },
 };
