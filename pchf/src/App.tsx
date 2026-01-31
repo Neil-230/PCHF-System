@@ -7,6 +7,7 @@ import { Dashboard } from "./components/Dashboard";
 import { InventoryManagement } from "./components/InventoryManagement";
 import { TransactionHistory } from "./components/TransactionHistory";
 import { Settings } from "./components/Settings";
+import { PermissionsManager } from "./components/PermissionsManager";
 import type { SecuritySettings } from "./components/Settings";
 import { PointOfSale } from "./components/PointOfSales";
 import { AuthWrapper } from "./components/auth/AuthWrapper";
@@ -17,13 +18,62 @@ import apiService from "./services/api";
 import { toast } from "sonner";
 import { useLocation, useNavigate } from "react-router-dom";
 
-const ROLE_ALLOWED_TABS: Record<User["role"], string[]> = {
-  owner: ["dashboard", "pos", "inventory", "transactions", "alerts", "settings"],
+type TabId = "dashboard" | "pos" | "inventory" | "transactions" | "permissions" | "alerts" | "settings";
+
+const ROLE_ALLOWED_TABS: Record<User["role"], TabId[]> = {
+  owner: ["dashboard", "pos", "inventory", "transactions", "permissions", "alerts", "settings"],
   admin: ["dashboard", "pos", "inventory", "transactions", "alerts", "settings"],
   cashier: ["pos", "transactions", "settings"],
 };
 
-const DEFAULT_TAB_FOR_ROLE: Record<User["role"], string> = {
+const tabToResource: Record<TabId, { resource: string; permission: string }> = {
+  dashboard: { resource: "dashboard", permission: "read:any" },
+  pos: { resource: "transaction", permission: "create:any" },
+  inventory: { resource: "product", permission: "read:any" },
+  transactions: { resource: "transaction", permission: "read:any" },
+  permissions: { resource: "userPermission", permission: "update:any" },
+  alerts: { resource: "notificationSetting", permission: "read:any" },
+  settings: { resource: "storeSetting", permission: "read:any" },
+};
+
+const ALL_TABS = Object.keys(tabToResource) as TabId[];
+
+const getOverrideDecision = (user?: User | null, tab?: TabId): "allow" | "deny" | null => {
+  if (!user || !tab) return null;
+  const mapping = tabToResource[tab];
+  if (!mapping) return null;
+  const overrides = user.permissionOverrides || [];
+  const [action, possession = "any"] = mapping.permission.split(":");
+  let allow = false;
+  let deny = false;
+  overrides.forEach((ovr) => {
+    if (ovr.resource !== mapping.resource) return;
+    if (ovr.action !== action) return;
+    const ovrPossession = ovr.possession || "any";
+    if (ovrPossession !== possession && ovrPossession !== "any") return;
+    if (ovr.effect === "deny") deny = true;
+    if (ovr.effect === "allow") allow = true;
+  });
+  if (deny) return "deny";
+  if (allow) return "allow";
+  return null;
+};
+
+const canAccessTab = (user?: User | null, tab?: TabId): boolean => {
+  if (!user || !tab) return false;
+  const decision = getOverrideDecision(user, tab);
+  if (decision === "deny") return false;
+  if (decision === "allow") return true;
+  const allowedTabs = ROLE_ALLOWED_TABS[user.role] || [];
+  return allowedTabs.includes(tab);
+};
+
+const isTabId = (value: string | null): value is TabId => {
+  if (!value) return false;
+  return Object.prototype.hasOwnProperty.call(tabToResource, value);
+};
+
+const DEFAULT_TAB_FOR_ROLE: Record<User["role"], TabId> = {
   owner: "dashboard",
   admin: "dashboard",
   cashier: "pos",
@@ -41,7 +91,7 @@ const extractTabFromPath = (pathname: string): string | null => {
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("pos");
+  const [activeTab, setActiveTab] = useState<TabId>("pos");
   const [transactions, setTransactions] = useState<Transaction[]>(mockTransactions);
   const [hasSyncedRoute, setHasSyncedRoute] = useState(false);
   const defaultSecurity: SecuritySettings = {
@@ -83,24 +133,24 @@ export default function App() {
 
   useEffect(() => {
     if (!user) return;
-    const allowedTabs = ROLE_ALLOWED_TABS[user.role] || [];
-    const fallbackTab = DEFAULT_TAB_FOR_ROLE[user.role] || 'dashboard';
-    const desiredTab = extractTabFromPath(location.pathname);
+    const fallbackTab = DEFAULT_TAB_FOR_ROLE[user.role] || "dashboard";
+    const desiredRaw = extractTabFromPath(location.pathname);
+    const desiredTab = isTabId(desiredRaw) ? desiredRaw : null;
 
-    if (desiredTab && allowedTabs.includes(desiredTab)) {
+    if (desiredTab && canAccessTab(user, desiredTab)) {
+      if (!hasSyncedRoute) setHasSyncedRoute(true);
       if (activeTab !== desiredTab) {
         setActiveTab(desiredTab);
       }
-      if (!hasSyncedRoute) setHasSyncedRoute(true);
       return;
     }
 
-    if (desiredTab && hasSyncedRoute) {
+    if (desiredRaw && hasSyncedRoute) {
       toast.error("You don't have access to that section.");
     }
 
-    if (activeTab !== fallbackTab) {
-      setActiveTab(fallbackTab);
+    if (activeTab !== fallbackTab as TabId) {
+      setActiveTab(fallbackTab as TabId);
     }
     const targetPath = `/${fallbackTab}`;
     if (location.pathname !== targetPath) {
@@ -265,12 +315,19 @@ export default function App() {
     loadTransactions();
   };
 
+  const handleBulkDeleteTransactions = async ({ dateFrom, dateTo }: { dateFrom: string; dateTo: string }) => {
+    const result = await apiService.deleteTransactions({ dateFrom, dateTo });
+    await loadTransactions();
+    return result;
+  };
+
   const handleTabChange = (tab: string) => {
     if (!user) return;
-    const tabs = ROLE_ALLOWED_TABS[user.role] || [];
-    const fallback = DEFAULT_TAB_FOR_ROLE[user.role] || 'pos';
-    const nextTab = tabs.includes(tab) ? tab : fallback;
-    setActiveTab(nextTab);
+    const targetTab = isTabId(tab) ? tab : null;
+    const fallback = DEFAULT_TAB_FOR_ROLE[user.role] || "pos";
+    if (!targetTab) return;
+    const nextTab = canAccessTab(user, targetTab) ? targetTab : fallback;
+    setActiveTab(nextTab as TabId);
     navigate(`/${nextTab}`); // update URL
     if (nextTab === 'transactions') loadTransactions();
   };
@@ -285,14 +342,13 @@ export default function App() {
         return <PointOfSale user={user} onTransactionComplete={handleTransactionComplete} />;
       case "inventory":
         return <InventoryManagement user={user} />;
+      case "permissions":
+        return <PermissionsManager currentUser={user} onNavigate={handleTabChange} />;
       case "transactions":
         return (
           <TransactionHistory
             transactions={transactions}
-            onDeleteAll={async () => {
-              try { await apiService.deleteTransactions(); } catch {}
-              await loadTransactions();
-            }}
+            onDeleteAll={handleBulkDeleteTransactions}
             canDeleteAll={user.role === 'admin' || user.role === 'owner'}
           />
         );

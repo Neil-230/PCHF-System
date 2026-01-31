@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
+import { User } from '../database/mongodb.js';
 
-export const verifyToken = (req, res, next) => {
+export const verifyToken = async (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1];
 
   if (!token) {
@@ -9,7 +10,17 @@ export const verifyToken = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
+    const dbUser = await User.findOne({ id: decoded.id, isArchived: false });
+    if (!dbUser) {
+      return res.status(401).json({ error: 'Account not found or archived' });
+    }
+    req.authUser = dbUser;
+    req.user = {
+      id: dbUser.id,
+      email: dbUser.email,
+      role: dbUser.role,
+      permissionOverrides: dbUser.permissionOverrides || [],
+    };
     next();
   } catch (err) {
     return res.status(401).json({ error: 'Invalid or expired token' });
@@ -24,39 +35,23 @@ export const verifyRecaptcha = async (req, res, next) => {
   }
 
   try {
-    const secret = process.env.RECAPTCHA_SECRET_KEY;
-    if (!secret && process.env.NODE_ENV === 'development') {
-      // In dev, if secret not set, skip to avoid blocking local testing
-      console.warn('reCAPTCHA secret missing in development; skipping verification.');
-      return next();
-    }
-
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 8000);
-
     const response = await fetch('https://www.google.com/recaptcha/api/siteverify', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: `secret=${secret}&response=${recaptchaToken}`,
-      signal: controller.signal,
+      body: `secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${recaptchaToken}`,
     });
-
-    clearTimeout(timeout);
 
     const data = await response.json();
 
-    if (!data.success || (typeof data.score === 'number' && data.score < 0.5)) {
-      return res.status(400).json({ error: 'reCAPTCHA verification failed', details: data });
+    if (!data.success || data.score < 0.5) {
+      return res.status(400).json({ error: 'reCAPTCHA verification failed' });
     }
 
     next();
   } catch (err) {
     console.error('reCAPTCHA error:', err);
-    if (err && err.name === 'AbortError') {
-      return res.status(500).json({ error: 'reCAPTCHA verification timeout' });
-    }
     return res.status(500).json({ error: 'reCAPTCHA verification error' });
   }
 };

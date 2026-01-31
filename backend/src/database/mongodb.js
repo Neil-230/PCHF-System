@@ -1,13 +1,85 @@
 // Centralized Mongo connection + schema exports (User, Product, Transaction, SystemSettings, etc.).
 import mongoose from 'mongoose';
+import { encryptValue, decryptValue, hashEmail, isEncryptedPayload } from '../utils/encryption.js';
 
 // MongoDB’s MVCC is enabled via optimisticConcurrency so each write checks the __v version key
 // instead of silently overwriting stale documents.
+const applyEncryptedField = (schema, fieldName, {
+  hashField,
+  hashFn,
+  hashUnique = false,
+  hashRequired = false,
+} = {}) => {
+  const cacheKey = `__plain_${fieldName}`;
+  if (hashField && !schema.path(hashField)) {
+    const hashDef = {
+      type: String,
+      index: true,
+    };
+    if (hashUnique) hashDef.unique = true;
+    if (!hashRequired) hashDef.sparse = true;
+    schema.add({ [hashField]: hashDef });
+  }
+
+  const path = schema.path(fieldName);
+  if (!path) {
+    throw new Error(`applyEncryptedField: schema missing path ${fieldName}`);
+  }
+
+  path.get(function getEncrypted(value) {
+    if (!value) return value;
+    if (this[cacheKey]) return this[cacheKey];
+    if (isEncryptedPayload(value)) {
+      const plain = decryptValue(value);
+      this[cacheKey] = plain;
+      return plain;
+    }
+    this[cacheKey] = value;
+    return value;
+  });
+
+  path.set(function setEncrypted(value) {
+    if (value == null) {
+      if (hashField) this.set(hashField, null);
+      this[cacheKey] = null;
+      return value;
+    }
+    const stringValue = String(value).trim();
+    this[cacheKey] = stringValue;
+    if (hashField && hashFn) {
+      this.set(hashField, hashFn(stringValue));
+    }
+    return isEncryptedPayload(stringValue) ? stringValue : encryptValue(stringValue);
+  });
+
+  schema.pre('save', function encryptBeforeSave(next) {
+    const raw = this.get(fieldName, null, { getters: false });
+    if (!raw) return next();
+    if (!isEncryptedPayload(raw)) {
+      const plain = this[fieldName];
+      this.set(fieldName, plain);
+      return next();
+    }
+    if (hashField && hashFn && !this.get(hashField)) {
+      const plain = this[fieldName];
+      this.set(hashField, plain ? hashFn(plain) : null);
+    }
+    return next();
+  });
+};
+
 // User Schema
+const permissionOverrideSchema = new mongoose.Schema({
+  resource: { type: String, required: true },
+  action: { type: String, enum: ['create', 'read', 'update', 'delete'], required: true },
+  possession: { type: String, enum: ['any', 'own'], default: 'any' },
+  effect: { type: String, enum: ['allow', 'deny'], required: true },
+}, { _id: false });
+
 const userSchema = new mongoose.Schema({
   id: { type: String, unique: true, required: true },
   name: { type: String, required: true },
-  email: { type: String, unique: true, required: true },
+  email: { type: String, required: true },
   password: { type: String, required: true },
   role: { type: String, enum: ['owner', 'admin', 'cashier'], default: 'cashier' },
   googleId: { type: String, unique: true, sparse: true },
@@ -33,6 +105,7 @@ const userSchema = new mongoose.Schema({
     timezone: { type: String, default: null },
     at: { type: Date, default: null },
   },
+  permissionOverrides: { type: [permissionOverrideSchema], default: [] },
   lastLogout: {
     ip: { type: String, default: null },
     country: { type: String, default: null },
@@ -42,8 +115,16 @@ const userSchema = new mongoose.Schema({
     org: { type: String, default: null },
     timezone: { type: String, default: null },
     at: { type: Date, default: null },
-  }
-}, { optimisticConcurrency: true });
+  },
+  phoneNumber: { type: String, default: null },
+}, { optimisticConcurrency: true, toJSON: { getters: true } });
+
+applyEncryptedField(userSchema, 'email', {
+  hashField: 'emailHash',
+  hashFn: hashEmail,
+  hashUnique: true,
+  hashRequired: true,
+});
 
 // Password Reset Schema
 const passwordResetSchema = new mongoose.Schema({
@@ -55,11 +136,18 @@ const passwordResetSchema = new mongoose.Schema({
   used: { type: Boolean, default: false }
 });
 
+applyEncryptedField(passwordResetSchema, 'email', {
+  hashField: 'emailHash',
+  hashFn: hashEmail,
+  hashUnique: false,
+  hashRequired: false,
+});
+
 // Pending Admin Schema (also safeguarded by MVCC through optimisticConcurrency)
 const pendingAdminSchema = new mongoose.Schema({
   id: { type: String, unique: true, required: true },
   name: { type: String, required: true },
-  email: { type: String, unique: true, required: true },
+  email: { type: String, required: true },
   password: { type: String },
   googleId: { type: String, sparse: true },
   facebookId: { type: String, sparse: true },
@@ -67,7 +155,14 @@ const pendingAdminSchema = new mongoose.Schema({
   emailVerified: { type: Boolean, default: false },
   passwordSet: { type: Boolean, default: false },
   requestedAt: { type: Date, default: Date.now }
-}, { optimisticConcurrency: true });
+}, { optimisticConcurrency: true, toJSON: { getters: true } });
+
+applyEncryptedField(pendingAdminSchema, 'email', {
+  hashField: 'emailHash',
+  hashFn: hashEmail,
+  hashUnique: true,
+  hashRequired: true,
+});
 
 // Product Schema
 const productSchema = new mongoose.Schema({
@@ -80,7 +175,7 @@ const productSchema = new mongoose.Schema({
   description: { type: String },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
-}, { optimisticConcurrency: true });
+}, { optimisticConcurrency: true, toJSON: { getters: true } });
 
 // Transaction Item Subschema
 const transactionItemSchema = new mongoose.Schema({
@@ -119,6 +214,12 @@ const transactionSchema = new mongoose.Schema({
     org: { type: String, default: null },
     timezone: { type: String, default: null },
   },
+}, { toJSON: { getters: true } });
+
+applyEncryptedField(transactionSchema, 'customerContact');
+applyEncryptedField(transactionSchema, 'handledBy.email', {
+  hashField: 'handledByEmailHash',
+  hashFn: hashEmail,
 });
 
 // System Settings Schema (singleton)
@@ -147,6 +248,9 @@ const systemSettingsSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now }
 }, { optimisticConcurrency: true });
 
+applyEncryptedField(systemSettingsSchema, 'email');
+applyEncryptedField(systemSettingsSchema, 'phone');
+
 const userActivityLogSchema = new mongoose.Schema({
   id: { type: String, unique: true, required: true },
   userId: { type: String, required: true },
@@ -162,7 +266,12 @@ const userActivityLogSchema = new mongoose.Schema({
   org: { type: String, default: null },
   timezone: { type: String, default: null },
   at: { type: Date, default: Date.now },
-}, { timestamps: false });
+}, { timestamps: false, toJSON: { getters: true } });
+
+applyEncryptedField(userActivityLogSchema, 'email', {
+  hashField: 'emailHash',
+  hashFn: hashEmail,
+});
 
 export const User = mongoose.model('User', userSchema);
 export const PasswordReset = mongoose.model('PasswordReset', passwordResetSchema);

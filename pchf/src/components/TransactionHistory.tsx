@@ -6,7 +6,7 @@ import { Button, Modal } from "react-bootstrap";
 
 interface TransactionHistoryProps {
   transactions: Transaction[];
-  onDeleteAll: () => void;
+  onDeleteAll: (params: { dateFrom: string; dateTo: string }) => Promise<{ deletedCount: number }>;
   canDeleteAll?: boolean;
 }
 
@@ -15,6 +15,7 @@ export function TransactionHistory({ transactions, onDeleteAll, canDeleteAll = f
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
   const printAreaRef = useRef<HTMLDivElement>(null);
 
   const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -177,15 +178,23 @@ export function TransactionHistory({ transactions, onDeleteAll, canDeleteAll = f
 
   // Delete all confirmation
   // ga bug rabani, dili ma delete kamo na debug ani uy for backend bitaw ang method ani
-  const handleDeleteAll = () => {
-    const confirmMessage = prompt(
-      'Do you want to delete the entire transaction?\nCopy this message to confirm:\n\n"Delete Transaction"\n\nOr press Cancel to abort.'
+  const handleDeleteAll = async () => {
+    if (!dateFrom || !dateTo) {
+      alert("Please select both start and end dates before deleting.");
+      return;
+    }
+    const confirmation = window.confirm(
+      `Delete all transactions from ${dateFrom} to ${dateTo}? This cannot be undone.`
     );
-    if (confirmMessage === "Delete Transaction") {
-      onDeleteAll();
-      alert("All transactions have been deleted.");
-    } else if (confirmMessage !== null) {
-      alert("Confirmation text did not match. Deletion cancelled.");
+    if (!confirmation) return;
+    setIsDeleting(true);
+    try {
+      const { deletedCount } = await onDeleteAll({ dateFrom, dateTo });
+      alert(`Deleted ${deletedCount} transaction${deletedCount === 1 ? "" : "s"} successfully.`);
+    } catch (err: any) {
+      alert(err?.message || "Failed to delete transactions. Please try again.");
+    } finally {
+      setIsDeleting(false);
     }
   };
   //kapuy nag modal tistingan taning prompt HAHA bati kaayo
@@ -242,7 +251,11 @@ export function TransactionHistory({ transactions, onDeleteAll, canDeleteAll = f
             <Printer size={16} className="me-2" /> Print All
           </button>
           {canDeleteAll && (
-            <button className="btn btn-danger" onClick={handleDeleteAll}>
+            <button
+              className="btn btn-danger"
+              onClick={handleDeleteAll}
+              disabled={!dateFrom || !dateTo || isDeleting}
+            >
               <Trash2 size={16} className="me-2" /> Delete All
             </button>
           )}

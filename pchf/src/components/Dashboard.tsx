@@ -159,6 +159,7 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
     }
   };
 
+  //handle the pdf export
   const handleDownloadActiveLogPdf = async () => {
     if (!filteredActiveLog.length) {
       toast.info("No entries to export.");

@@ -18,6 +18,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import csurf from 'csurf';
 import passport from 'passport';
+import rateLimit from 'express-rate-limit';
 import { errorHandler } from './middleware/errorHandler.js';
 import { connectDB } from './database/mongodb.js';
 import { runScheduledBackupIfEnabled } from './services/driveService.js';
@@ -37,8 +38,24 @@ const csrfProtection = csurf({
   value: (req) => req.headers['x-csrf-token'] || req.headers['x-xsrf-token'] || req.body?._csrf || req.query?._csrf,
 });
 
+const windowMinutes = Number(process.env.RATE_LIMIT_WINDOW_MINUTES || 15);
+const maxRequests = Number(process.env.RATE_LIMIT_MAX_REQUESTS || 100);
+const limiter = rateLimit({
+  windowMs: windowMinutes * 60 * 1000,
+  limit: maxRequests,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: {
+    error: 'Too many requests. Please slow down.',
+  },
+  handler: (req, res, next, options) => {
+    res.status(options.statusCode).json(options.message);
+  },
+});
+
 // Middleware
-app.set('trust proxy', true);
+const trustProxy = process.env.RATE_LIMIT_TRUST_PROXY === 'true' || process.env.NODE_ENV === 'production';
+app.set('trust proxy', trustProxy);
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:5173',
   credentials: true
@@ -47,6 +64,7 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+app.use(limiter);
 app.use(ipinfoEnricher);
 app.use((req, res, next) => {
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');

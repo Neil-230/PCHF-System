@@ -1,3 +1,5 @@
+import type { PermissionGroupDescriptor, PermissionOverride } from '../types/auth';
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
 export interface AuthResponse {
@@ -14,6 +16,8 @@ export interface User {
   role: 'owner' | 'admin' | 'cashier';
   isVerified: boolean;
   createdAt: string;
+  permissionOverrides?: PermissionOverride[];
+  __v?: number;
 }
 
 class ApiService {
@@ -196,6 +200,27 @@ class ApiService {
 
   async getAllUsers(): Promise<{ users: User[] }> {
     return this.request('/users');
+  }
+
+  async getPermissionCatalog(): Promise<{ catalog: PermissionGroupDescriptor[] }> {
+    return this.request('/users/permissions/catalog');
+  }
+
+  async setUserRole(id: string, role: 'admin' | 'cashier'): Promise<{ user: User; message: string }> {
+    return this.request(`/users/${id}/role`, {
+      method: 'PATCH',
+      body: JSON.stringify({ role }),
+    });
+  }
+
+  async setPermissionOverrides(
+    id: string,
+    payload: { overrides: PermissionOverride[]; version: number },
+  ): Promise<{ user: User; message: string }> {
+    return this.request(`/users/${id}/permission-overrides`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
   }
 
   async getUserById(id: string): Promise<{ user: User }> {

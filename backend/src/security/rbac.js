@@ -35,6 +35,9 @@ const grantsObject = {
       'read:any': ['*'],
       'update:any': ['*'],
     },
+    userPermission: {
+      'update:any': ['*'],
+    },
   },
   admin: {
     dashboard: {
@@ -73,11 +76,6 @@ const grantsObject = {
     },
     product: {
       'read:any': ['*'],
-    },
-      transaction: {
-      'create:any': ['*'],
-      'read:any': ['*'],
-      'delete:any': ['*'],
     },
     // no settings updates
   },

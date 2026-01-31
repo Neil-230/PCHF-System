@@ -50,10 +50,10 @@ export function InventoryManagement({ user }: { user?: User }) {
     apiService
       .getProducts()
       .then(({ products }) => setProducts(products))
-      .catch(() => {});
+      .catch((err: any) => {
+        toast.error(err?.message || "Failed to load products");
+      });
   }, []);
-
-  
 
   // SKU Generator (e.g., COF001, SNA123) pwedi ni ninyo i Module
   const generateSKU = (category: string) => {
@@ -88,19 +88,7 @@ export function InventoryManagement({ user }: { user?: User }) {
         toast.error("Data changed by someone else. Please refresh and try again.");
         return;
       }
-      const newProduct: Product = {
-        id: Date.now().toString(),
-        name: formData.name,
-        price: parseFloat(formData.price),
-        category: formData.category,
-        stock: parseInt(formData.stock),
-        sku: skuValue,
-        description: formData.description,
-      };
-      setProducts((prev) => [...prev, newProduct]);
-      resetForm();
-      setIsAddDialogOpen(false);
-      toast.success("Product added locally");
+      toast.error(e?.message || "Failed to add product. Please try again.");
     }
   };
 
@@ -133,16 +121,10 @@ export function InventoryManagement({ user }: { user?: User }) {
         toast.error("Data changed by someone else. Please refresh and try again.");
         return;
       }
-      const updatedProduct: Product = {
-        ...editingProduct,
-        ...updates,
-      } as Product;
-      setProducts((prev) => prev.map((p) => (p.id === editingProduct.id ? updatedProduct : p)));
-      resetForm();
-      setEditingProduct(null);
-      toast.success("Product updated locally");
+      toast.error(e?.message || "Failed to update product. Please try again.");
     }
   };
+
   // Keymaping for Edit
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
@@ -159,7 +141,6 @@ export function InventoryManagement({ user }: { user?: User }) {
     window.addEventListener("keydown", handleKeyPress);
     return () => window.removeEventListener("keydown", handleKeyPress);
   }, [isAddDialogOpen, editingProduct, formData]);
-  
 
   const openEditDialog = (product: Product) => {
     setEditingProduct(product);
@@ -201,8 +182,7 @@ export function InventoryManagement({ user }: { user?: User }) {
         toast.error("Data changed by someone else. Please refresh and try again.");
         return;
       }
-      setProducts((prev) => prev.filter((p) => p.id !== productId));
-      toast.success("Product deleted locally");
+      toast.error(e?.message || "Failed to delete product. Please try again.");
     }
   };
 
