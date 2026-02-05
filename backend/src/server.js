@@ -39,7 +39,8 @@ const csrfProtection = csurf({
 });
 
 const windowMinutes = Number(process.env.RATE_LIMIT_WINDOW_MINUTES || 15);
-const maxRequests = Number(process.env.RATE_LIMIT_MAX_REQUESTS || 100);
+const maxRequests = Number(process.env.RATE_LIMIT_MAX_REQUESTS || 500);
+const safeReadPrefixes = ['/api/users', '/api/products', '/api/transactions', '/api/dashboard', '/api/settings'];
 const limiter = rateLimit({
   windowMs: windowMinutes * 60 * 1000,
   limit: maxRequests,
@@ -50,6 +51,11 @@ const limiter = rateLimit({
   },
   handler: (req, res, next, options) => {
     res.status(options.statusCode).json(options.message);
+  },
+  skip: (req) => {
+    if ((req.method || '').toUpperCase() !== 'GET') return false;
+    const url = req.originalUrl || req.url || '';
+    return safeReadPrefixes.some((prefix) => url.startsWith(prefix));
   },
 });
 

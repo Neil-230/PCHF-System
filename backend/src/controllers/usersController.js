@@ -1,5 +1,6 @@
 import { User, PendingAdmin } from '../database/mongodb.js';
 import { PERMISSION_CATALOG, isValidPermission } from '../constants/permissions.js';
+import { emailHashFilter } from '../utils/emailLookup.js';
 
 const sanitizeOverridesInput = (rawOverrides = []) => {
   if (!Array.isArray(rawOverrides)) {
@@ -116,7 +117,8 @@ export const approveAdmin = async (req, res) => {
   }
 
   const email = req.params.email;
-  const adminToApprove = await PendingAdmin.findOne({ email });
+  const filter = emailHashFilter(email);
+  const adminToApprove = await PendingAdmin.findOne(filter);
   if (!adminToApprove) {
     return res.status(404).json({ error: 'Pending admin not found' });
   }
@@ -144,7 +146,7 @@ export const approveAdmin = async (req, res) => {
     await user.save();
   }
 
-  await PendingAdmin.deleteOne({ email });
+  await PendingAdmin.deleteOne(filter);
 
   res.json({ message: `${roleToApprove.charAt(0).toUpperCase() + roleToApprove.slice(1)} approved`, user: user.toJSON() });
 };
@@ -155,7 +157,8 @@ export const declineAdmin = async (req, res) => {
   }
 
   const email = req.params.email;
-  const pending = await PendingAdmin.findOne({ email });
+  const filter = emailHashFilter(email);
+  const pending = await PendingAdmin.findOne(filter);
   if (!pending) {
     return res.status(404).json({ error: 'Pending admin not found' });
   }
