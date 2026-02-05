@@ -90,6 +90,26 @@ npm run dev
 - Frontend: `http://localhost:5173`
 - Backend: `http://localhost:5000`
 
+## 🧪 Demo Accounts (Seed Data)
+
+Use the built-in seeding script to create ready-to-use demo users in your MongoDB cluster:
+
+```bash
+cd backend
+npm install  # if you haven't yet
+node src/scripts/seedUsers.js
+```
+
+The script is idempotent—rerunning it simply refreshes the passwords below without creating duplicates. Once it finishes, log in with:
+
+| Role   | Email              | Password         |
+|--------|--------------------|------------------|
+| Owner  | `owner@pchf.local` | `OwnerPass!123`  |
+| Admin  | `admin@pchf.local` | `AdminPass!123`  |
+| Cashier| `cashier@pchf.local`| `CashierPass!123` |
+
+> **Tip:** These credentials are for local testing only. Update or delete them before going to production.
+
 ## 📋 Required Credentials
 
 ### Google OAuth
