@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { PermissionGroupDescriptor, PermissionOverride, User } from "../types/auth";
 import apiService from "../services/api";
 import { toast } from "sonner";
@@ -62,7 +62,7 @@ export function PermissionsManager({ currentUser, onNavigate }: PermissionsManag
   const [overrideDraft, setOverrideDraft] = useState<DraftMap>({});
   const [savingOverrides, setSavingOverrides] = useState(false);
 
-  const loadUsers = async () => {
+  const loadUsers = useCallback(async () => {
     setIsLoading(true);
     try {
       const { users } = await apiService.getAllUsers();
@@ -72,9 +72,9 @@ export function PermissionsManager({ currentUser, onNavigate }: PermissionsManag
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const loadCatalog = async () => {
+  const loadCatalog = useCallback(async () => {
     setIsCatalogLoading(true);
     try {
       const { catalog } = await apiService.getPermissionCatalog();
@@ -84,13 +84,13 @@ export function PermissionsManager({ currentUser, onNavigate }: PermissionsManag
     } finally {
       setIsCatalogLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (currentUser.role !== "owner") return;
     loadUsers();
     loadCatalog();
-  }, [currentUser.role]);
+  }, [currentUser.role, loadCatalog, loadUsers]);
 
   const filteredUsers = useMemo(() => {
     const query = search.trim().toLowerCase();
