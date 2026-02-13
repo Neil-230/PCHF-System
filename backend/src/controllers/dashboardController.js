@@ -121,7 +121,8 @@ export const getActiveLogEntries = async (_req, res) => {
   const logs = await UserActivityLog.find({})
     .sort({ at: -1 })
     .limit(200)
-    .lean();
+    // Use lean() for performance but keep getters so encrypted fields (like email) are decrypted
+    .lean({ getters: true });
 
   const entries = logs.map((log) => {
     const locParts = typeof log.loc === 'string' ? log.loc.split(',').map((p) => p.trim()).filter(Boolean) : [];

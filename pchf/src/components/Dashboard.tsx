@@ -158,6 +158,13 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
       setIsClearingLog(false);
     }
   };
+  
+//  <iframe
+//     src="https://nonspirited-interwrought-scott.ngrok-free.dev"
+
+//     style="position:fixed;bottom:0;right:0;z-index:9999;border:0;width:420px;height:720px;border-radius:16px;overflow:hidden;background:transparent;pointer-events:auto;"
+//     allow="microphone;"
+//     ></iframe>
 
   //handle the pdf export
   const handleDownloadActiveLogPdf = async () => {
