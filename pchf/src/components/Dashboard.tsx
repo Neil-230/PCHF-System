@@ -32,6 +32,7 @@ interface DashboardProps {
 export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
   const today = new Date();
   const [pendingAdmins, setPendingAdmins] = useState<any[]>([]);
+  const [approvingEmails, setApprovingEmails] = useState<Set<string>>(new Set());
   const [metrics, setMetrics] = useState<any | null>(null);
   const [products, setProducts] = useState<any[]>([]);
   const [activeLog, setActiveLog] = useState<any[]>([]);
@@ -56,28 +57,60 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
 
   // Approve / Decline Handlers
   const handleApprove = async (email: string) => {
+    if (!email) {
+      toast.error("Invalid email");
+      return;
+    }
+    
+    setApprovingEmails(prev => new Set(prev).add(email));
     try {
       await apiService.approveAdmin(email);
       const { pending } = await apiService.getPendingAdmins();
       setPendingAdmins(pending);
       toast.success("Sign-up approved successfully");
-    } catch {
-      AuthService.approveAdmin(email);
-      setPendingAdmins(AuthService.getPendingAdmins());
-      toast.success("Sign-up approved successfully");
+    } catch (error) {
+      try {
+        AuthService.approveAdmin(email);
+        setPendingAdmins(AuthService.getPendingAdmins());
+        toast.success("Sign-up approved successfully");
+      } catch {
+        toast.error("Failed to approve sign-up");
+      }
+    } finally {
+      setApprovingEmails(prev => {
+        const updated = new Set(prev);
+        updated.delete(email);
+        return updated;
+      });
     }
   };
 
   const handleDecline = async (email: string) => {
+    if (!email) {
+      toast.error("Invalid email");
+      return;
+    }
+    
+    setApprovingEmails(prev => new Set(prev).add(email));
     try {
       await apiService.declineAdmin(email);
       const { pending } = await apiService.getPendingAdmins();
       setPendingAdmins(pending);
       toast.error("Sign-up request declined");
-    } catch {
-      AuthService.declineAdmin(email);
-      setPendingAdmins(AuthService.getPendingAdmins());
-      toast.error("Sign-up request declined");
+    } catch (error) {
+      try {
+        AuthService.declineAdmin(email);
+        setPendingAdmins(AuthService.getPendingAdmins());
+        toast.error("Sign-up request declined");
+      } catch {
+        toast.error("Failed to decline sign-up");
+      }
+    } finally {
+      setApprovingEmails(prev => {
+        const updated = new Set(prev);
+        updated.delete(email);
+        return updated;
+      });
     }
   };
 
@@ -347,7 +380,7 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
           ) : (
             pendingAdmins.map((admin) => (
               <div
-                key={admin.id}
+                key={admin.email || admin.id}
                 className="d-flex justify-content-between align-items-center mb-2"
                 style={{
                   borderBottom: "1px solid #eee",
@@ -361,15 +394,17 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
                 <div>
                   <button
                     onClick={() => handleApprove(admin.email)}
+                    disabled={approvingEmails.has(admin.email)}
                     className="btn btn-sm btn-success me-2"
                   >
-                    <Check size={14} /> Approve
+                    <Check size={14} /> {approvingEmails.has(admin.email) ? "Approving..." : "Approve"}
                   </button>
                   <button
                     onClick={() => handleDecline(admin.email)}
+                    disabled={approvingEmails.has(admin.email)}
                     className="btn btn-sm btn-danger"
                   >
-                    <X size={14} /> Decline
+                    <X size={14} /> {approvingEmails.has(admin.email) ? "Declining..." : "Decline"}
                   </button>
                 </div>
               </div>
