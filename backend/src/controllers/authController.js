@@ -187,8 +187,8 @@ export const signup = async (req, res) => {
     return res.status(400).json({ error: 'All fields are required.' });
   }
 
-  if (password.length < 6) {
-    return res.status(400).json({ error: 'Password must be at least 6 characters' });
+  if (password.length < 8) {
+    return res.status(400).json({ error: 'Password must be at least 8 characters' });
   }
 
   const ownerExists = await User.findOne({ role: 'owner', isArchived: false });
@@ -385,8 +385,12 @@ export const handleGoogleCallback = (req, res, next) => {
       return res.redirect(`${FRONTEND}/login?error=oauth_failed`);
     }
     if (!user) {
-      const profile = info && info.profile ? encodeURIComponent(JSON.stringify(info.profile)) : '';
-      return res.redirect(`${FRONTEND}/auth/google-callback?signup=required&user=${profile}`);
+      const profile = info && info.profile ? JSON.stringify(info.profile) : '';
+      // Store profile in secure session instead of URL param
+      if (profile) {
+        res.cookie('oauth_profile', profile, { ...cookieOpts, maxAge: 10 * 60 * 1000 });
+      }
+      return res.redirect(`${FRONTEND}/auth/google-callback?signup=required`);
     }
     try {
       const hasOwner = await User.findOne({ role: 'owner', isArchived: false });
@@ -409,9 +413,13 @@ export const handleGoogleCallback = (req, res, next) => {
     } catch (e) {
       console.error('Google callback pending check error:', e);
     }
-    await recordLastLogin(user, req.ipinfo);
+    await recordLastLogin(user, req.ipinfo || {});
     const token = generateToken(user);
-    return res.redirect(`${FRONTEND}/auth/google-callback?token=${token}&user=${encodeURIComponent(JSON.stringify(user.toJSON()))}`);
+    // Store token in secure httpOnly cookie instead of URL parameter
+    res.cookie('authToken', token, { ...cookieOpts, maxAge: 7 * 24 * 60 * 60 * 1000 });
+    // Store user data in secure cookie too (less sensitive than token)
+    res.cookie('userData', JSON.stringify(user.toJSON()), { ...cookieOpts, maxAge: 7 * 24 * 60 * 60 * 1000 });
+    return res.redirect(`${FRONTEND}/auth/google-callback?token_set=true`);
   })(req, res, next);
 };
 
@@ -435,8 +443,12 @@ export const handleFacebookCallback = (req, res, next) => {
       return res.redirect(`${FRONTEND}/login?error=oauth_failed`);
     }
     if (!user) {
-      const profile = info && info.profile ? encodeURIComponent(JSON.stringify(info.profile)) : '';
-      return res.redirect(`${FRONTEND}/auth/facebook-callback?signup=required&user=${profile}`);
+      const profile = info && info.profile ? JSON.stringify(info.profile) : '';
+      // Store profile in secure session instead of URL param
+      if (profile) {
+        res.cookie('oauth_profile', profile, { ...cookieOpts, maxAge: 10 * 60 * 1000 });
+      }
+      return res.redirect(`${FRONTEND}/auth/facebook-callback?signup=required`);
     }
     try {
       const hasOwner = await User.findOne({ role: 'owner', isArchived: false });
@@ -459,9 +471,13 @@ export const handleFacebookCallback = (req, res, next) => {
     } catch (e) {
       console.error('Facebook callback pending check error:', e);
     }
-    await recordLastLogin(user, req.ipinfo);
+    await recordLastLogin(user, req.ipinfo || {});
     const token = generateToken(user);
-    return res.redirect(`${FRONTEND}/auth/facebook-callback?token=${token}&user=${encodeURIComponent(JSON.stringify(user.toJSON()))}`);
+    // Store token in secure httpOnly cookie instead of URL parameter
+    res.cookie('authToken', token, { ...cookieOpts, maxAge: 7 * 24 * 60 * 60 * 1000 });
+    // Store user data in secure cookie too (less sensitive than token)
+    res.cookie('userData', JSON.stringify(user.toJSON()), { ...cookieOpts, maxAge: 7 * 24 * 60 * 60 * 1000 });
+    return res.redirect(`${FRONTEND}/auth/facebook-callback?token_set=true`);
   })(req, res, next);
 };
 
@@ -733,8 +749,8 @@ export const resetPassword = async (req, res) => {
     return res.status(400).json({ error: 'Email, code, and new password are required' });
   }
 
-  if (newPassword.length < 6) {
-    return res.status(400).json({ error: 'Password must be at least 6 characters' });
+  if (newPassword.length < 8) {
+    return res.status(400).json({ error: 'Password must be at least 8 characters' });
   }
 
   const reset = await findPasswordResetByEmail(email, {
@@ -806,8 +822,8 @@ export const changePassword = async (req, res) => {
     return res.status(400).json({ error: 'Current and new password are required' });
   }
 
-  if (newPassword.length < 6) {
-    return res.status(400).json({ error: 'New password must be at least 6 characters' });
+  if (newPassword.length < 8) {
+    return res.status(400).json({ error: 'New password must be at least 8 characters' });
   }
 
   const user = await User.findOne({ id: req.user.id, isArchived: false });

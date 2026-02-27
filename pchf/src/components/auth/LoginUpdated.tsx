@@ -129,8 +129,8 @@ export function LoginUpdated({ onLogin, onSwitchToSignUp }: LoginProps) {
       return;
     }
 
-    if (newPassword.length < 6) {
-      setResetError('Password must be at least 6 characters');
+    if (newPassword.length < 8) {
+      setResetError('Password must be at least 8 characters');
       return;
     }
 

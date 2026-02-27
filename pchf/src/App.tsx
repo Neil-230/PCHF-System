@@ -15,7 +15,6 @@ import type { Transaction } from "./types";
 import type { User } from "./types/auth";
 import { mockTransactions } from "./data/mockData";
 import apiService from "./services/api";
-import { toast } from "sonner";
 import { useLocation, useNavigate } from "react-router-dom";
 
 type TabId = "dashboard" | "pos" | "inventory" | "transactions" | "permissions" | "alerts" | "settings";
@@ -119,16 +118,42 @@ export default function App() {
 
   useEffect(() => {
     const token = localStorage.getItem('authToken');
-    if (!token) {
-      setIsLoading(false);
+    const googleOAuthComplete = localStorage.getItem('googleOAuthComplete') === 'true';
+    const currentUserJson = localStorage.getItem('currentUser');
+
+    // If token exists, fetch current user to validate/refresh
+    if (token) {
+      apiService
+        .getCurrentUser()
+        .then(({ user }) => {
+          setUser(user);
+          setIsLoading(false);
+        })
+        .catch(() => {
+          // Token invalid, clear and redirect to login
+          localStorage.removeItem('authToken');
+          setIsLoading(false);
+        });
       return;
     }
-    apiService
-      .getCurrentUser()
-      .then(({ user }) => {
+
+    // If Google OAuth just completed and we have currentUser stored, use it
+    if (googleOAuthComplete && currentUserJson) {
+      try {
+        const user = JSON.parse(currentUserJson);
         setUser(user);
-      })
-      .finally(() => setIsLoading(false));
+        localStorage.removeItem('googleOAuthComplete'); // Clear the flag
+        localStorage.removeItem('currentUser'); // Clear the stored user data
+        setIsLoading(false);
+        return;
+      } catch (err) {
+        console.error('Error parsing stored user:', err);
+        localStorage.removeItem('currentUser');
+        localStorage.removeItem('googleOAuthComplete');
+      }
+    }
+
+    setIsLoading(false);
   }, []);
 
   useEffect(() => {
@@ -137,6 +162,7 @@ export default function App() {
     const desiredRaw = extractTabFromPath(location.pathname);
     const desiredTab = isTabId(desiredRaw) ? desiredRaw : null;
 
+    // If desired tab is accessible, use it
     if (desiredTab && canAccessTab(user, desiredTab)) {
       if (!hasSyncedRoute) setHasSyncedRoute(true);
       if (activeTab !== desiredTab) {
@@ -145,14 +171,19 @@ export default function App() {
       return;
     }
 
-    if (desiredRaw && hasSyncedRoute) {
-      toast.error("You don't have access to that section.");
+    // Determine target tab: default if accessible, otherwise first allowed tab
+    let targetTab = fallbackTab;
+    if (!canAccessTab(user, fallbackTab)) {
+      // Find first accessible tab from user's allowed tabs
+      const allowedTabs = ROLE_ALLOWED_TABS[user.role] || [];
+      const firstAllowed = allowedTabs.find(tab => canAccessTab(user, tab));
+      targetTab = firstAllowed || fallbackTab;
     }
 
-    if (activeTab !== fallbackTab as TabId) {
-      setActiveTab(fallbackTab as TabId);
+    if (activeTab !== targetTab) {
+      setActiveTab(targetTab as TabId);
     }
-    const targetPath = `/${fallbackTab}`;
+    const targetPath = `/${targetTab}`;
     if (location.pathname !== targetPath) {
       navigate(targetPath, { replace: true });
     }

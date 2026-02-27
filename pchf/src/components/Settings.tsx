@@ -111,6 +111,8 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user,
   const [loadingDeletion, setLoadingDeletion] = useState(false);
   const [driveStatus, setDriveStatus] = useState<{ connected: boolean; backupEnabled: boolean; backupLastRun: string | null; backupLastError: string; driveFolderId: string | null }>({ connected: false, backupEnabled: false, backupLastRun: null, backupLastError: '', driveFolderId: null });
   const [loadingDrive, setLoadingDrive] = useState(false);
+  const [driveTokenValid, setDriveTokenValid] = useState<boolean | null>(null);
+  const [driveTokenStatus, setDriveTokenStatus] = useState<string>('');
   const [notifyLowStock, setNotifyLowStock] = useState(false);
   const [notifyOutOfStock, setNotifyOutOfStock] = useState(false);
   const [lowStockThreshold, setLowStockThreshold] = useState<string>('10');
@@ -157,6 +159,11 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user,
           const s = await apiService.getDriveStatus();
           setDriveStatus(s);
           setSecuritySettings((prev) => ({ ...prev, dataBackup: !!s.backupEnabled }));
+          
+          // Validate token if connected
+          if (s.connected) {
+            await validateDriveTokenStatus();
+          }
         } catch {}
       };
       refresh();
@@ -168,9 +175,14 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user,
       params.delete('drive');
       const newUrl = window.location.pathname + (params.toString() ? `?${params.toString()}` : '');
       window.history.replaceState({}, '', newUrl);
-      // refresh status
+      // refresh status and validate token
       (async () => {
-        try { const s = await apiService.getDriveStatus(); setDriveStatus(s); } catch {}
+        try { 
+          const s = await apiService.getDriveStatus(); 
+          setDriveStatus(s);
+          setDriveTokenValid(true);
+          setDriveTokenStatus('valid');
+        } catch {}
       })();
     } else if (st === 'error') {
       toast.error('Google Drive connection failed');
@@ -186,6 +198,22 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user,
       window.location.href = url;
     } catch (e: any) {
       toast.error(e?.message || 'Failed to initiate Google Drive connection');
+    }
+  };
+
+  const validateDriveTokenStatus = async () => {
+    try {
+      const validation = await apiService.validateDriveToken();
+      setDriveTokenValid(validation.valid);
+      setDriveTokenStatus(validation.status);
+      
+      if (!validation.valid && validation.status === 'invalid_grant') {
+        toast.error('Drive connection expired. Please re-authorize.');
+      }
+    } catch (e: any) {
+      console.error('Token validation error:', e);
+      setDriveTokenValid(false);
+      setDriveTokenStatus('error');
     }
   };
 
@@ -205,12 +233,23 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user,
   const handleRunBackup = async () => {
     setLoadingDrive(true);
     try {
+      // Validate token before attempting backup
+      await validateDriveTokenStatus();
+      
       await apiService.runDriveBackup();
       setDriveStatus((prev) => ({ ...prev, backupLastRun: new Date().toISOString(), backupLastError: '' }));
-      toast.success('Backup created');
+      setDriveTokenValid(true);
+      toast.success('Backup created successfully');
     } catch (e: any) {
       const msg = e?.message || 'Backup failed';
       setDriveStatus((prev) => ({ ...prev, backupLastError: msg }));
+      
+      // Check if it's an invalid_grant error
+      if (msg.includes('expired') || msg.includes('re-authorize')) {
+        setDriveTokenValid(false);
+        setDriveTokenStatus('invalid_grant');
+      }
+      
       toast.error(msg);
     } finally {
       setLoadingDrive(false);
@@ -664,27 +703,53 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user,
                   <label className="fw-bold d-block mb-1">Cloud Backup (Google Drive)</label>
                   <div className="small text-muted">
                     Status: {driveStatus.connected ? 'Connected' : 'Not connected'}
+                    {driveStatus.connected && driveTokenValid !== null && (
+                      <span className={driveTokenValid ? ' text-success' : ' text-danger'}>
+                        {' '}({driveTokenValid ? '✓ Valid' : '⚠ Re-authorization needed'})
+                      </span>
+                    )}
                   </div>
                   <div className="small text-muted mb-2">
                     {driveStatus.backupLastRun ? `Last run: ${new Date(driveStatus.backupLastRun).toLocaleString()}` : ''}
                   </div>
+                  
+                  {/* Display token validation error with re-auth button */}
+                  {driveStatus.connected && driveTokenValid === false && driveTokenStatus === 'invalid_grant' && (
+                    <div className="alert alert-warning p-2 mb-2 small d-flex justify-content-between align-items-center">
+                      <div>
+                        <strong>⚠ Token Expired:</strong> Your Google Drive connection has expired. Please re-authorize.
+                      </div>
+                      <button 
+                        className="btn btn-sm btn-warning ms-2 text-nowrap"
+                        onClick={handleConnectDrive}
+                        disabled={loadingDrive}
+                      >
+                        {loadingDrive ? 'Connecting...' : 'Re-authorize'}
+                      </button>
+                    </div>
+                  )}
+                  
                   {!driveStatus.connected ? (
-                    <button className="btn btn-outline-dark btn-sm" onClick={handleConnectDrive} disabled={loadingDrive}>Connect Google Drive</button>
+                    <button className="btn btn-outline-dark btn-sm" onClick={handleConnectDrive} disabled={loadingDrive}>
+                      {loadingDrive ? 'Connecting...' : 'Connect Google Drive'}
+                    </button>
                   ) : (
                     <div className="d-flex gap-2 flex-wrap align-items-center">
                       
                       <button className="btn btn-outline-dark w-100" 
                         onClick={handleEnsureFolder} 
-                        disabled={loadingDrive}
+                        disabled={loadingDrive || driveTokenValid === false}
+                        title={driveTokenValid === false ? 'Re-authorize Drive first' : ''}
                       >
                         Ensure Backup Folder
                       </button>
                       
                       <button className="btn btn-secondary w-100" 
                         onClick={handleRunBackup} 
-                        disabled={loadingDrive}
+                        disabled={loadingDrive || driveTokenValid === false}
+                        title={driveTokenValid === false ? 'Re-authorize Drive first' : ''}
                       >
-                        Run Backup Now
+                        {loadingDrive ? 'Running...' : 'Run Backup Now'}
                       </button>
                       {driveStatus.driveFolderId && (
                         <a className="btn btn-link btn-sm text-decoration-none text-center w-100" 

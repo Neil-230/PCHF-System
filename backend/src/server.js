@@ -146,7 +146,10 @@ const startBackupScheduler = () => {
   const run = async () => {
     try {
       await runScheduledBackupIfEnabled();
-    } catch {}
+    } catch (err) {
+      console.error('Backup scheduler error:', err);
+      // Don't crash the server, just log and continue
+    }
   };
   // run once after startup delay to allow DB connection
   setTimeout(run, 60 * 1000);
@@ -160,19 +163,18 @@ const startDeletionCleanup = () => {
     try {
       const { User } = await import('./database/mongodb.js');
       const now = new Date();
-      const candidates = await User.find({ deletionScheduledFor: { $lte: now }, isArchived: false });
-      if (!candidates.length) {
-        return;
+      // Use updateMany to avoid race conditions with concurrent modifications
+      const result = await User.updateMany(
+        { deletionScheduledFor: { $lte: now }, isArchived: false },
+        { 
+          isArchived: true,
+          archivedAt: now,
+          deletedAt: now
+        }
+      );
+      if (result.modifiedCount > 0) {
+        console.log(`Deletion cleanup: archived ${result.modifiedCount} account(s)`);
       }
-      for (const user of candidates) {
-        user.isArchived = true;
-        user.archivedAt = now;
-        user.deletedAt = now;
-        await user.save().catch((err) => {
-          console.error(`Failed to archive user ${user.email || user.id}:`, err);
-        });
-      }
-      console.log(`Deletion cleanup: archived ${candidates.length} account(s)`);
     } catch (err) {
       console.error('Deletion cleanup error:', err);
     }
@@ -183,9 +185,29 @@ const startDeletionCleanup = () => {
   setInterval(run, 24 * 60 * 60 * 1000);
 };
 
-// Health check
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', message: 'Server is running' });
+// Health check - includes database connectivity status
+app.get('/api/health', async (req, res) => {
+  try {
+    const { default: mongoose } = await import('mongoose');
+    const dbConnected = mongoose.connection.readyState === 1; // 1 = connected
+    
+    res.status(dbConnected ? 200 : 503).json({
+      status: dbConnected ? 'OK' : 'DEGRADED',
+      message: dbConnected ? 'Server and database are running' : 'Database connection lost',
+      timestamp: new Date().toISOString(),
+      database: {
+        connected: dbConnected,
+        readyState: mongoose.connection.readyState, // 0=disconnected, 1=connected, 2=connecting, 3=disconnecting
+      },
+    });
+  } catch (err) {
+    res.status(503).json({
+      status: 'ERROR',
+      message: 'Health check failed',
+      timestamp: new Date().toISOString(),
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined,
+    });
+  }
 });
 
 // Connect to MongoDB and start server

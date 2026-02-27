@@ -2,7 +2,13 @@ import jwt from 'jsonwebtoken';
 import { User } from '../database/mongodb.js';
 
 export const verifyToken = async (req, res, next) => {
-  const token = req.headers.authorization?.split(' ')[1];
+  // Check Authorization header first, fallback to httpOnly cookie if present
+  let token = req.headers.authorization?.split(' ')[1];
+  
+  // If no Authorization header, check for token in httpOnly cookie
+  if (!token && req.cookies?.authToken) {
+    token = req.cookies.authToken;
+  }
 
   if (!token) {
     return res.status(401).json({ error: 'No token provided' });

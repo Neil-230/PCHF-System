@@ -1,5 +1,5 @@
 import { SystemSettings } from '../database/mongodb.js';
-import { getAuthUrl as driveAuthUrl, handleOAuthCallback, ensureFolder, uploadBackup } from '../services/driveService.js';
+import { getAuthUrl as driveAuthUrl, handleOAuthCallback, ensureFolder, uploadBackup, validateDriveToken } from '../services/driveService.js';
 
 const getOrCreateSettings = async () => {
   let settings = await SystemSettings.findOne({ id: 'system' });
@@ -90,6 +90,11 @@ export const ensureDriveFolder = async (req, res) => {
 export const runDriveBackup = async (_req, res) => {
   const result = await uploadBackup();
   res.json({ message: 'Backup created', file: result });
+};
+
+export const validateDriveTokenStatus = async (_req, res) => {
+  const validation = await validateDriveToken();
+  res.json(validation);
 };
 
 export const updateNotifications = async (req, res) => {

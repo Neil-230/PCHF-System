@@ -10,6 +10,7 @@ import {
   toggleBackupEnabled,
   ensureDriveFolder,
   runDriveBackup,
+  validateDriveTokenStatus,
   updateNotifications,
   toggleSignups,
   updateStoreSettings,
@@ -22,6 +23,9 @@ router.get('/', asyncHandler(getPublicSettings));
 
 // Backup: status
 router.get('/drive/status', verifyToken, authorize('backupSetting', 'read:any'), asyncHandler(getDriveStatus));
+
+// Backup: validate token status
+router.get('/drive/validate-token', verifyToken, authorize('backupSetting', 'read:any'), asyncHandler(validateDriveTokenStatus));
 
 // Backup: get Google OAuth URL
 router.get('/drive/auth-url', verifyToken, authorize('backupSetting', 'read:any'), asyncHandler(getDriveAuthUrl));

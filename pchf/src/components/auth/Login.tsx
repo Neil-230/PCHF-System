@@ -93,7 +93,7 @@ export function Login({ onLogin, onSwitchToSignUp }: LoginProps) {
   const handleResetPassword = () => {
     console.log("Reset password clicked");
 
-    if (newPassword.trim().length < 6) {
+    if (newPassword.trim().length < 8) {
       toast.warning("Password must be at least 8 characters long");
       return;
     }

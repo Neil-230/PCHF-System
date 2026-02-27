@@ -60,6 +60,20 @@ export const createTransaction = async (req, res) => {
     return res.status(400).json({ error: 'Items are required' });
   }
 
+  // Validate each item has required fields and valid quantities
+  for (const item of items) {
+    if (!item.productId || !item.quantity) {
+      return res.status(400).json({ error: 'Each item must have productId and quantity' });
+    }
+    const qty = Number(item.quantity);
+    if (isNaN(qty) || qty <= 0) {
+      return res.status(400).json({ error: 'Item quantity must be a positive number' });
+    }
+    if (!item.product || typeof item.product.price !== 'number' || item.product.price < 0) {
+      return res.status(400).json({ error: 'Invalid product information in item' });
+    }
+  }
+
   const currentUser = await User.findOne({ id: req.user.id });
   if (!currentUser) {
     return res.status(401).json({ error: 'Invalid user' });
@@ -129,8 +143,8 @@ export const createTransaction = async (req, res) => {
           const lines = toNotify.map((e) => `${e.type === 'out' ? 'Out of stock' : 'Low stock'}: ${e.name} (SKU: ${e.sku}) – stock: ${e.stock}`);
           const smsBody = `Inventory alert:\n${lines.join('\n')}`;
           const emailHtml = `<div style="font-family:Arial,sans-serif"><p>Inventory alert:</p><ul>${toNotify.map((e) => `<li>${e.type === 'out' ? 'Out of stock' : 'Low stock'}: ${e.name} (SKU: ${e.sku}) – stock: ${e.stock}</li>`).join('')}</ul></div>`;
-          try { if (wantsEmail && emailTo) { await sendGenericEmail(emailTo, 'Inventory alert', emailHtml); } } catch {}
-          try { if (wantsSMS && smsTo) { await sendSMS(smsTo, smsBody); } } catch {}
+          try { if (wantsEmail && emailTo) { await sendGenericEmail(emailTo, 'Inventory alert', emailHtml); } } catch (err) { console.error('Failed to send transaction inventory alert email:', err); }
+          try { if (wantsSMS && smsTo) { await sendSMS(smsTo, smsBody); } } catch (err) { console.error('Failed to send transaction inventory alert SMS:', err); }
         }
       }
 

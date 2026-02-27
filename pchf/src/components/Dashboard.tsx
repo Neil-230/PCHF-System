@@ -48,7 +48,8 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
       apiService
         .getPendingAdmins()
         .then(({ pending }) => setPendingAdmins(pending))
-        .catch(() => {
+        .catch((err) => {
+          console.error('Failed to fetch pending admins:', err);
           const pending = AuthService.getPendingAdmins();
           setPendingAdmins(pending);
         });
@@ -119,7 +120,10 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
     apiService
       .getDashboardMetrics()
       .then((data) => setMetrics(data))
-      .catch(() => setMetrics(null));
+      .catch((err) => {
+        console.error('Failed to fetch dashboard metrics:', err);
+        setMetrics(null);
+      });
   }, [transactions]);
 
   // Fetch products for fallback and other computations
@@ -127,7 +131,9 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
     apiService
       .getProducts()
       .then(({ products }) => setProducts(products))
-      .catch(() => {});
+      .catch((err) => {
+        console.error('Failed to fetch products:', err);
+      });
   }, []);
 
   useEffect(() => {

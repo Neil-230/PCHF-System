@@ -67,6 +67,36 @@ const getDriveClient = async () => {
   return google.drive({ version: 'v3', auth: oAuth2Client });
 };
 
+// Validate if the stored refresh token is still valid
+export const validateDriveToken = async () => {
+  try {
+    const settings = await SystemSettings.findOne({ id: 'system' });
+    if (!settings?.driveRefreshToken) {
+      return { valid: false, status: 'not_connected', message: 'Google Drive is not connected' };
+    }
+    
+    const oAuth2Client = getOAuth2Client();
+    oAuth2Client.setCredentials({ refresh_token: settings.driveRefreshToken });
+    
+    // Attempt to refresh the access token to validate the refresh token
+    try {
+      const { credentials } = await oAuth2Client.refreshAccessToken();
+      return { valid: true, status: 'valid', message: 'Google Drive token is valid', expiresAt: credentials.expiry_date };
+    } catch (refreshErr) {
+      const error = refreshErr.message || String(refreshErr);
+      if (error.includes('invalid_grant')) {
+        // Token is revoked or expired
+        return { valid: false, status: 'invalid_grant', message: 'Drive connection expired. Please re-authorize.' };
+      } else if (error.includes('invalid_client')) {
+        return { valid: false, status: 'invalid_client', message: 'OAuth credentials are not valid. Contact support.' };
+      }
+      return { valid: false, status: 'unknown_error', message: error };
+    }
+  } catch (err) {
+    return { valid: false, status: 'error', message: err.message || 'Failed to validate Drive token' };
+  }
+};
+
 const generateBackupPayload = async () => {
   const [users, products, transactions, pending, sys] = await Promise.all([
     User.find({}).lean(),
@@ -88,32 +118,67 @@ const generateBackupPayload = async () => {
 export const uploadBackup = async () => {
   const settings = await SystemSettings.findOne({ id: 'system' });
   if (!settings?.driveRefreshToken) {
-    throw new Error('Google Drive is not connected');
+    const error = new Error('Google Drive is not connected');
+    error.code = 'NOT_CONNECTED';
+    throw error;
   }
-  const drive = await getDriveClient();
-  const payload = await generateBackupPayload();
-  const json = JSON.stringify(payload, null, 2);
+  
+  try {
+    const drive = await getDriveClient();
+    const payload = await generateBackupPayload();
+    const json = JSON.stringify(payload, null, 2);
 
-  const name = `pch-backup-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
-  const fileMetadata = {
-    name,
-    mimeType: 'application/json',
-    ...(settings.driveFolderId ? { parents: [settings.driveFolderId] } : {}),
-  };
+    const name = `pch-backup-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+    const fileMetadata = {
+      name,
+      mimeType: 'application/json',
+      ...(settings.driveFolderId ? { parents: [settings.driveFolderId] } : {}),
+    };
 
-  const media = {
-    mimeType: 'application/json',
-    body: Readable.from([json]),
-  };
+    const media = {
+      mimeType: 'application/json',
+      body: Readable.from([json]),
+    };
 
-  const res = await drive.files.create({ requestBody: fileMetadata, media, fields: 'id, name' });
+    const res = await drive.files.create({ requestBody: fileMetadata, media, fields: 'id, name' });
 
-  settings.backupLastRun = new Date();
-  settings.backupLastError = '';
-  settings.updatedAt = new Date();
-  await saveSystemSettings(settings, 'Conflict: system settings were updated concurrently while recording backup completion. Please retry.');
+    settings.backupLastRun = new Date();
+    settings.backupLastError = '';
+    settings.updatedAt = new Date();
+    await saveSystemSettings(settings, 'Conflict: system settings were updated concurrently while recording backup completion. Please retry.');
 
-  return res.data;
+    return res.data;
+  } catch (err) {
+    // Detect invalid_grant and provide clear error message
+    const errorMsg = err.message || String(err);
+    let userFriendlyError = errorMsg;
+    let code = 'BACKUP_ERROR';
+    
+    if (errorMsg.includes('invalid_grant')) {
+      userFriendlyError = 'Drive connection expired. Please re-authorize Google Drive in Settings.';
+      code = 'INVALID_GRANT';
+    } else if (errorMsg.includes('invalid_client')) {
+      userFriendlyError = 'OAuth credentials are invalid. Contact support.';
+      code = 'INVALID_CLIENT';
+    } else if (errorMsg.includes('not connected')) {
+      userFriendlyError = 'Google Drive is not connected';
+      code = 'NOT_CONNECTED';
+    }
+    
+    // Update settings with error info for frontend display
+    try {
+      const currentSettings = await SystemSettings.findOne({ id: 'system' });
+      currentSettings.backupLastError = userFriendlyError;
+      currentSettings.updatedAt = new Date();
+      await saveSystemSettings(currentSettings, 'Conflict while recording backup error.');
+    } catch (saveErr) {
+      console.error('Failed to record backup error state:', saveErr);
+    }
+    
+    const error = new Error(userFriendlyError);
+    error.code = code;
+    throw error;
+  }
 };
 
 export const ensureFolder = async (folderName = 'PCH_Backups') => {

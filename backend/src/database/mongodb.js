@@ -281,12 +281,89 @@ export const Transaction = mongoose.model('Transaction', transactionSchema);
 export const SystemSettings = mongoose.model('SystemSettings', systemSettingsSchema);
 export const UserActivityLog = mongoose.model('UserActivityLog', userActivityLogSchema);
 
-export const connectDB = async () => {
-  try {
-    await mongoose.connect(process.env.MONGODB_URI);
-    console.log('MongoDB connected successfully');
-  } catch (err) {
-    console.error('MongoDB connection error:', err);
-    process.exit(1);
-  }
+// MongoDB connection with resilience: retry logic, pool configuration, and event monitoring
+const MONGO_CONNECT_OPTIONS = {
+  // Connection pool configuration
+  maxPoolSize: 20,           // Max concurrent connections
+  minPoolSize: 5,            // Min connections to maintain
+  // Timeout settings
+  serverSelectionTimeoutMS: 5000,  // Time to wait for server selection
+  socketTimeoutMS: 45000,          // Socket timeout for idle connections
+  connectTimeoutMS: 10000,         // Time to establish initial connection
+  // Automatic retries (driver-level)
+  retryWrites: true,               // Retry failed writes
+  retryReads: true,                // Retry failed reads
+  // Connection monitoring
+  heartbeatFrequencyMS: 30000,     // Check server health every 30s
+  monitorCommands: false,          // Don't log all commands (verbose)
 };
+
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+export const connectDB = async () => {
+  const maxRetries = 5;
+  let lastError;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      if (!process.env.MONGODB_URI) {
+        throw new Error('MONGODB_URI environment variable is not set. Please configure it in your .env file.');
+      }
+
+      console.log(`[MongoDB] Connection attempt ${attempt}/${maxRetries}...`);
+      await mongoose.connect(process.env.MONGODB_URI, MONGO_CONNECT_OPTIONS);
+      console.log('[MongoDB] Connected successfully');
+
+      // Setup connection event listeners for runtime monitoring
+      setupConnectionEventListeners();
+      return; // Success
+    } catch (err) {
+      lastError = err;
+      if (attempt < maxRetries) {
+        // Exponential backoff: 1s, 2s, 4s, 8s, 16s
+        const delayMs = Math.pow(2, attempt - 1) * 1000;
+        console.error(`[MongoDB] Connection failed (attempt ${attempt}/${maxRetries}):`, err.message);
+        console.log(`[MongoDB] Retrying in ${delayMs}ms...`);
+        await sleep(delayMs);
+      }
+    }
+  }
+
+  // All retries exhausted
+  console.error('[MongoDB] Failed to connect after all retry attempts:', lastError);
+  process.exit(1);
+};
+
+// Setup event listeners for runtime connection monitoring
+function setupConnectionEventListeners() {
+  const connection = mongoose.connection;
+
+  connection.on('connected', () => {
+    console.log('[MongoDB] Connected to database');
+  });
+
+  connection.on('error', (err) => {
+    console.error('[MongoDB] Connection error:', err.message);
+    // Note: MongoDB driver handles automatic reconnection for transient errors
+  });
+
+  connection.on('disconnected', () => {
+    console.warn('[MongoDB] Disconnected from database');
+  });
+
+  connection.on('reconnected', () => {
+    console.log('[MongoDB] Reconnected to database');
+  });
+
+  // Gracefully close connection on process termination
+  process.on('SIGINT', async () => {
+    try {
+      console.log('[MongoDB] Closing connection on process exit...');
+      await mongoose.connection.close();
+      process.exit(0);
+    } catch (err) {
+      console.error('[MongoDB] Error closing connection:', err);
+      process.exit(1);
+    }
+  });
+}

@@ -111,8 +111,8 @@ export const updateProduct = async (req, res) => {
         const typeText = isOut ? 'Out of stock' : 'Low stock';
         const smsBody = `Inventory alert:\n${typeText}: ${product.name} (SKU: ${product.sku}) – stock: ${product.stock}`;
         const emailHtml = `<div style="font-family:Arial,sans-serif"><p>Inventory alert:</p><ul><li>${typeText}: ${product.name} (SKU: ${product.sku}) – stock: ${product.stock}</li></ul></div>`;
-        try { if (wantsEmail && emailTo) { await sendGenericEmail(emailTo, 'Inventory alert', emailHtml); } } catch {}
-        try { if (wantsSMS && smsTo) { await sendSMS(smsTo, smsBody); } } catch {}
+        try { if (wantsEmail && emailTo) { await sendGenericEmail(emailTo, 'Inventory alert', emailHtml); } } catch (err) { console.error('Failed to send inventory alert email:', err); }
+        try { if (wantsSMS && smsTo) { await sendSMS(smsTo, smsBody); } } catch (err) { console.error('Failed to send inventory alert SMS:', err); }
       }
     }
   }

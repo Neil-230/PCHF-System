@@ -17,8 +17,7 @@ export function GoogleCallback() {
   const didToast = useRef(false);
 
   useEffect(() => {
-    const token = searchParams.get('token');
-    const userStr = searchParams.get('user');
+    const token_set = searchParams.get('token_set') === 'true';
     const signupRequired = searchParams.get('signup') === 'required';
     const isPending = searchParams.get('pending') === '1';
     const errorCode = searchParams.get('error');
@@ -38,45 +37,91 @@ export function GoogleCallback() {
       return;
     }
 
-    if (token && userStr) {
-      try {
-        const user = JSON.parse(decodeURIComponent(userStr));
-        apiService.setToken(token);
-        if(!didToast.current) {
-          toast.success('Login successful!');
-          didToast.current = true;
+    if (token_set) {
+      // Token is in httpOnly cookie, now fetch current user to confirm and store in localStorage
+      (async () => {
+        try {
+          // Call getCurrentUser - it will use the httpOnly cookie automatically via credentials: 'include'
+          const { user } = await apiService.getCurrentUser();
+          
+          if (!didToast.current) {
+            toast.success('Login successful!');
+            didToast.current = true;
+          }
+
+          // Store a flag so App knows we just logged in and user is authenticated
+          // Even though we don't have explicit token in localStorage, the httpOnly cookie will be sent
+          localStorage.setItem('googleOAuthComplete', 'true');
+          localStorage.setItem('currentUser', JSON.stringify(user));
+          
+          navigate('/dashboard', { replace: true });
+        } catch (err: any) {
+          console.error('Error fetching current user after Google auth:', err);
+          
+          // Fallback: extract userData from the userData cookie set by backend
+          try {
+            const cookieValue = document.cookie
+              .split('; ')
+              .find((row) => row.startsWith('userData='))
+              ?.split('=')[1];
+            
+            if (cookieValue) {
+              const userData = JSON.parse(decodeURIComponent(cookieValue));
+              if (!didToast.current) {
+                toast.success('Login successful!');
+                didToast.current = true;
+              }
+              
+              // Store fallback data
+              localStorage.setItem('googleOAuthComplete', 'true');
+              localStorage.setItem('currentUser', JSON.stringify(userData));
+              
+              navigate('/dashboard', { replace: true });
+              return;
+            }
+          } catch (fallbackErr) {
+            console.error('Error processing fallback userData:', fallbackErr);
+          }
+
+          // If we get here, something went wrong
+          if (!didToast.current) {
+            toast.error('Authentication failed. Please try again.');
+            didToast.current = true;
+          }
+          navigate('/login', { replace: true });
         }
-        navigate('/dashboard', { replace: true });
-      } catch (err) {
-        console.error('Error parsing Google callback:', err);
-        if(!didToast.current) {
-          toast.error('Authentication failed');
-        }
-        didToast.current = true;
-        navigate('/login', { replace: true });
-      }
+      })();
       return;
     }
 
     if (isPending) {
-        if (!didToast.current){
-          toast.error('Your account is awaiting owner/admin approval. Please try again later.');
-        }
+      if (!didToast.current) {
+        toast.error('Your account is awaiting owner/admin approval. Please try again later.');
+      }
       didToast.current = true;
       navigate('/login', { replace: true });
       return;
     }
 
-    if (signupRequired && userStr) {
+    if (signupRequired) {
+      // Get oauth_profile from cookie for signup
+      const profileCookie = document.cookie
+        .split('; ')
+        .find((row) => row.startsWith('oauth_profile='))
+        ?.split('=')[1];
+      
       try {
-        const minimal = JSON.parse(decodeURIComponent(userStr));
-        setSocialData(minimal);
+        const profile = profileCookie ? JSON.parse(decodeURIComponent(profileCookie)) : null;
+        if (profile) {
+          setSocialData(profile);
+        }
         setShowRoleModal(true);
-        if(!didToast.current) {
+        if (!didToast.current) {
           toast.info('Almost there! Choose a role so we can finish creating your account.');
         }
         didToast.current = true;
-      } catch {
+      } catch (err) {
+        console.error('Error parsing signup profile:', err);
         navigate('/login', { replace: true });
       }
       return;

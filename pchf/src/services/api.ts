@@ -48,28 +48,34 @@ class ApiService {
     if (existingToken) return existingToken;
     if (this.csrfPromise) return this.csrfPromise;
 
-    this.csrfPromise = fetch(`${API_BASE_URL}/csrf-token`, {
-      method: 'GET',
-      credentials: 'include',
-    })
-      .then(async (res) => {
+    // Create the fetch promise without finally - prevents race condition
+    // Once token is cached, it won't fetch again
+    this.csrfPromise = (async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/csrf-token`, {
+          method: 'GET',
+          credentials: 'include',
+        });
+        
         if (!res.ok) {
           const errText = await res.text().catch(() => 'Unable to fetch CSRF token');
           throw new Error(errText || 'Unable to fetch CSRF token');
         }
-        return res.json();
-      })
-      .then((data) => {
+        
+        const data = await res.json();
         const token = typeof data?.csrfToken === 'string' ? data.csrfToken : null;
         if (!token) {
           throw new Error('Invalid CSRF token response');
         }
+        
         this.csrfToken = token;
         return token;
-      })
-      .finally(() => {
+      } catch (err) {
+        // Clear the promise only on error so retry is possible
         this.csrfPromise = null;
-      });
+        throw err;
+      }
+    })();
 
     return this.csrfPromise;
   }
@@ -367,6 +373,10 @@ class ApiService {
   // ============ BACKUP (GOOGLE DRIVE) ============
   async getDriveStatus(): Promise<{ connected: boolean; backupEnabled: boolean; backupLastRun: string | null; backupLastError: string; driveFolderId: string | null }> {
     return this.request('/settings/drive/status');
+  }
+
+  async validateDriveToken(): Promise<{ valid: boolean; status: string; message: string; expiresAt?: number }> {
+    return this.request('/settings/drive/validate-token');
   }
 
   async getDriveAuthUrl(): Promise<{ url: string }> {

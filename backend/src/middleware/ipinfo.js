@@ -75,8 +75,9 @@ export async function ipinfoEnricher(req, _res, next) {
     }
 
     return next();
-  } catch {
-    // swallow errors to avoid blocking requests
+  } catch (err) {
+    // swallow errors to avoid blocking requests, but log for debugging
+    console.debug('IPInfo lookup failed:', err.message);
     return next();
   }
 }
