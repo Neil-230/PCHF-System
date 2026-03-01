@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import type { Product } from "../types";
 import type { User } from "../types/auth";
 import { mockProducts } from "../data/mockData";
-import { Plus, Edit, Search, Package, Trash2 } from "lucide-react";
+import { Plus, Edit, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 import { FileDown } from "lucide-react";
