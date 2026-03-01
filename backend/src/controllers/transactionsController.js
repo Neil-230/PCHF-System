@@ -156,18 +156,27 @@ export const createTransaction = async (req, res) => {
         settingsDoc = new SystemSettings({ id: 'system' });
       }
 
-      let nextNumber = Number.isFinite(settingsDoc.nextTransactionNumber)
-        ? settingsDoc.nextTransactionNumber
-        : 1;
-      let transactionId = `t_${String(nextNumber).padStart(4, '0')}`;
+      // ============================================
+      // FIXED: Use atomic counter instead of while loop
+      // This avoids the infinite loop issue when there are many transactions
+      // ============================================
+      
+      // Atomic increment and get next number
+      const counterDoc = await SystemSettings.findOneAndUpdate(
+        { id: 'system' },
+        { 
+          $inc: { nextTransactionNumber: 1 },
+          $setOnInsert: { nextTransactionNumber: 1, createdAt: new Date() }
+        },
+        { 
+          new: true,
+          upsert: true,
+          session
+        }
+      );
 
-      while (await Transaction.exists({ id: transactionId }).session(session)) {
-        nextNumber += 1;
-        transactionId = `t_${String(nextNumber).padStart(4, '0')}`;
-      }
-
-      settingsDoc.nextTransactionNumber = nextNumber + 1;
-      await settingsDoc.save({ session });
+      const nextNumber = counterDoc.nextTransactionNumber;
+      const transactionId = `t_${String(nextNumber).padStart(4, '0')}`;
 
       txn = new Transaction({
         id: transactionId,
@@ -211,12 +220,26 @@ export const createTransaction = async (req, res) => {
 
     res.status(201).json({ message: 'Transaction created', transaction: txn.toJSON() });
   } catch (err) {
+    console.error('Transaction creation error:', {
+      message: err?.message,
+      code: err?.code,
+      codeName: err?.codeName,
+      name: err?.name,
+      timestamp: new Date().toISOString(),
+    });
+    
     if (err && (err.name === 'VersionError' || err.codeName === 'WriteConflict')) {
       return res.status(409).json({ error: 'Conflict: inventory was updated concurrently. Please retry.' });
     }
     throw err;
   } finally {
-    session.endSession();
+    if (session) {
+      try {
+        await session.endSession();
+      } catch (sessionError) {
+        console.error('Error ending session:', sessionError.message);
+      }
+    }
   }
 };
 

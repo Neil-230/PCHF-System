@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { AuthService, defaultPasswords } from "../data/authData";
 import apiService from "../services/api";
+import { useToast } from "../hooks";
 import { Save } from "lucide-react";
 import { Store, Shield, Database, Bell } from "lucide-react";
 
@@ -77,6 +78,8 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user,
   const currentRole = user?.role ?? "unknown";
   const isCashier = currentRole === "cashier";
   const canAccessStoreSettings = currentRole === "admin" || currentRole === "owner";
+  const dedupToast = useToast();
+  
   /* ---------- States ---------- */
   const [signupsOpen, setSignupsOpen] = useState<boolean | null>(null);
   const [storeSettings, setStoreSettings] = useState<StoreSettings>(() => {
@@ -164,7 +167,10 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user,
           if (s.connected) {
             await validateDriveTokenStatus();
           }
-        } catch {}
+        } catch (err) {
+          // Silent fail - status already initialized
+          console.error('Failed to refresh drive status:', err);
+        }
       };
       refresh();
     }
@@ -182,7 +188,10 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user,
           setDriveStatus(s);
           setDriveTokenValid(true);
           setDriveTokenStatus('valid');
-        } catch {}
+        } catch (err) {
+          console.error('Failed to get drive status after connection:', err);
+          // Toast already shown above for successful connection
+        }
       })();
     } else if (st === 'error') {
       toast.error('Google Drive connection failed');
@@ -197,7 +206,7 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user,
       const { url } = await apiService.getDriveAuthUrl();
       window.location.href = url;
     } catch (e: any) {
-      toast.error(e?.message || 'Failed to initiate Google Drive connection');
+      dedupToast.error(e?.message || 'Failed to initiate Google Drive connection');
     }
   };
 
@@ -208,7 +217,7 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user,
       setDriveTokenStatus(validation.status);
       
       if (!validation.valid && validation.status === 'invalid_grant') {
-        toast.error('Drive connection expired. Please re-authorize.');
+        dedupToast.error('Drive connection expired. Please re-authorize.');
       }
     } catch (e: any) {
       console.error('Token validation error:', e);
@@ -224,7 +233,7 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user,
       setDriveStatus((prev) => ({ ...prev, driveFolderId }));
       toast.success('Backup folder is ready');
     } catch (e: any) {
-      toast.error(e?.message || 'Failed to ensure folder');
+      dedupToast.error(e?.message || 'Failed to ensure folder');
     } finally {
       setLoadingDrive(false);
     }
@@ -244,13 +253,13 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user,
       const msg = e?.message || 'Backup failed';
       setDriveStatus((prev) => ({ ...prev, backupLastError: msg }));
       
-      // Check if it's an invalid_grant error
+      // Check if it's an invalid_grant error (don't show toast - handled by validateDriveTokenStatus)
       if (msg.includes('expired') || msg.includes('re-authorize')) {
         setDriveTokenValid(false);
         setDriveTokenStatus('invalid_grant');
+      } else {
+        dedupToast.error(msg);
       }
-      
-      toast.error(msg);
     } finally {
       setLoadingDrive(false);
     }
@@ -284,7 +293,7 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user,
       localStorage.setItem("storeSettings", JSON.stringify(storeSettings));
       toast.success("Settings saved successfully!");
     } catch (e: any) {
-      toast.error(e?.message || "Failed to save settings");
+      dedupToast.error(e?.message || "Failed to save settings");
       // still persist locally for POS fallback
       localStorage.setItem("storeSettings", JSON.stringify(storeSettings));
     }

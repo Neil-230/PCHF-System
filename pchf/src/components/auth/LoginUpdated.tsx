@@ -96,8 +96,8 @@ export function LoginUpdated({ onLogin, onSwitchToSignUp }: LoginProps) {
       setResetError("");
       toast.success('Verification code sent to your email');
     } catch (err: any) {
-      setResetError(err.message || 'Failed to send code');
-      toast.error(err.message || 'Failed to send code');
+      const errorMsg = err.message || 'Failed to send code';
+      setResetError(errorMsg); // Show in UI, not toast
     } finally {
       setResetIsLoading(false);
     }
@@ -116,8 +116,8 @@ export function LoginUpdated({ onLogin, onSwitchToSignUp }: LoginProps) {
       setResetError("");
       toast.success('Code verified');
     } catch (err: any) {
-      setResetError(err.message || 'Invalid code');
-      toast.error(err.message || 'Invalid code');
+      const errorMsg = err.message || 'Invalid code';
+      setResetError(errorMsg); // Show in UI, not toast
     } finally {
       setResetIsLoading(false);
     }

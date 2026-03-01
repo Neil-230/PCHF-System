@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { PermissionGroupDescriptor, PermissionOverride, User } from "../types/auth";
 import apiService from "../services/api";
 import { toast } from "sonner";
+import { useToast } from "../hooks";
 import { Shield, UserCheck, UserX, Loader2 } from "lucide-react";
 
 interface PermissionsManagerProps {
@@ -52,6 +53,7 @@ const getPermissionKey = (resource: string, action: string, possession = "any") 
   `${resource}:${action}:${possession}`;
 
 export function PermissionsManager({ currentUser, onNavigate }: PermissionsManagerProps) {
+  const dedupToast = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [users, setUsers] = useState<User[]>([]);
   const [search, setSearch] = useState("");
@@ -68,11 +70,11 @@ export function PermissionsManager({ currentUser, onNavigate }: PermissionsManag
       const { users } = await apiService.getAllUsers();
       setUsers(users);
     } catch (err: any) {
-      toast.error(err?.message || "Failed to load users");
+      dedupToast.error(err?.message || "Failed to load users");
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [dedupToast]);
 
   const loadCatalog = useCallback(async () => {
     setIsCatalogLoading(true);
@@ -80,11 +82,11 @@ export function PermissionsManager({ currentUser, onNavigate }: PermissionsManag
       const { catalog } = await apiService.getPermissionCatalog();
       setCatalog(catalog);
     } catch (err: any) {
-      toast.error(err?.message || "Failed to load permission catalog");
+      dedupToast.error(err?.message || "Failed to load permission catalog");
     } finally {
       setIsCatalogLoading(false);
     }
-  }, []);
+  }, [dedupToast]);
 
   useEffect(() => {
     if (currentUser.role !== "owner") return;
@@ -109,7 +111,7 @@ export function PermissionsManager({ currentUser, onNavigate }: PermissionsManag
   const handleRoleUpdate = async (user: User, role: RoleKey) => {
     if (role === user.role) return;
     if (role !== "admin" && role !== "cashier") {
-      toast.error("Only admin or cashier roles can be assigned.");
+      dedupToast.error("Only admin or cashier roles can be assigned.");
       return;
     }
     const confirmed = window.confirm(`Grant ${role.toUpperCase()} permissions to ${user.name}?`);
@@ -120,7 +122,7 @@ export function PermissionsManager({ currentUser, onNavigate }: PermissionsManag
       toast.success(`${user.name} is now ${role}`);
       loadUsers();
     } catch (err: any) {
-      toast.error(err?.message || "Failed to update user role");
+      dedupToast.error(err?.message || "Failed to update user role");
     } finally {
       setUpdatingUserId(null);
     }
@@ -170,7 +172,7 @@ export function PermissionsManager({ currentUser, onNavigate }: PermissionsManag
       closeOverrideManager();
       loadUsers();
     } catch (err: any) {
-      toast.error(err?.message || "Failed to update overrides");
+      dedupToast.error(err?.message || "Failed to update overrides");
     } finally {
       setSavingOverrides(false);
     }

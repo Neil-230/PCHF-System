@@ -117,7 +117,12 @@ export const approveAdmin = async (req, res) => {
   }
 
   const email = req.params.email;
-  const filter = emailHashFilter(email);
+  if (!email || typeof email !== 'string') {
+    return res.status(400).json({ error: 'Email is required' });
+  }
+
+  const sanitizedEmail = String(email).trim().toLowerCase();
+  const filter = emailHashFilter(sanitizedEmail);
   const adminToApprove = await PendingAdmin.findOne(filter);
   if (!adminToApprove) {
     return res.status(404).json({ error: 'Pending admin not found' });
@@ -125,12 +130,22 @@ export const approveAdmin = async (req, res) => {
 
   const roleToApprove = adminToApprove.role || 'admin';
 
-  let user = await User.findOne({ email });
+  let user = await User.findOne(filter, { isArchived: false });
   if (user) {
-    user.role = roleToApprove;
-    if (!user.isVerified) user.isVerified = true;
-    await user.save();
+    // Update existing user atomically
+    user = await User.findOneAndUpdate(
+      filter,
+      {
+        $set: {
+          role: roleToApprove,
+          isVerified: true,
+          updatedAt: new Date()
+        }
+      },
+      { new: true }
+    );
   } else {
+    // Create new user
     user = new User({
       id: adminToApprove.id,
       name: adminToApprove.name,
@@ -143,7 +158,16 @@ export const approveAdmin = async (req, res) => {
       googleId: adminToApprove.googleId || undefined,
       facebookId: adminToApprove.facebookId || undefined,
     });
-    await user.save();
+    try {
+      await user.save();
+    } catch (err) {
+      if (err.code === 11000) {
+        // Another request created it, fetch it
+        user = await User.findOne(filter);
+      } else {
+        throw err;
+      }
+    }
   }
 
   await PendingAdmin.deleteOne(filter);
@@ -157,15 +181,19 @@ export const declineAdmin = async (req, res) => {
   }
 
   const email = req.params.email;
-  const filter = emailHashFilter(email);
+  if (!email || typeof email !== 'string') {
+    return res.status(400).json({ error: 'Email is required' });
+  }
+
+  const sanitizedEmail = String(email).trim().toLowerCase();
+  const filter = emailHashFilter(sanitizedEmail);
   const pending = await PendingAdmin.findOne(filter);
   if (!pending) {
     return res.status(404).json({ error: 'Pending admin not found' });
   }
 
   await pending.deleteOne();
-
-  await User.deleteOne({ email });
+  await User.deleteOne(filter);
 
   res.json({ message: 'Sign-up request declined and account deleted' });
 };
@@ -258,17 +286,39 @@ export const requestDeletion = async (req, res) => {
   const user = await User.findOne({ id: req.user.id, isArchived: false });
   if (!user) return res.status(404).json({ error: 'User not found' });
 
-  if (!user.deletionScheduledFor) {
-    const now = new Date();
-    const scheduled = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-    user.deletionRequestedAt = now;
-    user.deletionScheduledFor = scheduled;
-    await user.save();
+  if (user.deletionScheduledFor) {
+    // Already scheduled, return existing date
+    const ms = user.deletionScheduledFor.getTime() - Date.now();
+    const daysRemaining = Math.max(0, Math.ceil(ms / (24 * 60 * 60 * 1000)));
+    return res.json({ scheduledFor: user.deletionScheduledFor.toISOString(), daysRemaining, alreadyScheduled: true });
   }
 
-  const ms = user.deletionScheduledFor.getTime() - Date.now();
+  // Schedule deletion atomically using findOneAndUpdate
+  const now = new Date();
+  const scheduled = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+  
+  const updated = await User.findOneAndUpdate(
+    { id: req.user.id, isArchived: false, deletionScheduledFor: null },
+    {
+      $set: {
+        deletionRequestedAt: now,
+        deletionScheduledFor: scheduled,
+      }
+    },
+    { new: true }
+  );
+
+  if (!updated) {
+    // Another request beat us to it, fetch current state
+    const current = await User.findOne({ id: req.user.id });
+    const ms = current.deletionScheduledFor.getTime() - Date.now();
+    const daysRemaining = Math.max(0, Math.ceil(ms / (24 * 60 * 60 * 1000)));
+    return res.json({ scheduledFor: current.deletionScheduledFor.toISOString(), daysRemaining });
+  }
+
+  const ms = updated.deletionScheduledFor.getTime() - Date.now();
   const daysRemaining = Math.max(0, Math.ceil(ms / (24 * 60 * 60 * 1000)));
-  res.json({ scheduledFor: user.deletionScheduledFor.toISOString(), daysRemaining });
+  res.json({ scheduledFor: updated.deletionScheduledFor.toISOString(), daysRemaining });
 };
 
 export const cancelDeletion = async (req, res) => {

@@ -13,7 +13,13 @@ loadRecaptcha();
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
-      <Toaster richColors position="top-center"/>
+      <Toaster 
+        richColors 
+        position="top-right"
+        visibleToasts={3}
+        closeButton
+        containerClassName="toaster-container"
+      />
       <Routes>
         <Route path="/" element={<App />} />
         <Route path="/login" element={<App />} />

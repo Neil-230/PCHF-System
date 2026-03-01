@@ -1,6 +1,22 @@
 import type { PermissionGroupDescriptor, PermissionOverride } from '../types/auth';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+// Initialize API URL with validation
+const initializeApiUrl = (): string => {
+  const envUrl = import.meta.env.VITE_API_URL;
+  
+  if (!envUrl) {
+    const defaultUrl = 'http://localhost:4000/api';
+    console.warn(
+      '[API Config] VITE_API_URL not configured. Using default:', defaultUrl,
+      '\nFor production, set VITE_API_URL in your environment variables.'
+    );
+    return defaultUrl;
+  }
+  
+  return envUrl;
+};
+
+const API_BASE_URL = initializeApiUrl();
 
 export interface AuthResponse {
   message: string;

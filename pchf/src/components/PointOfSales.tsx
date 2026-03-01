@@ -120,11 +120,12 @@ export function PointOfSale({ onTransactionComplete, user }: PointOfSaleProps) {
   };
 
   const clearCart = () => {
-    if (cart.length === 0) return toast.error("Cart is empty");
+    if (cart.length === 0) {
+      toast.error("Cart is empty");
+      return;
+    }
     setCart([]);
     toast.success("Cart successfully cleared");
-
-
   };
 
   const filteredProducts = products.filter((product) => {
@@ -161,7 +162,7 @@ export function PointOfSale({ onTransactionComplete, user }: PointOfSaleProps) {
     return () => {
       window.removeEventListener("keydown", handleEnter);
     };
-  }, [isNameDialogOpen, handleNameSubmit]);
+  }, [isNameDialogOpen, customerName, customerContact, customerAddress])
 
 
   const addToCart = (product: Product) => {
@@ -213,10 +214,20 @@ export function PointOfSale({ onTransactionComplete, user }: PointOfSaleProps) {
   const total = subtotal + tax + deliveryFee;
 
   const handleConfirmPayment = async () => {
-    if (cart.length === 0) return toast.error("Cart is empty");
+    // Validate all fields before showing any toast
+    if (cart.length === 0) {
+      toast.error("Cart is empty");
+      return;
+    }
     const cash = parseFloat(cashAmount);
-    if (isNaN(cash) || cash <= 0) return toast.error("Enter valid cash");
-    if (cash < total) return toast.error("Insufficient cash"); //error bellow than total
+    if (isNaN(cash) || cash <= 0) {
+      toast.error("Enter valid cash amount");
+      return;
+    }
+    if (cash < total) {
+      toast.error("Insufficient cash");
+      return;
+    } //error bellow than total
 
     const change = cash - total;
     const isDelivery = deliveryType === "Delivery";

@@ -1,5 +1,91 @@
 // Entry point: wires environment variables, Express middleware, Passport, CSRF, routes, and schedulers.
 // Useful when tracing request flow or startup logic.
+
+// ============================================
+// CRITICAL: Handle unhandled exceptions and rejections
+// ============================================
+process.on('uncaughtException', (error) => {
+  console.error('❌ UNCAUGHT EXCEPTION - Server must restart:', {
+    message: error.message,
+    stack: error.stack,
+    timestamp: new Date().toISOString()
+  });
+  
+  try {
+    // Attempt to close DB connection (async operation, but don't wait)
+    import('mongoose').then(({ default: mongoose }) => {
+      if (mongoose.connection.readyState !== 0) {
+        mongoose.connection.close(() => {
+          console.log('✓ Database connection closed');
+        });
+      }
+    }).catch(e => {
+      console.error('Error importing mongoose:', e.message);
+    });
+  } catch (e) {
+    console.error('Error closing database:', e.message);
+  }
+  
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ UNHANDLED PROMISE REJECTION:', {
+    reason: reason instanceof Error ? reason.message : String(reason),
+    timestamp: new Date().toISOString()
+  });
+  
+  if (reason instanceof Error) {
+    console.error('Stack trace:', reason.stack);
+  }
+});
+
+process.on('SIGTERM', () => {
+  console.log('⚠️  SIGTERM received - initiating graceful shutdown...');
+  try {
+    import('mongoose').then(({ default: mongoose }) => {
+      if (mongoose.connection.readyState !== 0) {
+        mongoose.connection.close(() => {
+          console.log('✓ Database connection closed gracefully');
+        });
+      }
+    }).catch(e => {
+      console.error('Error importing mongoose:', e.message);
+    });
+  } catch (error) {
+    console.error('Error during graceful shutdown:', error.message);
+  }
+  
+  setTimeout(() => {
+    process.exit(0);
+  }, 5000);
+});
+
+process.on('SIGINT', () => {
+  console.log('⚠️  SIGINT received - initiating graceful shutdown...');
+  try {
+    import('mongoose').then(({ default: mongoose }) => {
+      if (mongoose.connection.readyState !== 0) {
+        mongoose.connection.close(() => {
+          console.log('✓ Database connection closed gracefully');
+        });
+      }
+    }).catch(e => {
+      console.error('Error importing mongoose:', e.message);
+    });
+  } catch (error) {
+    console.error('Error during graceful shutdown:', error.message);
+  }
+  
+  setTimeout(() => {
+    process.exit(0);
+  }, 5000);
+});
+
+// ============================================
+// END OF EXCEPTION HANDLERS
+// ============================================
+
 // Load environment variables FIRST before any other imports
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
@@ -70,6 +156,25 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+
+// ============================================
+// Request timeout middleware
+// ============================================
+app.use((req, res, next) => {
+  req.setTimeout(30000);   // 30 seconds request timeout
+  res.setTimeout(30000);   // 30 seconds response timeout
+  
+  const startTime = Date.now();
+  res.on('finish', () => {
+    const duration = Date.now() - startTime;
+    if (duration > 5000) {
+      console.warn(`⚠️  Slow request: ${req.method} ${req.path} took ${duration}ms`);
+    }
+  });
+  
+  next();
+});
+
 app.use(limiter);
 app.use(ipinfoEnricher);
 app.use((req, res, next) => {

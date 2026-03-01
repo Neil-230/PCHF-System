@@ -84,11 +84,11 @@ export function InventoryManagement({ user }: { user?: User }) {
       setIsAddDialogOpen(false);
       toast.success("Product added successfully");
     } catch (e: any) {
-      if (e?.status === 409) {
-        toast.error("Data changed by someone else. Please refresh and try again.");
-        return;
-      }
-      toast.error(e?.message || "Failed to add product. Please try again.");
+      // Show only one toast for the error
+      const errorMsg = e?.status === 409
+        ? "Data changed by someone else. Please refresh and try again."
+        : e?.message || "Failed to add product. Please try again.";
+      toast.error(errorMsg);
     }
   };
 

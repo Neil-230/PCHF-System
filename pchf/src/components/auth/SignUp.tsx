@@ -37,14 +37,16 @@ export function SignUp({ onSignUp, onSwitchToLogin }: SignUpProps) {
 
   // Verification
   const [enteredCode, setEnteredCode] = useState("");
-  const demoCode = "123456"; // demo code
+  const [demoCode, setDemoCode] = useState("");
 
   const handleSendCode = () => {
+    const generatedCode = Math.floor(100000 + Math.random() * 900000).toString();
+    setDemoCode(generatedCode);
     if (!firstName || !lastName || !email) {
       toast.error("Please fill out all required fields first.");
       return;
     }
-    toast.info(`Demo verification code sent! Code: ${demoCode}`);
+    toast.success(`Verification code sent! Check your email.`);
     setShowCodeModal(true);
   };
 

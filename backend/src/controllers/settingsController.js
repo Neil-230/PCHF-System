@@ -2,12 +2,20 @@ import { SystemSettings } from '../database/mongodb.js';
 import { getAuthUrl as driveAuthUrl, handleOAuthCallback, ensureFolder, uploadBackup, validateDriveToken } from '../services/driveService.js';
 
 const getOrCreateSettings = async () => {
-  let settings = await SystemSettings.findOne({ id: 'system' });
-  if (!settings) {
-    settings = new SystemSettings({ id: 'system' });
-    await settings.save();
+  try {
+    const settings = await SystemSettings.findOneAndUpdate(
+      { id: 'system' },
+      { $setOnInsert: { id: 'system', createdAt: new Date() } },
+      { upsert: true, new: true }
+    );
+    return settings;
+  } catch (err) {
+    if (err.code === 11000) {
+      // Another request created it, fetch it
+      return await SystemSettings.findOne({ id: 'system' });
+    }
+    throw err;
   }
-  return settings;
 };
 
 export const getPublicSettings = async (_req, res) => {
@@ -88,13 +96,28 @@ export const ensureDriveFolder = async (req, res) => {
 };
 
 export const runDriveBackup = async (_req, res) => {
-  const result = await uploadBackup();
-  res.json({ message: 'Backup created', file: result });
+  try {
+    const result = await uploadBackup();
+    res.json({ message: 'Backup created', file: result });
+  } catch (err) {
+    console.error('Backup failed:', err.message);
+    return res.status(500).json({ 
+      error: 'Backup failed: ' + (err?.message || 'Unknown error')
+    });
+  }
 };
 
 export const validateDriveTokenStatus = async (_req, res) => {
-  const validation = await validateDriveToken();
-  res.json(validation);
+  try {
+    const validation = await validateDriveToken();
+    res.json(validation);
+  } catch (err) {
+    console.error('Drive token validation failed:', err.message);
+    return res.status(500).json({ 
+      error: 'Token validation failed',
+      valid: false
+    });
+  }
 };
 
 export const updateNotifications = async (req, res) => {

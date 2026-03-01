@@ -1,5 +1,9 @@
 import nodemailer from 'nodemailer';
 
+if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
+  throw new Error('Email configuration missing: EMAIL_USER and EMAIL_PASSWORD must be set in .env');
+}
+
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {

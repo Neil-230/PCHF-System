@@ -176,8 +176,7 @@ export function TransactionHistory({ transactions, onDeleteAll, canDeleteAll = f
     printWindow.print();
   };
 
-  // Delete all confirmation
-  // ga bug rabani, dili ma delete kamo na debug ani uy for backend bitaw ang method ani
+  // Delete all transactions within date range
   const handleDeleteAll = async () => {
     if (!dateFrom || !dateTo) {
       alert("Please select both start and end dates before deleting.");
@@ -197,7 +196,6 @@ export function TransactionHistory({ transactions, onDeleteAll, canDeleteAll = f
       setIsDeleting(false);
     }
   };
-  //kapuy nag modal tistingan taning prompt HAHA bati kaayo
 
   return (
     <div style={{ marginTop: "1rem" }}>

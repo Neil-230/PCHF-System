@@ -180,11 +180,27 @@ const sendVerificationCodeWithRetry = async (email, code, attempts = 2) => {
   throw lastError || new Error('Failed to send verification email');
 };
 
+// Email validation regex
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export const signup = async (req, res) => {
   const { name, email, password, role } = req.body;
 
   if (!name || !email || !password || !role) {
     return res.status(400).json({ error: 'All fields are required.' });
+  }
+
+  // Sanitize and validate inputs
+  const sanitizedName = String(name).trim();
+  const sanitizedEmail = String(email).trim().toLowerCase();
+  const sanitizedRole = String(role).trim();
+
+  if (!sanitizedName) {
+    return res.status(400).json({ error: 'Name cannot be empty' });
+  }
+
+  if (!EMAIL_REGEX.test(sanitizedEmail)) {
+    return res.status(400).json({ error: 'Invalid email format' });
   }
 
   if (password.length < 8) {
@@ -199,17 +215,17 @@ export const signup = async (req, res) => {
     }
   }
 
-  if (role === 'admin') {
-    const existingPending = await findPendingAdminByEmail(email);
+  if (sanitizedRole === 'admin') {
+    const existingPending = await findPendingAdminByEmail(sanitizedEmail);
     if (existingPending) {
       return res.status(409).json({ error: 'This account is already pending approval. Please wait for owner approval.' });
     }
   }
 
-  const existingUser = await findUserByEmail(email, { isArchived: false });
+  const existingUser = await findUserByEmail(sanitizedEmail, { isArchived: false });
   const hasGoogleOnly = !!existingUser?.googleId && Array.isArray(existingUser.loginMethods) && !existingUser.loginMethods.includes('password');
   if (hasGoogleOnly) {
-    logAuthEvent('signup_blocked_google_only', { email });
+    logAuthEvent('signup_blocked_google_only', { email: sanitizedEmail });
     return res.status(409).json({ error: 'This email is registered using Google Sign-In. Please use Google to continue.' });
   }
 
@@ -219,13 +235,13 @@ export const signup = async (req, res) => {
   let reusedUnverifiedAccount = false;
   if (existingUser) {
     if (existingUser.isVerified) {
-      logAuthEvent('signup_blocked_existing_verified', { email });
+      logAuthEvent('signup_blocked_existing_verified', { email: sanitizedEmail });
       return res.status(409).json({ error: 'This email already exists. Please log in instead.' });
     }
 
-    existingUser.name = name;
+    existingUser.name = sanitizedName;
     existingUser.password = hashedPassword;
-    existingUser.role = role || existingUser.role || 'cashier';
+    existingUser.role = sanitizedRole || existingUser.role || 'cashier';
     existingUser.passwordCreatedManually = false;
     if (!Array.isArray(existingUser.loginMethods)) {
       existingUser.loginMethods = [];
@@ -236,14 +252,14 @@ export const signup = async (req, res) => {
     await existingUser.save();
     user = existingUser;
     reusedUnverifiedAccount = true;
-    logAuthEvent('signup_reuse_unverified', { email, role: user.role });
+    logAuthEvent('signup_reuse_unverified', { email: sanitizedEmail, role: user.role });
   } else {
     user = new User({
       id: uuidv4(),
-      name,
-      email,
+      name: sanitizedName,
+      email: sanitizedEmail,
       password: hashedPassword,
-      role: role || 'cashier',
+      role: sanitizedRole || 'cashier',
       googleId: undefined,
       loginMethods: ['password'],
       passwordCreatedManually: false,
@@ -253,25 +269,25 @@ export const signup = async (req, res) => {
     logAuthEvent('signup_created_pending_verification', { email, role: user.role });
   }
 
-  await deletePasswordResetsByEmail(email);
+  await deletePasswordResetsByEmail(sanitizedEmail);
   const code = generateCode();
   const passwordReset = new PasswordReset({
     id: uuidv4(),
-    email,
+    email: sanitizedEmail,
     code,
     expiresAt: new Date(Date.now() + 15 * 60 * 1000),
   });
   await passwordReset.save();
 
   try {
-    await sendVerificationCodeWithRetry(email, code, 3);
+    await sendVerificationCodeWithRetry(sanitizedEmail, code, 3);
   } catch (err) {
     console.error('Email sending failed:', err);
-    await deletePasswordResetsByEmail(email, { code });
+    await deletePasswordResetsByEmail(sanitizedEmail, { code });
     if (!reusedUnverifiedAccount) {
-      await deleteUserByEmail(email);
+      await deleteUserByEmail(sanitizedEmail);
     }
-    logAuthEvent('signup_failed_verification_delivery', { email, error: err?.message || String(err) });
+    logAuthEvent('signup_failed_verification_delivery', { email: sanitizedEmail, error: err?.message || String(err) });
     return res.status(500).json({ error: 'Failed to send verification email' });
   }
 
@@ -285,7 +301,12 @@ export const verifyEmail = async (req, res) => {
     return res.status(400).json({ error: 'Email and code are required' });
   }
 
-  const reset = await findPasswordResetByEmail(email, {
+  const sanitizedEmail = String(email).trim().toLowerCase();
+  if (!EMAIL_REGEX.test(sanitizedEmail)) {
+    return res.status(400).json({ error: 'Invalid email format' });
+  }
+
+  const reset = await findPasswordResetByEmail(sanitizedEmail, {
     code,
     used: false,
     expiresAt: { $gt: new Date() },
@@ -295,13 +316,17 @@ export const verifyEmail = async (req, res) => {
     return res.status(400).json({ error: 'Invalid or expired code' });
   }
 
-  const user = await findUserByEmail(email, { isArchived: false });
+  const user = await findUserByEmail(sanitizedEmail, { isArchived: false });
   if (!user) {
     return res.status(400).json({ error: 'User not found' });
   }
 
   user.isVerified = true;
   await user.save();
+
+  // Mark code as used to prevent reuse
+  reset.used = true;
+  await reset.save();
 
   res.json({ message: 'Email verified successfully', user: user.toJSON() });
 };
@@ -313,9 +338,14 @@ export const login = async (req, res) => {
     return res.status(400).json({ error: 'Email and password are required' });
   }
 
-  const user = await findUserByEmail(email, { isArchived: false });
+  const sanitizedEmail = String(email).trim().toLowerCase();
+  if (!EMAIL_REGEX.test(sanitizedEmail)) {
+    return res.status(400).json({ error: 'Invalid email format' });
+  }
+
+  const user = await findUserByEmail(sanitizedEmail, { isArchived: false });
   if (!user) {
-    logAuthEvent('login_failed_no_account', { email });
+    logAuthEvent('login_failed_no_account', { email: sanitizedEmail });
     return res.status(404).json({ error: 'No account found with this email.' });
   }
 
@@ -401,6 +431,7 @@ export const handleGoogleCallback = (req, res, next) => {
       }
     } catch (e) {
       console.error('Google callback owner promotion error:', e);
+      return res.redirect(`${FRONTEND}/auth/google-callback?error=role_assignment_failed`);
     }
     try {
       const hasOwner2 = await User.findOne({ role: 'owner', isArchived: false });
@@ -412,6 +443,7 @@ export const handleGoogleCallback = (req, res, next) => {
       }
     } catch (e) {
       console.error('Google callback pending check error:', e);
+      return res.redirect(`${FRONTEND}/auth/google-callback?error=pending_check_failed`);
     }
     await recordLastLogin(user, req.ipinfo || {});
     const token = generateToken(user);
@@ -459,6 +491,7 @@ export const handleFacebookCallback = (req, res, next) => {
       }
     } catch (e) {
       console.error('Facebook callback owner promotion error:', e);
+      return res.redirect(`${FRONTEND}/auth/facebook-callback?error=role_assignment_failed`);
     }
     try {
       const hasOwner2 = await User.findOne({ role: 'owner', isArchived: false });
@@ -470,6 +503,7 @@ export const handleFacebookCallback = (req, res, next) => {
       }
     } catch (e) {
       console.error('Facebook callback pending check error:', e);
+      return res.redirect(`${FRONTEND}/auth/facebook-callback?error=pending_check_failed`);
     }
     await recordLastLogin(user, req.ipinfo || {});
     const token = generateToken(user);
@@ -692,7 +726,12 @@ export const requestPasswordResetCode = async (req, res) => {
     return res.status(400).json({ error: 'Email is required' });
   }
 
-  const user = await findUserByEmail(email, { isArchived: false });
+  const sanitizedEmail = String(email).trim().toLowerCase();
+  if (!EMAIL_REGEX.test(sanitizedEmail)) {
+    return res.status(400).json({ error: 'Invalid email format' });
+  }
+
+  const user = await findUserByEmail(sanitizedEmail, { isArchived: false });
   if (!user) {
     return res.status(404).json({ error: 'User not found' });
   }
@@ -705,7 +744,7 @@ export const requestPasswordResetCode = async (req, res) => {
   const code = generateCode();
   const passwordReset = new PasswordReset({
     id: uuidv4(),
-    email,
+    email: sanitizedEmail,
     code,
     expiresAt: new Date(Date.now() + 15 * 60 * 1000),
   });
@@ -713,9 +752,11 @@ export const requestPasswordResetCode = async (req, res) => {
   await passwordReset.save();
 
   try {
-    await sendPasswordResetEmail(email, code);
+    await sendPasswordResetEmail(sanitizedEmail, code);
   } catch (err) {
     console.error('Email sending failed:', err);
+    // Clean up orphaned reset code if email fails
+    await passwordReset.deleteOne();
     return res.status(500).json({ error: 'Failed to send password reset email' });
   }
 
@@ -729,7 +770,9 @@ export const verifyResetCode = async (req, res) => {
     return res.status(400).json({ error: 'Email and code are required' });
   }
 
-  const reset = await findPasswordResetByEmail(email, {
+  const sanitizedEmail = String(email).trim().toLowerCase();
+
+  const reset = await findPasswordResetByEmail(sanitizedEmail, {
     code,
     used: false,
     expiresAt: { $gt: new Date() },
@@ -738,6 +781,9 @@ export const verifyResetCode = async (req, res) => {
   if (!reset) {
     return res.status(400).json({ error: 'Invalid or expired code' });
   }
+
+  // Note: Do NOT mark as used here - will be marked as used in resetPassword
+  // This allows the code to be verified without being consumed
 
   res.json({ message: 'Code verified successfully' });
 };
@@ -749,11 +795,16 @@ export const resetPassword = async (req, res) => {
     return res.status(400).json({ error: 'Email, code, and new password are required' });
   }
 
+  const sanitizedEmail = String(email).trim().toLowerCase();
+  if (!EMAIL_REGEX.test(sanitizedEmail)) {
+    return res.status(400).json({ error: 'Invalid email format' });
+  }
+
   if (newPassword.length < 8) {
     return res.status(400).json({ error: 'Password must be at least 8 characters' });
   }
 
-  const reset = await findPasswordResetByEmail(email, {
+  const reset = await findPasswordResetByEmail(sanitizedEmail, {
     code,
     used: false,
     expiresAt: { $gt: new Date() },
@@ -763,7 +814,7 @@ export const resetPassword = async (req, res) => {
     return res.status(400).json({ error: 'Invalid or expired code' });
   }
 
-  const user = await findUserByEmail(email, { isArchived: false });
+  const user = await findUserByEmail(sanitizedEmail, { isArchived: false });
   if (!user) {
     return res.status(400).json({ error: 'User not found' });
   }

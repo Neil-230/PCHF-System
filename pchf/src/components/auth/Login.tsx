@@ -65,13 +65,18 @@ export function Login({ onLogin, onSwitchToSignUp }: LoginProps) {
   // };
 
   const handleSendCode = () => {
+    if (!resetEmail || !resetEmail.includes('@')) {
+      setResetError("Please enter a valid email address.");
+      return;
+    }
+
     const users = AuthService.getUsers();
     const found = users.find(u => u.email === resetEmail);
 
-    // if (!found) {
-    //   setResetError("No account found with this email.");
-    //   return;
-    // }
+    if (!found) {
+      setResetError("No account found with this email.");
+      return;
+    }
 
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     setGeneratedCode(code);
@@ -91,8 +96,6 @@ export function Login({ onLogin, onSwitchToSignUp }: LoginProps) {
   };
 
   const handleResetPassword = () => {
-    console.log("Reset password clicked");
-
     if (newPassword.trim().length < 8) {
       toast.warning("Password must be at least 8 characters long");
       return;

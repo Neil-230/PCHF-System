@@ -65,11 +65,13 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
     
     setApprovingEmails(prev => new Set(prev).add(email));
     try {
+      // Try backend first
       await apiService.approveAdmin(email);
       const { pending } = await apiService.getPendingAdmins();
       setPendingAdmins(pending);
       toast.success("Sign-up approved successfully");
     } catch (error) {
+      // Fallback to local service
       try {
         AuthService.approveAdmin(email);
         setPendingAdmins(AuthService.getPendingAdmins());
@@ -94,15 +96,17 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
     
     setApprovingEmails(prev => new Set(prev).add(email));
     try {
+      // Try backend first
       await apiService.declineAdmin(email);
       const { pending } = await apiService.getPendingAdmins();
       setPendingAdmins(pending);
-      toast.error("Sign-up request declined");
+      toast.info("Sign-up request declined");
     } catch (error) {
+      // Fallback to local service
       try {
         AuthService.declineAdmin(email);
         setPendingAdmins(AuthService.getPendingAdmins());
-        toast.error("Sign-up request declined");
+        toast.info("Sign-up request declined");
       } catch {
         toast.error("Failed to decline sign-up");
       }

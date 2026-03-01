@@ -2,6 +2,12 @@ import jwt from 'jsonwebtoken';
 import { User } from '../database/mongodb.js';
 
 export const verifyToken = async (req, res, next) => {
+  // Validate JWT_SECRET is configured
+  if (!process.env.JWT_SECRET) {
+    console.error('JWT_SECRET is not configured in environment variables');
+    return res.status(500).json({ error: 'Server configuration error' });
+  }
+
   // Check Authorization header first, fallback to httpOnly cookie if present
   let token = req.headers.authorization?.split(' ')[1];
   
