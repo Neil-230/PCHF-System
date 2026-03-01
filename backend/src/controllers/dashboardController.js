@@ -121,8 +121,8 @@ export const getActiveLogEntries = async (_req, res) => {
   const logs = await UserActivityLog.find({})
     .sort({ at: -1 })
     .limit(200)
-    // Use lean() for performance but keep getters so encrypted fields (like email) are decrypted
-    .lean({ getters: true });
+    // Don't use lean() - we need schema getters to decrypt the email field
+    .exec();
 
   const entries = logs.map((log) => {
     const locParts = typeof log.loc === 'string' ? log.loc.split(',').map((p) => p.trim()).filter(Boolean) : [];
