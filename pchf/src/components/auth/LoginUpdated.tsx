@@ -1,20 +1,18 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
+import { CardContent } from "../ui/card";
 import { Alert, AlertDescription } from "../ui/alert";
-import { Eye, EyeOff, CreditCard, LogInIcon, MailCheck } from "lucide-react";
+import { Eye, EyeOff, LogInIcon } from "lucide-react";
 import { toast } from "sonner";
 import "../css/login.css";
 import { FcGoogle } from "react-icons/fc";
-import { FaFacebook } from "react-icons/fa";
 import apiService from "../../services/api";
 import { executeRecaptcha } from "../../services/recaptcha";
-import { useNavigate } from "react-router-dom";
 
 interface LoginProps {
-  onLogin: (email: string, password: string) => boolean;
+  onLogin: (email: string, password: string) => Promise<void>;
   onSwitchToSignUp: () => void;
 }
 
@@ -39,7 +37,7 @@ export function LoginUpdated({ onLogin, onSwitchToSignUp }: LoginProps) {
   const [step, setStep] = useState<"email" | "code" | "reset">("email");
   const [resetError, setResetError] = useState('');
   const [resetIsLoading, setResetIsLoading] = useState(false);
-  const navigate = useNavigate();
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,11 +48,11 @@ export function LoginUpdated({ onLogin, onSwitchToSignUp }: LoginProps) {
       // Require reCAPTCHA for manual login
       const recaptchaToken = await executeRecaptcha('login');
       const response = await apiService.login(email, password, recaptchaToken);
-      
+
       if (response.token) {
         apiService.setToken(response.token);
         toast.success('Login successful!');
-        onLogin(email, password);
+        await onLogin(email, password); // await so errors from AuthWrapper.login() are caught below
       }
     } catch (err: any) {
       const rawMessage = (err?.body?.error || err?.message || '').toLowerCase();
@@ -77,11 +75,6 @@ export function LoginUpdated({ onLogin, onSwitchToSignUp }: LoginProps) {
     window.location.href = `${base}/api/auth/google`;
   };
 
-  const handleFacebookSignup = () => {
-    const api = (import.meta.env.VITE_API_URL || 'http://localhost:4000/api');
-    const base = api.replace(/\/api\/?$/, '');
-    window.location.href = `${base}/api/auth/facebook`;
-  };
 
   const handleSendCode = async () => {
     if (!resetEmail) {
@@ -142,7 +135,7 @@ export function LoginUpdated({ onLogin, onSwitchToSignUp }: LoginProps) {
     setResetIsLoading(true);
     try {
       await apiService.resetPassword(resetEmail, resetCode, newPassword);
-      
+
       const modalEl = document.getElementById("forgotPasswordModal");
       if (window.bootstrap && modalEl) {
         let modal = window.bootstrap.Modal.getInstance(modalEl);
@@ -188,7 +181,7 @@ export function LoginUpdated({ onLogin, onSwitchToSignUp }: LoginProps) {
                 <CardContent className="">
                   <form onSubmit={handleSubmit}>
                     {error && (
-                      <Alert variant="destructive" style={{display:"none"}}>
+                      <Alert variant="destructive">
                         <AlertDescription>{error}</AlertDescription>
                       </Alert>
                     )}
@@ -307,15 +300,15 @@ export function LoginUpdated({ onLogin, onSwitchToSignUp }: LoginProps) {
       </div>
 
       {/* === FORGOT PASSWORD MODAL === */}
-      <div className="modal fade" id="forgotPasswordModal" tabIndex={-1} aria-hidden="true" style={{backgroundColor: "rgba(239, 252, 255, 0.31)"}}>
+      <div className="modal fade" id="forgotPasswordModal" tabIndex={-1} aria-hidden="true" style={{ backgroundColor: "rgba(239, 252, 255, 0.31)" }}>
         <div className="modal-dialog modal-dialog-centered">
-          <div className="modal-content p-3" style={{backgroundColor: "rgba(255, 255, 255, 1)"}}>
+          <div className="modal-content p-3" style={{ backgroundColor: "rgba(255, 255, 255, 1)" }}>
             <div className="modal-header border border-0" >
               <h5 className="modal-title">Forgot Password</h5>
               <button type="button" className="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div className="modal-body ">
-              {resetError && <div className="alert alert-danger" style={{display:"none"}}>{resetError}</div>}
+              {resetError && <div className="alert alert-danger">{resetError}</div>}
 
               {step === "email" && (
                 <>

@@ -2,14 +2,12 @@ import { useState } from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
+import { CardContent } from "../ui/card";
 import { Alert, AlertDescription } from "../ui/alert";
-import { Eye, EyeOff, CreditCard, LogInIcon, MailCheck } from "lucide-react";
+import { Eye, EyeOff, LogInIcon } from "lucide-react";
 import { AuthService, defaultPasswords } from "../../data/authData";
 import { toast } from "sonner";
 import "../css/login.css";
-<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"></link>
-import { FcGoogle } from "react-icons/fc";
 
 interface LoginProps {
   onLogin: (email: string, password: string) => boolean;
@@ -108,7 +106,7 @@ export function Login({ onLogin, onSwitchToSignUp }: LoginProps) {
 
     // Demo only: Save the password
     defaultPasswords[resetEmail] = newPassword;
-    
+
     // Close modal safely
     const modalEl = document.getElementById("forgotPasswordModal");
     if (window.bootstrap && modalEl) {
@@ -116,7 +114,7 @@ export function Login({ onLogin, onSwitchToSignUp }: LoginProps) {
       if (!modal) modal = new window.bootstrap.Modal(modalEl);
       modal.hide();
     }
-      
+
 
     // Reset state after modal close
     setTimeout(() => {
@@ -254,9 +252,9 @@ export function Login({ onLogin, onSwitchToSignUp }: LoginProps) {
       </div>
 
       {/* === FORGOT PASSWORD MODAL === */}
-      <div className="modal fade" id="forgotPasswordModal" tabIndex={-1} aria-hidden="true" style={{backgroundColor: "rgba(239, 252, 255, 0.31)"}}>
+      <div className="modal fade" id="forgotPasswordModal" tabIndex={-1} aria-hidden="true" style={{ backgroundColor: "rgba(239, 252, 255, 0.31)" }}>
         <div className="modal-dialog modal-dialog-centered">
-          <div className="modal-content p-3" style={{backgroundColor: "rgba(255, 255, 255, 1)"}}>
+          <div className="modal-content p-3" style={{ backgroundColor: "rgba(255, 255, 255, 1)" }}>
             <div className="modal-header border border-0" >
               <h5 className="modal-title">Forgot Password</h5>
               <button type="button" className="btn-close" data-bs-dismiss="modal"></button>

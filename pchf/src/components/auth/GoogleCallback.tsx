@@ -43,7 +43,7 @@ export function GoogleCallback() {
         try {
           // Call getCurrentUser - it will use the httpOnly cookie automatically via credentials: 'include'
           const { user } = await apiService.getCurrentUser();
-          
+
           if (!didToast.current) {
             toast.success('Login successful!');
             didToast.current = true;
@@ -53,29 +53,32 @@ export function GoogleCallback() {
           // Even though we don't have explicit token in localStorage, the httpOnly cookie will be sent
           localStorage.setItem('googleOAuthComplete', 'true');
           localStorage.setItem('currentUser', JSON.stringify(user));
-          
+
           navigate('/dashboard', { replace: true });
         } catch (err: any) {
           console.error('Error fetching current user after Google auth:', err);
-          
+
           // Fallback: extract userData from the userData cookie set by backend
           try {
-            const cookieValue = document.cookie
+            const rawCookie = document.cookie
               .split('; ')
-              .find((row) => row.startsWith('userData='))
-              ?.split('=')[1];
-            
+              .find((row) => row.startsWith('userData='));
+            // Use indexOf to avoid breaking on '=' chars inside the value (e.g. base64)
+            const cookieValue = rawCookie
+              ? rawCookie.slice(rawCookie.indexOf('=') + 1)
+              : undefined;
+
             if (cookieValue) {
               const userData = JSON.parse(decodeURIComponent(cookieValue));
               if (!didToast.current) {
                 toast.success('Login successful!');
                 didToast.current = true;
               }
-              
+
               // Store fallback data
               localStorage.setItem('googleOAuthComplete', 'true');
               localStorage.setItem('currentUser', JSON.stringify(userData));
-              
+
               navigate('/dashboard', { replace: true });
               return;
             }
@@ -109,17 +112,24 @@ export function GoogleCallback() {
         .split('; ')
         .find((row) => row.startsWith('oauth_profile='))
         ?.split('=')[1];
-      
+
       try {
         const profile = profileCookie ? JSON.parse(decodeURIComponent(profileCookie)) : null;
         if (profile) {
           setSocialData(profile);
+          setShowRoleModal(true);
+          if (!didToast.current) {
+            toast.info('Almost there! Choose a role so we can finish creating your account.');
+          }
+          didToast.current = true;
+        } else {
+          // Cookie missing or empty — cannot proceed with signup, send back to login
+          if (!didToast.current) {
+            toast.error('Could not retrieve your profile. Please try signing in again.');
+            didToast.current = true;
+          }
+          navigate('/login', { replace: true });
         }
-        setShowRoleModal(true);
-        if (!didToast.current) {
-          toast.info('Almost there! Choose a role so we can finish creating your account.');
-        }
-        didToast.current = true;
       } catch (err) {
         console.error('Error parsing signup profile:', err);
         navigate('/login', { replace: true });
@@ -163,9 +173,15 @@ export function GoogleCallback() {
           ? 'Admin request submitted! Pending owner approval.'
           : 'Account pending for approval!'
       );
-      
+
       setShowRoleModal(false);
-      navigate('/dashboard', { replace: true });
+      // Only navigate to dashboard if backend issued a token (i.e. account is active immediately).
+      // For pending/approval-required accounts, send to login so the user knows to wait.
+      if (resp.token) {
+        navigate('/dashboard', { replace: true });
+      } else {
+        navigate('/login', { replace: true });
+      }
     } catch (err: any) {
       toast.error(err.message || 'Failed to complete signup. If you created an email/password account already, please finish verification there.');
     } finally {
@@ -201,8 +217,8 @@ export function GoogleCallback() {
           Need to use email/password instead?
           <Button variant="link" className="p-0 ms-1" onClick={() => navigate('/login', { replace: true })}>Go back</Button>
         </small>
-        <Button 
-          className="bg-dark" 
+        <Button
+          className="bg-dark"
           onClick={handleRoleSelection}
           disabled={isLoading}
         >

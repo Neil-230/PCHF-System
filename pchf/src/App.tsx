@@ -13,7 +13,6 @@ import { PointOfSale } from "./components/PointOfSales";
 import { AuthWrapper } from "./components/auth/AuthWrapper";
 import type { Transaction } from "./types";
 import type { User } from "./types/auth";
-import { mockTransactions } from "./data/mockData";
 import apiService from "./services/api";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -91,7 +90,7 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabId>("pos");
-  const [transactions, setTransactions] = useState<Transaction[]>(mockTransactions);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [hasSyncedRoute, setHasSyncedRoute] = useState(false);
   const defaultSecurity: SecuritySettings = {
     requirePin: true,
@@ -105,7 +104,7 @@ export default function App() {
       if (saved) {
         return { ...defaultSecurity, ...JSON.parse(saved) };
       }
-    } catch {}
+    } catch { }
     return defaultSecurity;
   });
   const [inactivityWarning, setInactivityWarning] = useState(false);
@@ -211,7 +210,7 @@ export default function App() {
         deliveryFee: t.deliveryFee,
       }));
       setTransactions(mapped);
-    } catch {}
+    } catch { }
   };
 
   useEffect(() => {
@@ -223,7 +222,7 @@ export default function App() {
     const allowedTabs = ROLE_ALLOWED_TABS[authenticatedUser.role] || [];
     const fallbackTab = DEFAULT_TAB_FOR_ROLE[authenticatedUser.role] || 'dashboard';
     const requestedTab = extractTabFromPath(location.pathname);
-    const nextTab = requestedTab && allowedTabs.includes(requestedTab)
+    const nextTab = requestedTab && isTabId(requestedTab) && allowedTabs.includes(requestedTab)
       ? requestedTab
       : fallbackTab;
     setActiveTab(nextTab);
@@ -250,12 +249,12 @@ export default function App() {
     setInactivityWarning(false);
     try {
       await apiService.logout();
-    } catch {}
+    } catch { }
     apiService.clearToken();
     setUser(null);
-    setActiveTab("pos");
+    setActiveTab("pos"); // safe neutral default; overridden by role on next login
     setHasSyncedRoute(false);
-    navigate("/pos", { replace: true });
+    navigate("/", { replace: true }); // go to root; login screen renders immediately since user is null
   }, [navigate]);
 
   const triggerInactivityPrompt = useCallback(() => {
@@ -316,7 +315,7 @@ export default function App() {
   const handleTimeoutLogout = useCallback(async () => {
     try {
       await apiService.recordTimeoutLogout();
-    } catch {}
+    } catch { }
     await handleLogout();
   }, [handleLogout]);
 
@@ -327,12 +326,17 @@ export default function App() {
       return;
     }
     clearCountdownInterval();
+    // Guard: ensure handleTimeoutLogout fires only once even if effect re-runs
+    const logoutFired = { current: false };
     countdownIntervalRef.current = window.setInterval(() => {
       setCountdown((prev) => {
         if (prev <= 1) {
           clearCountdownInterval();
           setInactivityWarning(false);
-          handleTimeoutLogout();
+          if (!logoutFired.current) {
+            logoutFired.current = true;
+            handleTimeoutLogout();
+          }
           return 0;
         }
         return prev - 1;
@@ -347,9 +351,14 @@ export default function App() {
   };
 
   const handleBulkDeleteTransactions = async ({ dateFrom, dateTo }: { dateFrom: string; dateTo: string }) => {
-    const result = await apiService.deleteTransactions({ dateFrom, dateTo });
-    await loadTransactions();
-    return result;
+    try {
+      const result = await apiService.deleteTransactions({ dateFrom, dateTo });
+      await loadTransactions();
+      return result;
+    } catch (err: any) {
+      // Re-throw so the calling component (TransactionHistory) can catch and show an error toast
+      throw err;
+    }
   };
 
   const handleTabChange = (tab: string) => {
