@@ -14,7 +14,7 @@ export const authLimiter = rateLimit({
   message: 'Too many login attempts. Please try again after 15 minutes.',
   standardHeaders: true,
   legacyHeaders: false,
-  skip: false, // NO SKIP - Enforce strictly on all methods
+  skip: () => false, // NO SKIP - Enforce strictly on all methods
   keyGenerator: (req) => {
     // Rate limit per IP, not per user (prevent username enumeration)
     return req.ip;

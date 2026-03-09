@@ -324,9 +324,8 @@ export const verifyEmail = async (req, res) => {
   user.isVerified = true;
   await user.save();
 
-  // Mark code as used to prevent reuse
-  reset.used = true;
-  await reset.save();
+  // Note: Do NOT mark as used here - will be marked as used in resetPassword
+  // This allows the code to be used for setting the password after verification
 
   res.json({ message: 'Email verified successfully', user: user.toJSON() });
 };
