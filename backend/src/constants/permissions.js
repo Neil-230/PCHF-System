@@ -1,5 +1,41 @@
 export const PERMISSION_CATALOG = [
   {
+    id: 'posAccess',
+    label: 'POS Access',
+    resource: 'transaction',
+    description: 'Access to Point of Sale for creating transactions.',
+    actions: [
+      { action: 'create', possession: 'any', label: 'Access POS', defaultRoles: ['owner', 'admin', 'cashier'] },
+    ],
+  },
+  {
+    id: 'inventoryAccess',
+    label: 'Inventory Access',
+    resource: 'product',
+    description: 'Access to view and manage inventory.',
+    actions: [
+      { action: 'read', possession: 'any', label: 'Access Inventory', defaultRoles: ['owner', 'admin'] },
+    ],
+  },
+  {
+    id: 'transactionsAccess',
+    label: 'Transactions Access',
+    resource: 'transaction',
+    description: 'Access to view transaction history.',
+    actions: [
+      { action: 'read', possession: 'any', label: 'Access Transactions', defaultRoles: ['owner', 'admin', 'cashier'] },
+    ],
+  },
+  {
+    id: 'settingsAccess',
+    label: 'Settings Access',
+    resource: 'storeSetting',
+    description: 'Access to store settings and configuration.',
+    actions: [
+      { action: 'read', possession: 'any', label: 'Access Settings', defaultRoles: ['owner', 'admin', 'cashier'] },
+    ],
+  },
+  {
     id: 'dashboard',
     label: 'Dashboard',
     resource: 'dashboard',
@@ -11,9 +47,9 @@ export const PERMISSION_CATALOG = [
   },
   {
     id: 'transactions',
-    label: 'Transactions',
+    label: 'Transactions (Advanced)',
     resource: 'transaction',
-    description: 'POS operations and history.',
+    description: 'Detailed transaction permissions including deletion.',
     actions: [
       { action: 'create', possession: 'any', label: 'Create transactions / accept payments', defaultRoles: ['owner', 'admin', 'cashier'] },
       { action: 'read', possession: 'any', label: 'View transaction history', defaultRoles: ['owner', 'admin', 'cashier'] },
@@ -22,9 +58,9 @@ export const PERMISSION_CATALOG = [
   },
   {
     id: 'inventory',
-    label: 'Inventory',
+    label: 'Inventory (Advanced)',
     resource: 'product',
-    description: 'Catalog management controls.',
+    description: 'Detailed product management controls.',
     actions: [
       { action: 'create', possession: 'any', label: 'Add products', defaultRoles: ['owner', 'admin'] },
       { action: 'read', possession: 'any', label: 'View products', defaultRoles: ['owner', 'admin', 'cashier'] },
@@ -34,7 +70,7 @@ export const PERMISSION_CATALOG = [
   },
   {
     id: 'storeSettings',
-    label: 'Store Settings',
+    label: 'Store Settings (Advanced)',
     resource: 'storeSetting',
     description: 'Branding, store profile, and policies.',
     actions: [
@@ -78,7 +114,7 @@ export const PERMISSION_CATALOG = [
     resource: 'userPermission',
     description: 'Grant or revoke admin/cashier privileges.',
     actions: [
-      { action: 'update', possession: 'any', label: 'Adjust others’ permissions', defaultRoles: ['owner'] },
+      { action: 'update', possession: 'any', label: "Adjust others' permissions", defaultRoles: ['owner'] },
     ],
   },
 ];

@@ -1,5 +1,5 @@
 import "./css/layout.css";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { // Iconssssssssss 
   Package,
   BarChart3,
@@ -13,16 +13,15 @@ import { // Iconssssssssss
   Clock3,
 } from "lucide-react";
 import apiService from "../services/api";
+import type { User } from "../types/auth";
+
+type TabId = "dashboard" | "pos" | "inventory" | "transactions" | "permissions" | "alerts" | "settings";
 
 interface LayoutProps {
   children: React.ReactNode;
   activeTab: string;
   onTabChange: (tab: string) => void;
-  user: {
-    name: string;
-    email: string;
-    role: string; // any, owner, admin, cashier. NOTE. String ni sya
-  };
+  user: User;
   onLogout: () => void;
   autoLogoutEnabled?: boolean;
   sessionTimeoutMinutes?: number;
@@ -38,6 +37,52 @@ const navigation = [
   { id: "settings", label: "Settings", icon: Settings, roles: ["admin", "cashier", "owner"] },
 ];
 
+const tabToResource: Record<TabId, { resource: string; permission: string }> = {
+  dashboard: { resource: "dashboard", permission: "read:any" },
+  pos: { resource: "transaction", permission: "create:any" },
+  inventory: { resource: "product", permission: "read:any" },
+  transactions: { resource: "transaction", permission: "read:any" },
+  permissions: { resource: "userPermission", permission: "update:any" },
+  alerts: { resource: "notificationSetting", permission: "read:any" },
+  settings: { resource: "storeSetting", permission: "read:any" },
+};
+
+const ROLE_ALLOWED_TABS: Record<User["role"], TabId[]> = {
+  owner: ["dashboard", "pos", "inventory", "transactions", "permissions", "alerts", "settings"],
+  admin: ["dashboard", "pos", "inventory", "transactions", "alerts", "settings"],
+  cashier: ["pos", "transactions", "settings"],
+};
+
+const getOverrideDecision = (user: User | null, tab: TabId): "allow" | "deny" | null => {
+  if (!user) return null;
+  const mapping = tabToResource[tab];
+  if (!mapping) return null;
+  const overrides = user.permissionOverrides || [];
+  const [action, possession = "any"] = mapping.permission.split(":");
+  let allow = false;
+  let deny = false;
+  overrides.forEach((ovr) => {
+    if (ovr.resource !== mapping.resource) return;
+    if (ovr.action !== action) return;
+    const ovrPossession = ovr.possession || "any";
+    if (ovrPossession !== possession && ovrPossession !== "any") return;
+    if (ovr.effect === "deny") deny = true;
+    if (ovr.effect === "allow") allow = true;
+  });
+  if (deny) return "deny";
+  if (allow) return "allow";
+  return null;
+};
+
+const canAccessTab = (user: User | null, tab: TabId): boolean => {
+  if (!user) return false;
+  const decision = getOverrideDecision(user, tab);
+  if (decision === "deny") return false;
+  if (decision === "allow") return true;
+  const allowedTabs = ROLE_ALLOWED_TABS[user.role] || [];
+  return allowedTabs.includes(tab);
+};
+
 export function Layout({ children, activeTab, onTabChange, user, onLogout, autoLogoutEnabled, sessionTimeoutMinutes }: LayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [notifLow, setNotifLow] = useState<any[]>([]);
@@ -51,8 +96,8 @@ export function Layout({ children, activeTab, onTabChange, user, onLogout, autoL
       .join("")
       .toUpperCase();
 
-  // Filter tabs dependi sa Roles
-  const allowedNavigation = navigation.filter((item) => item.roles.includes(user.role));
+  // Filter tabs based on role AND permission overrides
+  const allowedNavigation = navigation.filter((item) => canAccessTab(user, item.id as TabId));
   const canAccessDashboard = allowedNavigation.some((item) => item.id === 'dashboard');
 
   // Load notifications from backend and poll periodically

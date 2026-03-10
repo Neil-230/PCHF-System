@@ -173,9 +173,8 @@ export default function App() {
     // Determine target tab: default if accessible, otherwise first allowed tab
     let targetTab = fallbackTab;
     if (!canAccessTab(user, fallbackTab)) {
-      // Find first accessible tab from user's allowed tabs
-      const allowedTabs = ROLE_ALLOWED_TABS[user.role] || [];
-      const firstAllowed = allowedTabs.find(tab => canAccessTab(user, tab));
+      // Find first accessible tab from ALL tabs (including those accessible via overrides)
+      const firstAllowed = ALL_TABS.find(tab => canAccessTab(user, tab));
       targetTab = firstAllowed || fallbackTab;
     }
 
@@ -219,10 +218,9 @@ export default function App() {
 
   const handleAuthSuccess = (authenticatedUser: User) => {
     setUser(authenticatedUser);
-    const allowedTabs = ROLE_ALLOWED_TABS[authenticatedUser.role] || [];
     const fallbackTab = DEFAULT_TAB_FOR_ROLE[authenticatedUser.role] || 'dashboard';
     const requestedTab = extractTabFromPath(location.pathname);
-    const nextTab = requestedTab && isTabId(requestedTab) && allowedTabs.includes(requestedTab)
+    const nextTab = requestedTab && isTabId(requestedTab) && canAccessTab(authenticatedUser, requestedTab)
       ? requestedTab
       : fallbackTab;
     setActiveTab(nextTab);
