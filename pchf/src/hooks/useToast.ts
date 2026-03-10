@@ -1,4 +1,4 @@
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
 
 interface ToastState {
@@ -41,10 +41,10 @@ export const useToast = () => {
     []
   );
 
-  return {
+  return useMemo(() => ({
     success: (msg: string) => showToast('success', msg),
     error: (msg: string) => showToast('error', msg),
     warning: (msg: string) => showToast('warning', msg),
     info: (msg: string) => showToast('info', msg),
-  };
+  }), [showToast]);
 };
