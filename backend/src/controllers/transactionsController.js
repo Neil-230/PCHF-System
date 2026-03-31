@@ -69,6 +69,9 @@ export const createTransaction = async (req, res) => {
     if (isNaN(qty) || qty <= 0) {
       return res.status(400).json({ error: 'Item quantity must be a positive number' });
     }
+    // if (!item.product || typeof item.product.price !== 'number' || item.product.price < 0) {
+    //   return res.status(400).json({ error: 'Invalid product information in item' });
+    // }
   }
 
   const currentUser = await User.findOne({ id: req.user.id });
