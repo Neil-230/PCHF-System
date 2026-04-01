@@ -52,6 +52,12 @@ const applyEncryptedField = (schema, fieldName, {
     return isEncryptedPayload(stringValue) ? stringValue : encryptValue(stringValue);
   });
 
+  schema.post('init', function clearEncryptionCache(doc) {
+    if (doc) {
+      doc[cacheKey] = undefined;
+    }
+  });
+
   schema.pre('save', function encryptBeforeSave(next) {
     const raw = this.get(fieldName, null, { getters: false });
     if (!raw) return next();
