@@ -7,7 +7,8 @@ import {
   getProductById,
   createProduct,
   updateProduct,
-  deleteProduct,
+  archiveProduct,
+  restoreProduct,
 } from '../controllers/productsController.js';
 
 const router = express.Router();
@@ -24,7 +25,10 @@ router.post('/', verifyToken, authorize('product', 'create:any'), asyncHandler(c
 // Update product (owner/admin)
 router.put('/:id', verifyToken, authorize('product', 'update:any'), asyncHandler(updateProduct));
 
-// Delete product (owner/admin)
-router.delete('/:id', verifyToken, authorize('product', 'delete:any'), asyncHandler(deleteProduct));
+// Restore product (owner/admin)
+router.post('/:id/restore', verifyToken, authorize('product', 'update:any'), asyncHandler(restoreProduct));
+
+// Archive product (owner/admin)
+router.delete('/:id', verifyToken, authorize('product', 'delete:any'), asyncHandler(archiveProduct));
 
 export default router;

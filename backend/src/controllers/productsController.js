@@ -28,8 +28,10 @@ const ensureProductVersionInitialized = async (product) => {
 };
 
 export const listProducts = async (req, res) => {
-  const { q, category } = req.query;
-  const filter = {};
+  const { q, category, archived } = req.query;
+  const isShowArchived = archived === 'true';
+  const filter = { isArchived: isShowArchived ? true : { $ne: true } };
+  
   if (q) {
     const regex = new RegExp(String(q), 'i');
     filter.$or = [{ name: regex }, { sku: regex }, { category: regex }];
@@ -50,7 +52,7 @@ export const getProductById = async (req, res) => {
 };
 
 export const createProduct = async (req, res) => {
-  const { name, sku, category, price, stock, description } = req.body;
+  const { name, sku, category, price, stock, description, image } = req.body;
   if (!name || !sku || price == null) {
     return res.status(400).json({ error: 'name, sku and price are required' });
   }
@@ -66,6 +68,7 @@ export const createProduct = async (req, res) => {
     price,
     stock: stock ?? 0,
     description,
+    image,
   });
   await product.save();
   res.status(201).json({ message: 'Product created', product: product.toJSON() });
@@ -119,19 +122,40 @@ export const updateProduct = async (req, res) => {
   res.json({ message: 'Product updated', product: product.toJSON() });
 };
 
-export const deleteProduct = async (req, res) => {
+export const archiveProduct = async (req, res) => {
   const product = await Product.findOne({ id: req.params.id });
   if (!product) return res.status(404).json({ error: 'Product not found' });
   await ensureProductVersionInitialized(product);
 
   const clientVersion = resolveClientVersion(req);
   if (clientVersion === undefined) {
-    return res.status(400).json({ error: 'Version is required to delete product.' });
+    return res.status(400).json({ error: 'Version is required to archive product.' });
   }
   if (Number(clientVersion) !== product.__v) {
     return res.status(409).json({ error: 'Conflict: product data is stale. Please refresh and retry.' });
   }
 
-  await product.deleteOne();
-  res.json({ message: 'Product deleted' });
+  product.isArchived = true;
+  product.archivedAt = new Date();
+  await product.save();
+  res.json({ message: 'Product archived' });
+};
+
+export const restoreProduct = async (req, res) => {
+  const product = await Product.findOne({ id: req.params.id });
+  if (!product) return res.status(404).json({ error: 'Product not found' });
+  await ensureProductVersionInitialized(product);
+
+  const clientVersion = resolveClientVersion(req);
+  if (clientVersion === undefined) {
+    return res.status(400).json({ error: 'Version is required to restore product.' });
+  }
+  if (Number(clientVersion) !== product.__v) {
+    return res.status(409).json({ error: 'Conflict: product data is stale. Please refresh and retry.' });
+  }
+
+  product.isArchived = false;
+  product.archivedAt = null;
+  await product.save();
+  res.json({ message: 'Product restored' });
 };

@@ -68,7 +68,13 @@ export function SignUpUpdated({ onSwitchToLogin }: SignUpProps) {
       setShowCodeModal(true);
       setResendCooldown(45);
     } catch (err: any) {
-      toast.error(err.message || "Failed to send verification code");
+      if (err?.status === 429) {
+        const retryAfter = err?.body?.retryAfter || 3600;
+        setResendCooldown(retryAfter);
+        toast.error(`Rate limit exceeded. Please wait ${retryAfter}s.`);
+      } else {
+        toast.error(err.message || "Failed to send verification code");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -239,10 +245,17 @@ export function SignUpUpdated({ onSwitchToLogin }: SignUpProps) {
                       type="button"
                       className="w-100 mt-3 bg-dark"
                       onClick={() => handleSendCode()}
-                      disabled={isLoading || verificationPending}
+                      disabled={isLoading || verificationPending || resendCooldown > 0}
                     >
                       <Check className="me-2" size={16} />
-                      {verificationPending ? 'Verification Pending' : isLoading ? 'Sending...' : 'Confirm'}
+                      {resendCooldown > 0 
+                        ? `Wait ${resendCooldown}s` 
+                        : verificationPending 
+                          ? 'Verification Pending' 
+                          : isLoading 
+                            ? 'Sending...' 
+                            : 'Confirm'
+                      }
                     </Button>
 
                     {verificationPending && !showCodeModal && (

@@ -1,7 +1,7 @@
 // Settings.tsx
 import React, { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { AuthService, defaultPasswords } from "../data/authData";
+import { AuthService } from "../data/authData";
 import apiService from "../services/api";
 import { useToast } from "../hooks";
 import { Save } from "lucide-react";
@@ -52,26 +52,6 @@ interface SettingsProps {
   onSecuritySettingsChange?: (settings: SecuritySettings) => void;
 }
 
-/* ---------- Inline SVGs ---------- */
-const LockSVG = () => (
-  <svg width="96" height="96" viewBox="0 0 24 24" fill="none" aria-hidden>
-    <rect x="3" y="10" width="18" height="11" rx="2" stroke="#111" strokeWidth="1.5" fill="#f5f5f5"/>
-    <path d="M7 10V7a5 5 0 0 1 10 0v3" stroke="#111" strokeWidth="1.5" strokeLinecap="round"/>
-  </svg>
-);
-const CodeSVG = () => (
-  <svg width="96" height="96" viewBox="0 0 24 24" fill="none" aria-hidden>
-    <path d="M8 17l-4-5 4-5" stroke="#111" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-    <path d="M16 17l4-5-4-5" stroke="#111" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-    <path d="M12 19V5" stroke="#111" strokeWidth="1.5" strokeLinecap="round"/>
-  </svg>
-);
-const KeySVG = () => (
-  <svg width="96" height="96" viewBox="0 0 24 24" fill="none" aria-hidden>
-    <circle cx="8" cy="8" r="3" stroke="#111" strokeWidth="1.5" fill="#f5f5f5"/>
-    <path d="M11 11h6l-1 1v1l-1 1h-1" stroke="#111" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-);
 
 /* ---------- Component ---------- */
 export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user, onSecuritySettingsChange }) => {
@@ -307,7 +287,6 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user,
   const [cpEmail, setCpEmail] = useState("");
   const [cpOldPassword, setCpOldPassword] = useState("");
   const [cpCodeInput, setCpCodeInput] = useState("");
-  const [generatedCode, setGeneratedCode] = useState("");
   const [cpNewPassword, setCpNewPassword] = useState("");
   const [cpConfirmPassword, setCpConfirmPassword] = useState("");
   const [cpMessage, setCpMessage] = useState<string | null>(null);
@@ -323,7 +302,6 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user,
     setCpEmail(user?.email || "");
     setCpOldPassword("");
     setCpCodeInput("");
-    setGeneratedCode("");
     setCpNewPassword("");
     setCpConfirmPassword("");
     setCpMessage(null);
@@ -453,7 +431,7 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user,
                       type="text"
                       className="form-control"
                       value={storeSettings.phone}
-                      onChange={(e) => setStoreSettings({ ...storeSettings, phone: e.target.value })}
+                      onChange={(e) => setStoreSettings({ ...storeSettings, phone: e.target.value.replace(/[^0-9]/g, "") })}
                       disabled={!canAccessStoreSettings}
                     />
                   </div>
@@ -901,20 +879,32 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user,
                   <div className="w-100 px-4">
                     {cpStep === "verify" && (
                       <div className="d-grid gap-2">
-                        <button className="btn btn-dark" onClick={handleSendCode}>Send code</button>
-                        <button className="btn btn-outline-secondary" onClick={closeChangePasswordModal}>Cancel</button>
+                        <button className="btn btn-dark" onClick={handleSendCode} disabled={cpLoading}>
+                          {cpLoading ? "Sending..." : "Send code"}
+                        </button>
+                        <button className="btn btn-outline-secondary" onClick={closeChangePasswordModal} disabled={cpLoading}>
+                          Cancel
+                        </button>
                       </div>
                     )}
                     {cpStep === "code" && (
                       <div className="d-grid gap-2">
-                        <button className="btn btn-dark" onClick={handleVerifyCode}>Confirm</button>
-                        <button className="btn btn-outline-secondary" onClick={() => setCpStep("verify")}>Back</button>
+                        <button className="btn btn-dark" onClick={handleVerifyCode} disabled={cpLoading}>
+                          {cpLoading ? "Verifying..." : "Confirm"}
+                        </button>
+                        <button className="btn btn-outline-secondary" onClick={() => setCpStep("verify")} disabled={cpLoading}>
+                          Back
+                        </button>
                       </div>
                     )}
                     {cpStep === "new" && (
                       <div className="d-grid gap-2">
-                        <button className="btn btn-dark" onClick={handleChangePassword}>Change Password</button>
-                        <button className="btn btn-outline-secondary" onClick={() => setCpStep("verify")}>Cancel</button>
+                        <button className="btn btn-dark" onClick={handleChangePassword} disabled={cpLoading}>
+                          {cpLoading ? "Processing..." : "Change Password"}
+                        </button>
+                        <button className="btn btn-outline-secondary" onClick={() => setCpStep("verify")} disabled={cpLoading}>
+                          Cancel
+                        </button>
                       </div>
                     )}
                   </div>

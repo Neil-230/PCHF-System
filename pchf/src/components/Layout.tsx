@@ -1,5 +1,5 @@
 import "./css/layout.css";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { // Iconssssssssss 
   Package,
   BarChart3,
@@ -284,18 +284,6 @@ export function Layout({ children, activeTab, onTabChange, user, onLogout, autoL
                   <strong>{user.name}</strong>
                   <div className="text-muted small">{user.email}</div>
                 </div>
-                <div className="dropdown-divider"></div>
-                {/* <button className="dropdown-item">
-                  <ShieldIcon size={16} className="me-2" />
-                  Security Settings
-                </button> */}
-                <button
-                  className="dropdown-item"
-                  onClick={() => onTabChange("settings")}
-                >
-                  <Settings size={16} className="me-2" />
-                  Store Settings
-                </button>
                 <div className="dropdown-divider"></div>
                 <button className="dropdown-item text-danger" onClick={onLogout}>
                   <LogOut size={16} className="me-2" />

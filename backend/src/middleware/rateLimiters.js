@@ -10,14 +10,18 @@ import rateLimit from 'express-rate-limit';
 // ============================================
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 30, // Relaxed to 30 login attempts per IP per 15 minutes
+  max: 20, // Relaxed to 30 login attempts per IP per 15 minutes
   standardHeaders: true,
   legacyHeaders: false,
   message: {
     error: 'Too many login attempts. Please try again after 15 minutes.',
   },
   handler: (req, res, _next, options) => {
-    res.status(options.statusCode).json(options.message);
+    const retryAfter = res.getHeader('Retry-After');
+    res.status(options.statusCode).json({
+      ...options.message,
+      retryAfter: parseInt(retryAfter, 10) || 0,
+    });
   },
   skip: () => false, // NO SKIP - Enforce strictly on all methods
   keyGenerator: (req) => {
@@ -31,7 +35,7 @@ export const authLimiter = rateLimit({
 // ============================================
 export const passwordResetLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 30, // Only 3 attempts per hour
+  max: 20, // Only 3 attempts per hour
   standardHeaders: true,
   legacyHeaders: false,
   skipSuccessfulRequests: true, // Count only failures
@@ -39,7 +43,11 @@ export const passwordResetLimiter = rateLimit({
     error: 'Too many password reset requests. Please try again later.',
   },
   handler: (req, res, _next, options) => {
-    res.status(options.statusCode).json(options.message);
+    const retryAfter = res.getHeader('Retry-After');
+    res.status(options.statusCode).json({
+      ...options.message,
+      retryAfter: parseInt(retryAfter, 10) || 0,
+    });
   },
 });
 
@@ -48,14 +56,18 @@ export const passwordResetLimiter = rateLimit({
 // ============================================
 export const signupLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 30, // 5 signups per hour per IP
+  max: 20, // 5 signups per hour per IP
   standardHeaders: true,
   legacyHeaders: false,
   message: {
     error: 'Too many account creations. Please try again later.',
   },
   handler: (req, res, _next, options) => {
-    res.status(options.statusCode).json(options.message);
+    const retryAfter = res.getHeader('Retry-After');
+    res.status(options.statusCode).json({
+      ...options.message,
+      retryAfter: parseInt(retryAfter, 10) || 0,
+    });
   },
 });
 

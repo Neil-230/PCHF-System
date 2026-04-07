@@ -1,11 +1,10 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo } from "react";
 import type { Product, CartItem } from "../types";
 import { mockProducts, categories } from "../data/mockData";
-import { Search, Trash2 } from "lucide-react";
+import { Search, Package } from "lucide-react";
 import "./css/PointOfSales.css";
 import { Modal, Button, Card } from "react-bootstrap";
 import { Badge } from "./ui/Badge";
-import { CardTitle, CardHeader, CardContent } from "./ui/card";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { toast } from "sonner";
@@ -128,14 +127,18 @@ export function PointOfSale({ onTransactionComplete, user }: PointOfSaleProps) {
     toast.success("Cart successfully cleared");
   };
 
-  const filteredProducts = products.filter((product) => {
-    const matchesCategory =
-      selectedCategory === "All" || product.category === selectedCategory;
-    const matchesSearch =
-      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.sku.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
+  const filteredProducts = useMemo(() => {
+    return products.filter((product) => {
+      const matchesCategory =
+        selectedCategory === "All" || product.category === selectedCategory;
+      const matchesSearch =
+        product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        product.sku.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesCategory && matchesSearch;
+    });
+  }, [products, selectedCategory, searchQuery]);
+
+  const memoizedCategories = useMemo(() => ["All", ...categories.filter(c => c !== "All")], []);
 
   // SUBMIT LOGIC
   const handleNameSubmit = () => {
@@ -384,14 +387,14 @@ export function PointOfSale({ onTransactionComplete, user }: PointOfSaleProps) {
             className="form-control mb-3"
             placeholder="Customer Name..."
             value={customerName}
-            onChange={(e) => setCustomerName(e.target.value)}
+            onChange={(e) => setCustomerName(e.target.value.replace(/[^a-zA-Z\s]/g, ""))}
           />
           <input
             type="text"
             className="form-control mb-3"
             placeholder="Contact Number..."
             value={customerContact}
-            onChange={(e) => setCustomerContact(e.target.value)}
+            onChange={(e) => setCustomerContact(e.target.value.replace(/[^0-9]/g, ""))}
           />
           <textarea
             className="form-control mb-3"
@@ -437,64 +440,101 @@ export function PointOfSale({ onTransactionComplete, user }: PointOfSaleProps) {
           <div className="row g-3">
             {/* Product Section */}
             <div className="col-lg-8">
-              <div className="d-flex gap-2 mb-3">
-                <form className="flex-grow-1">
-                  <div className="position-relative w-100">
+              <div className="mb-4">
+                <div className="d-flex align-items-center gap-2 mb-3">
+                  <div className="position-relative flex-grow-1">
                     <input
                       type="text"
-                      className="form-control ps-5"
-                      placeholder="Search products or SKU..."
+                      className="form-control ps-5 py-2 border-0 bg-white"
+                      style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.05)", borderRadius: "10px" }}
+                      placeholder="Search items, SKU, or category..."
                       onChange={(e) => setSearchQuery(e.target.value)}
                       value={searchQuery}
                     />
-                    <Search className="position-absolute top-50 start-0 translate-middle-y ms-2 text-secondary" size={18} />
+                    <Search className="position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" size={18} />
                   </div>
-                </form>
-                <select
-                  className="form-select w-25"
-                  value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
-                >
-                  <option value="All">All</option>
-                  {categories
-                    .filter((c) => c !== "All")
-                    .map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
+                </div>
+                
+                <div className="mb-2">
+                  <div className="d-flex gap-2 overflow-auto pb-2" style={{ scrollbarWidth: "none" }}>
+                    {memoizedCategories.map((cat) => (
+                      <button
+                        key={cat}
+                        className={`btn px-4 py-1 flex-shrink-0 transition-all border-0 ${selectedCategory === cat 
+                          ? 'btn-dark text-white' 
+                          : 'bg-white text-secondary'}`}
+                        style={{ 
+                          borderRadius: "20px", 
+                          fontSize: "0.85rem",
+                          boxShadow: selectedCategory === cat ? "0 4px 12px rgba(0,0,0,0.15)" : "0 2px 4px rgba(0,0,0,0.05)"
+                        }}
+                        onClick={() => setSelectedCategory(cat)}
+                      >
+                        {cat}
+                      </button>
                     ))}
-                </select>
+                  </div>
+                </div>
               </div>
 
-              <div className=" d-flex alert alert-secondary gap-2 py-2">
-                <strong className="d-flex">Customer:</strong> {customerName} &nbsp;|&nbsp; {customerContact}
+              <div className="d-flex align-items-center alert border-0 bg-white shadow-sm mb-4 py-2 px-3" style={{ borderRadius: "12px" }}>
+                <div className="me-2 text-primary d-flex align-items-center justify-content-center bg-primary bg-opacity-10 rounded-circle" style={{ width: "32px", height: "32px" }}>
+                  <span style={{ fontSize: "0.75rem", fontWeight: "bold" }}>{customerName[0]}</span>
+                </div>
+                <div className="flex-grow-1">
+                  <div className="fw-bold" style={{ fontSize: "0.9rem" }}>{customerName}</div>
+                  <div className="text-muted" style={{ fontSize: "0.75rem" }}>{customerContact} • {deliveryType}</div>
+                </div>
+                <button 
+                  className="btn btn-sm btn-link text-decoration-none text-primary" 
+                  onClick={() => setIsNameDialogOpen(true)}
+                  style={{ fontSize: "0.8rem" }}
+                >
+                  Edit Details
+                </button>
               </div>
 
               <div
-                className="grid gap-3 flex-grow overflow-y-auto pe-3 ProductList"
+                className="flex-grow overflow-y-auto pe-3 ProductList"
               >
                 {filteredProducts.map((product) => (
                   <Card
                     key={product.id}
-                    className={`cursor-pointer transition-all hover:shadow-md border border-0 ${product.stock === 0 ? "opacity-50" : ""}`}
+                    className={`navbutton cursor-pointer transition-all border-0 overflow-hidden text-start ${product.stock === 0 ? "opacity-50" : ""}`}
                     onClick={() => addToCart(product)}
-                    style={{ boxShadow: "2px 4px 8px  rgba(0, 0, 0, 0.10)" }}
+                    style={{ 
+                      boxShadow: "0 4px 15px rgba(0, 0, 0, 0.05)",
+                      borderRadius: "15px",
+                      background: "white"
+                    }}
                   >
-                    <CardHeader>
-                      <div className="d-flex flex-row">
-                        <CardTitle>{product.name}</CardTitle>
-                        <div className="ms-2">
-                          <Badge variant={product.stock > 10 ? "default" : product.stock > 0 ? "secondary" : "destructive"}>
-                            {product.stock > 0 ? `${product.stock}` : "Out"}
-                          </Badge>
-                        </div>
+                    <div className="position-relative">
+                      <div 
+                        className="bg-light d-flex align-items-center justify-content-center"
+                        style={{ height: "130px" }}
+                      >
+                        {product.image ? (
+                          <img src={product.image} alt={product.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        ) : (
+                          <Package size={40} className="text-secondary opacity-30" />
+                        )}
                       </div>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-xs text-muted-foreground">SKU: {product.sku}</p>
-                      <p className="fw-semibold">₱{product.price.toFixed(2)}</p>
-                      <Badge variant="outline" className="">{product.category}</Badge>
-                    </CardContent>
+                      <Badge 
+                        variant={product.stock > 10 ? "default" : product.stock > 0 ? "secondary" : "destructive"}
+                        className="position-absolute top-0 end-0 m-2"
+                        style={{ borderRadius: "8px" }}
+                      >
+                        {product.stock > 0 ? `${product.stock} left` : "Out"}
+                      </Badge>
+                    </div>
+                    
+                    <div className="p-3">
+                      <div className="mb-1 fw-bold text-dark text-truncate fs-6">{product.name}</div>
+                      <div className="d-flex justify-content-between align-items-center">
+                        <div className="fw-bold text-primary fs-5">₱{product.price.toFixed(2)}</div>
+                        <span className="text-muted" style={{ fontSize: "0.7rem" }}>{product.category}</span>
+                      </div>
+                    </div>
                   </Card>
                 ))}
               </div>
@@ -513,76 +553,80 @@ export function PointOfSale({ onTransactionComplete, user }: PointOfSaleProps) {
                   </div>
                 ) : (
                   <>
-                    <div className="flex-grow-1 overflow-auto mb-3">
+                    <div className="flex-grow-1 overflow-auto mb-4 px-1" style={{ scrollbarWidth: "none" }}>
                       {cart.map((item) => (
                         <div
                           key={item.product.id}
-                          className="d-flex align-items-center justify-content-between border-bottom py-2"
+                          className="d-flex align-items-center border-0 mb-3 bg-light rounded-3 p-2"
                         >
-                          <div className="me-auto">
-                            <p className="mb-0 fw-medium">{item.product.name}</p>
-                            <small>₱{item.product.price.toFixed(2)} each</small>
+                          <div 
+                            className="rounded-circle border bg-white overflow-hidden d-flex align-items-center justify-content-center me-3"
+                            style={{ width: "45px", height: "45px", flexShrink: 0 }}
+                          >
+                            {item.product.image ? (
+                              <img src={item.product.image} alt={item.product.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                            ) : (
+                              <Package size={18} className="text-secondary opacity-50" />
+                            )}
                           </div>
-                          <p className="mb-0 me-2 fw-semibold">
-                            ₱{(item.product.price * item.quantity).toFixed(2)}
-                          </p>
-                          <div className="d-flex align-items-center gap-2">
-                            <input
-                              type="number"
-                              className="form-control form-control-sm text-center"
-                              style={{ width: "60px" }}
-                              min="1"
-                              max={item.product.stock}
-                              value={item.quantity}
-                              onChange={(e) =>
-                                updateQuantity(
-                                  item.product.id,
-                                  parseInt(e.target.value)
-                                )
-                              }
-                            />
-                            <Button
-                              variant="danger"
-                              size="sm"
-                              onClick={() => removeFromCart(item.product.id)}
-                            >
-                              <Trash2 size={20}/>
-                            </Button>
+                          <div className="me-auto overflow-hidden">
+                            <p className="mb-0 fw-bold text-truncate" style={{ fontSize: "0.85rem" }}>{item.product.name}</p>
+                            <div className="fw-bold text-primary" style={{ fontSize: "0.8rem" }}>₱{(item.product.price * item.quantity).toFixed(2)}</div>
+                          </div>
+                          
+                          <div className="d-flex align-items-center bg-white rounded-pill px-1 shadow-sm ms-2">
+                             <button 
+                               className="btn btn-sm border-0 p-1" 
+                               onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
+                             >
+                               <span style={{ fontSize: "1.1rem", fontWeight: "bold" }}>−</span>
+                             </button>
+                             <span className="mx-2 fw-bold" style={{ fontSize: "0.85rem", minWidth: "20px", textAlign: "center" }}>
+                               {item.quantity}
+                             </span>
+                             <button 
+                               className="btn btn-sm border-0 p-1" 
+                               onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
+                               disabled={item.quantity >= item.product.stock}
+                             >
+                               <span style={{ fontSize: "1.1rem", fontWeight: "bold" }}>+</span>
+                             </button>
                           </div>
                         </div>
                       ))}
                     </div>
 
-                    <div className="border-top pt-3">
-                      <div className="d-flex justify-content-between">
-                        <span>Subtotal:</span>
-                        <span>₱{subtotal.toFixed(2)}</span>
+                    <div className="mt-auto bg-light rounded-4 p-3 shadow-sm border border-white">
+                      <div className="d-flex justify-content-between mb-2 text-muted small">
+                        <span>Items Subtotal:</span>
+                        <span className="fw-medium">₱{subtotal.toFixed(2)}</span>
                       </div>
-                      <div className="d-flex justify-content-between">
-                        <span>Tax ({taxRate}%):</span>
-                        <span>₱{tax.toFixed(2)}</span>
+                      <div className="d-flex justify-content-between mb-2 text-muted small">
+                        <span>Local Tax ({taxRate}%):</span>
+                        <span className="fw-medium">₱{tax.toFixed(2)}</span>
                       </div>
-                      <hr />
-                      <div className="d-flex justify-content-between fw-bold">
+                      <div className="d-flex justify-content-between mb-3 fw-bold border-top pt-2" style={{ fontSize: "1.1rem" }}>
                         <span>Total:</span>
-                        <span>₱{total.toFixed(2)}</span>
+                        <span className="text-primary">₱{total.toFixed(2)}</span>
                       </div>
-                      <Button
-                        variant="dark"
-                        className="w-100 mt-3"
-                        onClick={() => setIsCheckoutOpen(true)}
-                        disabled={cart.length === 0}
-                      >
-                        Checkout
-                      </Button>
-                      <Button
-                        variant="outline-danger"
-                        className="w-100 mt-2"
-                        onClick={clearCart}
-                        disabled={cart.length === 0}
-                      >
-                        Clear Cart
-                      </Button>
+                      <div className="d-grid gap-2">
+                        <Button
+                          variant="dark"
+                          style={{ borderRadius: "12px", padding: "12px", fontWeight: "bold" }}
+                          onClick={() => setIsCheckoutOpen(true)}
+                          disabled={cart.length === 0}
+                        >
+                          Checkout Now
+                        </Button>
+                        <Button
+                          variant="outline-danger"
+                          className="border-0 bg-transparent text-danger btn-sm"
+                          onClick={clearCart}
+                          disabled={cart.length === 0}
+                        >
+                          Clear Trash Cart
+                        </Button>
+                      </div>
                     </div>
                   </>
                 )}
@@ -595,71 +639,79 @@ export function PointOfSale({ onTransactionComplete, user }: PointOfSaleProps) {
       {/* Checkout Modal */}
       <Modal show={isCheckoutOpen} onHide={() => setIsCheckoutOpen(false)} centered
         style={{ backgroundColor: "rgba(239, 252, 255, 0.31)" }}>
-        <Modal.Header closeButton>
-          <Modal.Title>Cash Payment</Modal.Title>
+        <Modal.Header closeButton className="border-0 pb-0">
+          <Modal.Title className="fw-bold">Process Payment</Modal.Title>
         </Modal.Header>
-        <Modal.Body>
-          <div className="mb-3 border rounded p-3 bg-light">
-            <h6>Order Summary</h6>
+        <Modal.Body className="pt-3">
+          <div className="mb-4 bg-light rounded-4 p-3 border border-white shadow-sm">
+            <h6 className="fw-bold mb-3 small text-muted text-uppercase">Order Summary</h6>
             {cart.map((item) => (
               <div
                 key={item.product.id}
-                className="d-flex justify-content-between small"
+                className="d-flex justify-content-between mb-2"
+                style={{ fontSize: "0.9rem" }}
               >
-                <span>
-                  {item.product.name} x{item.quantity}
+                <span className="text-muted">
+                  {item.product.name} <small>x{item.quantity}</small>
                 </span>
-                <span>₱{(item.product.price * item.quantity).toFixed(2)}</span>
+                <span className="fw-medium">₱{(item.product.price * item.quantity).toFixed(2)}</span>
               </div>
             ))}
-            <hr />
-            <div className="d-flex justify-content-between fw-bold">
-              <span>Total:</span>
-              <span>₱{total.toFixed(2)}</span>
+            <div className="border-top mt-2 pt-2 d-flex justify-content-between align-items-center">
+              <span className="fw-bold">Total Payable</span>
+              <span className="fs-4 fw-bold text-primary">₱{total.toFixed(2)}</span>
             </div>
           </div>
           <div className="mb-3">
-            <label htmlFor="taxRate" className="form-label fw-semibold">Tax Percentage</label>
+            <label htmlFor="taxRate" className="small fw-bold text-muted text-uppercase mb-2 d-block">Tax Percentage (%)</label>
             <input
               type="number"
               id="taxRate"
               min="0"
               max="100"
               step="0.01"
-              className="form-control"
+              className="form-control border-0 bg-light p-3 rounded-3"
+              style={{ boxShadow: "inset 0 1px 4px rgba(0,0,0,0.05)" }}
               value={taxRate}
               onChange={(e) => setTaxRate(e.target.value)}
-              placeholder="Enter tax % (e.g., 12)"
+              placeholder="0.00"
             />
           </div>
-          <label className="form-label">Cash Received</label>
-          <input
-            type="number"
-            className="form-control mb-3"
-            placeholder="0.00"
-            value={cashAmount}
-            onChange={(e) => setCashAmount(e.target.value)}
-          />
+          
+          <div className="mb-4">
+            <label className="small fw-bold text-muted text-uppercase mb-2 d-block">Cash Amount Received (₱)</label>
+            <input
+              type="number"
+              className="form-control border-0 bg-light p-3 rounded-3 fs-4 fw-bold text-primary"
+              style={{ boxShadow: "inset 0 1px 4px rgba(0,0,0,0.05)" }}
+              placeholder="0.00"
+              value={cashAmount}
+              onChange={(e) => setCashAmount(e.target.value)}
+            />
+          </div>
 
           {cashAmount && parseFloat(cashAmount) >= total && (
-            <div className="alert alert-success">
-              Change: ₱{(parseFloat(cashAmount) - total).toFixed(2)}
+            <div className="alert alert-success border-0 rounded-4 py-3 text-center mb-4 shadow-sm bg-success bg-opacity-10 text-success">
+              <div className="small text-uppercase fw-bold opacity-75 mb-1">Return Change</div>
+              <div className="fs-3 fw-bold">₱{(parseFloat(cashAmount) - total).toFixed(2)}</div>
             </div>
           )}
-          {cashAmount && parseFloat(cashAmount) < total && (
-            <div className="alert alert-danger">
-              Insufficient amount. Need ₱
-              {(total - parseFloat(cashAmount)).toFixed(2)} more.
+          
+          {cashAmount && parseFloat(cashAmount) > 0 && parseFloat(cashAmount) < total && (
+            <div className="alert alert-danger border-0 rounded-4 py-3 text-center mb-4 shadow-sm bg-danger bg-opacity-10 text-danger">
+              <div className="small text-uppercase fw-bold opacity-75 mb-1">Remaining Balance</div>
+              <div className="fs-3 fw-bold">₱{(total - parseFloat(cashAmount)).toFixed(2)}</div>
             </div>
           )}
 
           <Button
             variant="dark"
             onClick={handleConfirmPayment}
-            className="w-100 mt-2"
+            className="w-100 py-3 shadow-sm"
+            style={{ borderRadius: "14px", fontWeight: "bold" }}
             disabled={!cashAmount || parseFloat(cashAmount) < total}
           >
-            Confirm Payment
+            Complete Transaction
           </Button>
         </Modal.Body>
       </Modal>

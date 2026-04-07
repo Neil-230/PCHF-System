@@ -1,17 +1,17 @@
 import { useState, useEffect } from "react";
 import type { Product } from "../types";
 import type { User } from "../types/auth";
-import { mockProducts } from "../data/mockData";
-import { Plus, Edit, Search, Trash2 } from "lucide-react";
+import { Plus, Edit, Search, Package, Archive, RotateCcw, LayoutGrid, FileDown } from "lucide-react";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
-import { FileDown } from "lucide-react";
+import autoTable from "jspdf-autotable";
 import apiService from "../services/api";
 
 import { Modal, Button } from "react-bootstrap";
 
 export function InventoryManagement({ user }: { user?: User }) {
-  const [products, setProducts] = useState<Product[]>(mockProducts);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [showArchived, setShowArchived] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -23,6 +23,7 @@ export function InventoryManagement({ user }: { user?: User }) {
     stock: "",
     sku: "",
     description: "",
+    image: "",
   });
 
   // Example categories
@@ -43,17 +44,18 @@ export function InventoryManagement({ user }: { user?: User }) {
       stock: "",
       sku: "",
       description: "",
+      image: "",
     });
   };
 
   useEffect(() => {
     apiService
-      .getProducts()
+      .getProducts({ archived: showArchived })
       .then(({ products }) => setProducts(products))
       .catch((err: any) => {
         toast.error(err?.message || "Failed to load products");
       });
-  }, []);
+  }, [showArchived]);
 
   // SKU Generator (e.g., COF001, SNA123) pwedi ni ninyo i Module
   const generateSKU = (category: string) => {
@@ -78,6 +80,7 @@ export function InventoryManagement({ user }: { user?: User }) {
         price: parseFloat(formData.price),
         stock: parseInt(formData.stock),
         description: formData.description,
+        image: formData.image,
       });
       setProducts((prev) => [...prev, created.product]);
       resetForm();
@@ -107,6 +110,7 @@ export function InventoryManagement({ user }: { user?: User }) {
       stock: parseInt(formData.stock),
       sku: formData.sku.trim() || generateSKU(formData.category),
       description: formData.description,
+      image: formData.image,
       version: editingProduct.__v,
     } as any;
 
@@ -151,38 +155,59 @@ export function InventoryManagement({ user }: { user?: User }) {
       stock: product.stock.toString(),
       sku: product.sku,
       description: product.description || "",
+      image: product.image || "",
     });
   };
 
-  const handleDeleteProduct = async (productId: string) => {
+  const handleArchiveProduct = async (productId: string) => {
     if (!user || user.role !== "owner") {
-      toast.error("Only the owner can delete products");
+      toast.error("Only the owner can archive products");
       return;
     }
 
     const product = products.find((p) => p.id === productId);
-    if (!product) {
-      toast.error("Product not found. Please refresh.");
-      return;
-    }
+    if (!product) return;
 
     if (product.__v === undefined) {
-      toast.error("This product's version is unknown. Please refresh before deleting.");
+      toast.error("This product's version is unknown. Please refresh.");
       return;
     }
 
-    const confirmed = window.confirm("Are you sure you want to delete this product?");
+    const confirmed = window.confirm("Are you sure you want to archive this product? It will no longer appear in the POS.");
     if (!confirmed) return;
     try {
       await apiService.deleteProduct(productId, product.__v);
       setProducts((prev) => prev.filter((p) => p.id !== productId));
-      toast.success("Product deleted");
+      toast.success("Product archived");
     } catch (e: any) {
       if (e?.status === 409) {
-        toast.error("Data changed by someone else. Please refresh and try again.");
+        toast.error("Data changed by someone else. Please refresh.");
         return;
       }
-      toast.error(e?.message || "Failed to delete product. Please try again.");
+      toast.error(e?.message || "Failed to archive product.");
+    }
+  };
+
+  const handleRestoreProduct = async (productId: string) => {
+    if (!user || user.role !== "owner") {
+      toast.error("Only the owner can restore products");
+      return;
+    }
+
+    const product = products.find((p) => p.id === productId);
+    if (!product) return;
+
+    if (product.__v === undefined) {
+      toast.error("This product's version is unknown. Please refresh.");
+      return;
+    }
+
+    try {
+      await apiService.restoreProduct(productId, product.__v);
+      setProducts((prev) => prev.filter((p) => p.id !== productId));
+      toast.success("Product restored to active inventory");
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to restore product.");
     }
   };
 
@@ -195,42 +220,106 @@ export function InventoryManagement({ user }: { user?: User }) {
 
   const handleDownloadPDF = () => {
     const doc = new jsPDF();
-    doc.setFontSize(16);
-    doc.text("Inventory Report", 14, 15);
+    
+    // Title
+    doc.setFontSize(22);
+    doc.setTextColor(40, 40, 40);
+    doc.text("Inventory Report", 14, 22);
+    
+    // Subtitle / Date
     doc.setFontSize(10);
-    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 22);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 30);
 
-    let yPos = 35;
-    const categories = [
-      { title: "Out of Stock", filter: (p: Product) => p.stock === 0 },
-      { title: "Low Stock (1-10)", filter: (p: Product) => p.stock > 0 && p.stock <= 10 },
-      { title: "In Stock (>10)", filter: (p: Product) => p.stock > 10 },
-    ];
+    // Filter categories
+    const outOfStock = products.filter((p) => p.stock === 0);
+    const lowStock = products.filter((p) => p.stock > 0 && p.stock <= 10);
+    const inStock = products.filter((p) => p.stock > 10);
 
-    categories.forEach(({ title, filter }) => {
-      const items = products.filter(filter);
-      if (items.length > 0) {
-        doc.setFontSize(12);
-        doc.text(title, 14, yPos);
-        yPos += 6;
-        doc.setFontSize(10);
+    // Summary stats
+    doc.setFontSize(10);
+    doc.setTextColor(60, 60, 60);
+    doc.text(`Total Items: ${products.length}  |  Out of Stock: ${outOfStock.length}  |  Low Stock: ${lowStock.length}`, 14, 38);
 
-        items.forEach((p) => {
-          if (yPos > 280) {
-            doc.addPage();
-            yPos = 20;
+    const tableColumn = ["Product Name", "SKU", "Category", "Price", "Stock", "Status"];
+    const tableRows: any[] = [];
+
+    // Helper to add rows
+    const addRows = (items: Product[], statusLabel: string) => {
+      items.forEach((p) => {
+        tableRows.push([
+          p.name,
+          p.sku,
+          p.category,
+          `PHP ${p.price.toFixed(2)}`,
+          p.stock.toString(),
+          statusLabel
+        ]);
+      });
+    };
+
+    // Add rows grouping by stock status to keep it organized
+    addRows(outOfStock, "Out of Stock");
+    addRows(lowStock, "Low Stock");
+    addRows(inStock, "In Stock");
+
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 45,
+      theme: 'grid',
+      styles: {
+        fontSize: 9,
+        cellPadding: 6,
+        textColor: [40, 40, 40],
+        lineColor: [240, 240, 240],
+        lineWidth: 0.1,
+        font: 'helvetica'
+      },
+      headStyles: {
+        fillColor: [250, 250, 250],
+        textColor: [50, 50, 50],
+        fontStyle: 'bold',
+        lineWidth: { bottom: 0.5 },
+        lineColor: [200, 200, 200]
+      },
+      alternateRowStyles: {
+        fillColor: [252, 252, 252],
+      },
+      columnStyles: {
+        3: { halign: 'right' }, // Price right aligned
+        4: { halign: 'center' }, // Stock center aligned
+      },
+      didParseCell: function(data) {
+        // Color code status column
+        if (data.section === 'body' && data.column.index === 5) {
+          const status = data.cell.raw;
+          if (status === 'Out of Stock') {
+            data.cell.styles.textColor = [220, 53, 69]; // Danger red
+            data.cell.styles.fontStyle = 'bold';
+          } else if (status === 'Low Stock') {
+            data.cell.styles.textColor = [255, 152, 0]; // Warning orange
+            data.cell.styles.fontStyle = 'bold';
+          } else {
+            data.cell.styles.textColor = [25, 135, 84]; // Success green
           }
-          doc.text(
-            `${p.name} | PHP. ${p.price.toFixed(2)} | Stock: ${p.stock} | SKU: ${p.sku}`,
-            14,
-            yPos
-          );
-          yPos += 6;
-        });
-
-        yPos += 8;
+        }
       }
     });
+
+    // Add footer with page numbers
+    const pageCount = (doc as any).internal.getNumberOfPages();
+    for(let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(150);
+        doc.text(
+            `Page ${i} of ${pageCount}`,
+            (doc.internal.pageSize as any).getWidth() - 20,
+            (doc.internal.pageSize as any).getHeight() - 10,
+            { align: 'right' }
+        );
+    }
 
     doc.save("Inventory_Report.pdf");
   };
@@ -315,6 +404,14 @@ export function InventoryManagement({ user }: { user?: User }) {
             <FileDown size={18} className="me-2" />
             Download PDF
           </button>
+
+          <button
+            className={`btn d-flex align-items-center ${showArchived ? 'btn-primary' : 'btn-outline-primary'}`}
+            onClick={() => setShowArchived(!showArchived)}
+          >
+            {showArchived ? <LayoutGrid size={18} className="me-2" /> : <Archive size={18} className="me-2" />}
+            {showArchived ? 'Show Active' : 'Show Archive'}
+          </button>
         </div>
       </div>
 
@@ -329,7 +426,7 @@ export function InventoryManagement({ user }: { user?: User }) {
         style={{ backgroundColor: "rgba(239, 252, 255, 0.31)" }}
       >
         <Modal.Header closeButton className="border-0">
-          <Modal.Title>{editingProduct ? "Edit Product" : "Add Product"}</Modal.Title>
+          <Modal.Title>{editingProduct ? (showArchived ? "View Archived Product" : "Edit Product") : "Add Product"}</Modal.Title>
         </Modal.Header>
 
         <Modal.Body>
@@ -400,6 +497,67 @@ export function InventoryManagement({ user }: { user?: User }) {
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             />
           </div>
+
+          <div className="mt-3">
+            <label className="form-label">Product Image</label>
+            <div className="d-flex align-items-start gap-3">
+              <div 
+                className="border rounded-3 d-flex align-items-center justify-content-center bg-light overflow-hidden"
+                style={{ width: "120px", height: "120px", cursor: "pointer" }}
+                onClick={() => document.getElementById('productImageInput')?.click()}
+              >
+                {formData.image ? (
+                  <img src={formData.image} alt="Preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                ) : (
+                  <div className="text-center text-muted p-2">
+                    <Plus size={24} className="mb-1" />
+                    <div style={{ fontSize: "0.75rem" }}>Upload</div>
+                  </div>
+                )}
+              </div>
+              <div className="flex-grow-1">
+                <input
+                  id="productImageInput"
+                  type="file"
+                  accept="image/*"
+                  className="d-none"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onloadend = () => {
+                        setFormData({ ...formData, image: reader.result as string });
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                />
+                
+                <div className="mb-3">
+                  <label className="form-label small text-muted">Paste Image URL</label>
+                  <input 
+                    type="text" 
+                    className="form-control form-control-sm" 
+                    placeholder="https://example.com/image.jpg"
+                    value={formData.image.startsWith('data:') ? '' : formData.image}
+                    onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+                  />
+                  <p className="text-muted" style={{ fontSize: "0.7rem", marginTop: "4px" }}>
+                    Or click the box on the left to upload a local file.
+                  </p>
+                </div>
+
+                {formData.image && (
+                  <button 
+                    className="btn btn-sm btn-outline-danger"
+                    onClick={() => setFormData({ ...formData, image: "" })}
+                  >
+                    Remove Image
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
         </Modal.Body>
 
         <Modal.Footer className="border-0">
@@ -414,6 +572,7 @@ export function InventoryManagement({ user }: { user?: User }) {
           </Button>
           <Button
             variant="primary"
+            disabled={showArchived}
             onClick={editingProduct ? handleEditProduct : handleAddProduct}
           >
             {editingProduct ? "Save Changes" : "Add Product"}
@@ -427,6 +586,7 @@ export function InventoryManagement({ user }: { user?: User }) {
           <table className="table table-hover mb-0"> {/*table-striped Used this to make it stripe*/}
             <thead className="">
               <tr className="">
+                <th>Preview</th>
                 <th>Category</th>
                 <th>ID</th>
                 <th>Product</th>
@@ -441,6 +601,18 @@ export function InventoryManagement({ user }: { user?: User }) {
                 const stockStatus = getStockStatus(product.stock);
                 return (
                   <tr key={product.id}>
+                    <td>
+                      <div 
+                        className="rounded-2 border bg-light overflow-hidden d-flex align-items-center justify-content-center"
+                        style={{ width: "48px", height: "48px" }}
+                      >
+                        {product.image ? (
+                          <img src={product.image} alt={product.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        ) : (
+                          <Package size={20} className="text-secondary opacity-50" />
+                        )}
+                      </div>
+                    </td>
                     <td>
                       <span className="badge text-dark border-0" >{product.category}</span>
                     </td>
@@ -459,19 +631,35 @@ export function InventoryManagement({ user }: { user?: User }) {
                       <span className={`badge fw-bold text-${stockStatus.variant}`}>{stockStatus.label}</span>
                     </td>
                     <td>
-                      <button
-                        className="btn btn-outline-secondary btn-sm"
-                        onClick={() => openEditDialog(product)}
-                      >
-                        <Edit size={16} />
-                      </button>
-                      {user?.role === "owner" && (
+                      {!showArchived && (
                         <button
-                          className="btn btn-outline-danger btn-sm ms-2"
-                          onClick={() => handleDeleteProduct(product.id)}
+                          className="btn btn-outline-secondary btn-sm"
+                          onClick={() => openEditDialog(product)}
                         >
-                          <Trash2 size={16} />
+                          <Edit size={16} />
                         </button>
+                      )}
+                      
+                      {user?.role === "owner" && (
+                        <>
+                          {showArchived ? (
+                            <button
+                              className="btn btn-outline-success btn-sm ms-2"
+                              onClick={() => handleRestoreProduct(product.id)}
+                              title="Restore to Active"
+                            >
+                              <RotateCcw size={16} />
+                            </button>
+                          ) : (
+                            <button
+                              className="btn btn-outline-warning btn-sm ms-2"
+                              onClick={() => handleArchiveProduct(product.id)}
+                              title="Archive Product"
+                            >
+                              <Archive size={16} />
+                            </button>
+                          )}
+                        </>
                       )}
                     </td>
                   </tr>

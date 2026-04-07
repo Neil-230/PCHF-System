@@ -21,8 +21,39 @@ select.form-select {
 }
 
 .ProductList {
-  max-height: calc(100vh - 180px);
+  max-height: calc(100vh - 280px);
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1.5rem;
+  padding-bottom: 2rem;
+}
+
+/* Hide scrollbar for category pills but allow scrolling */
+.overflow-auto::-webkit-scrollbar {
+  display: none;
+}
+.overflow-auto {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.transition-all {
+  transition: all 0.2s ease-in-out;
+}
+
+.navbutton:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 20px rgba(0,0,0,0.1) !important;
+}
+
+.navbutton:active {
+  transform: translateY(0);
+}
+
+.rounded-4 {
+  border-radius: 1.5rem !important;
+}
+
+.rounded-pill {
+  border-radius: 50rem !important;
 }

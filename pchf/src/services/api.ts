@@ -273,22 +273,23 @@ class ApiService {
   }
 
   // ============ PRODUCT ENDPOINTS ============
-  async getProducts(params: { q?: string; category?: string } = {}): Promise<{ products: any[] }> {
+  async getProducts(params: { q?: string; category?: string; archived?: boolean } = {}): Promise<{ products: any[] }> {
     const query = new URLSearchParams();
     if (params.q) query.set('q', params.q);
     if (params.category) query.set('category', params.category);
+    if (params.archived !== undefined) query.set('archived', String(params.archived));
     const qs = query.toString();
     return this.request(`/products${qs ? `?${qs}` : ''}`);
   }
 
-  async createProduct(product: { name: string; sku: string; category?: string; price: number; stock?: number; description?: string }): Promise<{ product: any; message: string }>{
+  async createProduct(product: { name: string; sku: string; category?: string; price: number; stock?: number; description?: string; image?: string }): Promise<{ product: any; message: string }>{
     return this.request('/products', {
       method: 'POST',
       body: JSON.stringify(product),
     });
   }
 
-  async updateProduct(id: string, updates: Partial<{ name: string; sku: string; category: string; price: number; stock: number; description: string }>): Promise<{ product: any; message: string }>{
+  async updateProduct(id: string, updates: Partial<{ name: string; sku: string; category: string; price: number; stock: number; description: string; image: string }>): Promise<{ product: any; message: string }>{
     return this.request(`/products/${id}`, {
       method: 'PUT',
       body: JSON.stringify(updates),
@@ -299,6 +300,13 @@ class ApiService {
     const qs = new URLSearchParams({ version: String(version) }).toString();
     return this.request(`/products/${id}?${qs}`, {
       method: 'DELETE',
+    });
+  }
+
+  async restoreProduct(id: string, version: number): Promise<{ message: string; product: any }> {
+    const qs = new URLSearchParams({ version: String(version) }).toString();
+    return this.request(`/products/${id}/restore?${qs}`, {
+      method: 'POST',
     });
   }
 

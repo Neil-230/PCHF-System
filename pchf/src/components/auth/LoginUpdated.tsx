@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
@@ -37,6 +37,22 @@ export function LoginUpdated({ onLogin, onSwitchToSignUp }: LoginProps) {
   const [step, setStep] = useState<"email" | "code" | "reset">("email");
   const [resetError, setResetError] = useState('');
   const [resetIsLoading, setResetIsLoading] = useState(false);
+  const [countdown, setCountdown] = useState(0);
+
+  // Countdown timer effect
+  useEffect(() => {
+    if (countdown <= 0) return;
+    const timer = setInterval(() => {
+      setCountdown((prev) => Math.max(0, prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [countdown]);
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -57,7 +73,12 @@ export function LoginUpdated({ onLogin, onSwitchToSignUp }: LoginProps) {
     } catch (err: any) {
       const rawMessage = (err?.body?.error || err?.message || '').toLowerCase();
       let friendly = err?.message || 'Login failed. Please try again.';
-      if (rawMessage.includes('google sign-in')) {
+      
+      if (err?.status === 429 || rawMessage.includes('too many attempts')) {
+        const retryAfter = err?.body?.retryAfter || 900; // fallback to 15 mins
+        setCountdown(retryAfter);
+        friendly = `Too many attempts. Please wait ${formatTime(retryAfter)} before trying again.`;
+      } else if (rawMessage.includes('google sign-in')) {
         friendly = 'This email is linked to Google Sign-In. Please continue using the Google button to log in.';
       } else if (rawMessage.includes('facebook login')) {
         friendly = 'This email is linked to Facebook Login. Please continue using the Facebook option to log in.';
@@ -90,7 +111,13 @@ export function LoginUpdated({ onLogin, onSwitchToSignUp }: LoginProps) {
       toast.success('Verification code sent to your email');
     } catch (err: any) {
       const errorMsg = err.message || 'Failed to send code';
-      setResetError(errorMsg); // Show in UI, not toast
+      if (err?.status === 429) {
+        const retryAfter = err?.body?.retryAfter || 3600;
+        setCountdown(retryAfter);
+        setResetError(`Too many requests. Please wait ${formatTime(retryAfter)}.`);
+      } else {
+        setResetError(errorMsg);
+      }
     } finally {
       setResetIsLoading(false);
     }
@@ -181,8 +208,24 @@ export function LoginUpdated({ onLogin, onSwitchToSignUp }: LoginProps) {
                 <CardContent className="">
                   <form onSubmit={handleSubmit}>
                     {error && (
-                      <Alert variant="destructive">
-                        <AlertDescription>{error}</AlertDescription>
+                      <Alert variant="destructive" className="border-0 shadow-sm mb-4 bg-red-50 text-red-900">
+                        <AlertDescription className="d-flex align-items-center gap-2">
+                          {countdown > 0 && (
+                            <div className="spinner-grow spinner-grow-sm text-danger" role="status">
+                              <span className="visually-hidden">Loading...</span>
+                            </div>
+                          )}
+                          <span>{error}</span>
+                        </AlertDescription>
+                      </Alert>
+                    )}
+
+                    {countdown > 0 && !error.includes('attempts') && (
+                      <Alert className="mb-4 bg-zinc-50 border-zinc-200">
+                        <AlertDescription className="text-zinc-600 d-flex justify-content-between align-items-center">
+                          <span>Rate limit active. Please wait:</span>
+                          <strong className="font-mono text-zinc-900">{formatTime(countdown)}</strong>
+                        </AlertDescription>
                       </Alert>
                     )}
 
@@ -221,9 +264,9 @@ export function LoginUpdated({ onLogin, onSwitchToSignUp }: LoginProps) {
                       </div>
                     </div>
 
-                    <Button type="submit" className="w-100 mt-3 bg-dark border-secondary" disabled={isLoading}>
+                    <Button type="submit" className="w-100 mt-3 bg-dark border-secondary" disabled={isLoading || countdown > 0}>
                       <LogInIcon className="me-2" size={16}></LogInIcon>
-                      {isLoading ? 'Signing in...' : 'Sign in'}
+                      {countdown > 0 ? `Wait ${formatTime(countdown)}` : isLoading ? 'Signing in...' : 'Sign in'}
                     </Button>
 
                     {/* <div className="text-center mt-2">

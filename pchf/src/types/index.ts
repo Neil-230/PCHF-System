@@ -6,6 +6,7 @@ export interface Product {
   stock: number;
   sku: string;
   image?: string;
+  isArchived?: boolean;
   description?: string;
   __v?: number;
 }

@@ -179,6 +179,9 @@ const productSchema = new mongoose.Schema({
   price: { type: Number, required: true, min: 0 },
   stock: { type: Number, default: 0, min: 0 },
   description: { type: String },
+  image: { type: String },
+  isArchived: { type: Boolean, default: false },
+  archivedAt: { type: Date, default: null },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 }, { optimisticConcurrency: true, toJSON: { getters: true } });
