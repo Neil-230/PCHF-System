@@ -1,7 +1,8 @@
+import "bootstrap/dist/css/bootstrap.min.css";
+import * as bootstrap from "bootstrap";
+(window as any).bootstrap = bootstrap;
 import "./App.css";
 import { useState, useEffect, useRef, useCallback } from "react";
-import "bootstrap/dist/css/bootstrap.min.css";
-import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import { Layout } from "./components/Layout";
 import { Dashboard } from "./components/Dashboard";
 import { InventoryManagement } from "./components/InventoryManagement";

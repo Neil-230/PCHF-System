@@ -11,9 +11,18 @@ import {
   Crown,
   Check,
   X,
-  Search,
+   Search,
   Trash2,
   FileDown,
+  Activity,
+  Calendar,
+  Zap,
+  LayoutDashboard,
+  ShieldCheck,
+  UserPlus,
+  RefreshCw,
+  SearchIcon,
+  Filter,
 } from "lucide-react";
 import { Chart } from "react-google-charts";
 import { AuthService } from "../data/authData";
@@ -320,464 +329,381 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
   };
 
   return (
-    <div style={{ padding: "20px" }}>
-      {/* Header */}
-      <div
-        className="d-flex justify-content-between align-items-center mb-4"
-        style={{ borderBottom: "1px solid #ddd", paddingBottom: "10px" }}
-      >
-        <div className="d-flex flex-column">
-          <div className="d-flex align-items-center mb-3">
-            <div className="d-flex m-0 p-2 ps-3 rounded-3"
-              style={{
-                fontWeight: "bold",
-                background: "white",
-                boxShadow: "2px 4px 8px rgba(0, 0, 0, 0.10)",
-              }}
-            >
-              {CurrentUser?.role === "owner" && (
-                <Crown size={40} color="gold" className="me-2" />
-              )}
-              <h1 className="fs-4 fw-bold mt-1">
-                Welcome back, {CurrentUser?.name || "User"}!
-              </h1>
+    <div className="container-fluid py-4 bg-light bg-opacity-25" style={{ minHeight: "100vh" }}>
+      {/* Header Section */}
+      <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-4 mb-5">
+        <div className="d-flex align-items-center gap-4">
+          <div className="bg-white p-3 rounded-4 shadow-sm d-flex align-items-center justify-content-center" style={{ width: "80px", height: "80px" }}>
+            {CurrentUser?.role === "owner" ? (
+              <Crown size={40} className="text-warning" />
+            ) : (
+              <LayoutDashboard size={40} className="text-primary" />
+            )}
+          </div>
+          <div>
+            <h1 className="fw-bold mb-1 text-dark tracking-tight">
+              Welcome back, {CurrentUser?.name || "User"}
+            </h1>
+            <div className="d-flex align-items-center gap-2 text-muted">
+              <Zap size={14} className="text-warning" />
+              <span className="small fw-medium">Your store is performing well today.</span>
             </div>
           </div>
-
-          <div className="d-flex">
-            <p
-              className="p-2 ps-3 rounded-3"
-              style={{
-                color: "gray",
-                backgroundColor: "white",
-                boxShadow: "2px 4px 8px rgba(0, 0, 0, 0.10)",
-              }}
-            >
-              Here's what's happening at your store today.
-            </p>
-          </div>
         </div>
-        <span
-          style={{
-            backgroundColor: "white",
-            border: "1px solid #ccc",
-            borderRadius: "8px",
-            padding: "5px 10px",
-            fontSize: "14px",
-            boxShadow: "2px 4px 8px rgba(0, 0, 0, 0.10)",
-          }}
-        >
-          {today.toLocaleDateString("en-US", {
-            weekday: "long",
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          })}
-        </span>
+        
+        <div className="d-flex align-items-center gap-2 bg-white px-4 py-3 rounded-4 shadow-sm border border-light">
+          <Calendar size={18} className="text-primary" />
+          <span className="fw-bold text-dark small">
+            {today.toLocaleDateString("en-US", {
+              weekday: "long",
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            })}
+          </span>
+        </div>
       </div>
 
-      {/* Pending sign-up approvals (Owner or Admin) */}
-      { (CurrentUser?.role === "owner" || CurrentUser?.role === "admin") && (
-        <div
-          className="card p-3 mb-4 border-0"
-          style={{ boxShadow: "2px 4px 8px rgba(0, 0, 0, 0.10)" }}
-        >
-          <h6 className="mb-3">
-            Pending Sign-up Approvals ({pendingAdmins.length})
-          </h6>
-          {pendingAdmins.length === 0 ? (
-            <p className="text-muted">No pending sign-up requests.</p>
-          ) : (
-            pendingAdmins.map((admin) => (
-              <div
-                key={admin.email || admin.id}
-                className="d-flex justify-content-between align-items-center mb-2"
-                style={{
-                  borderBottom: "1px solid #eee",
-                  paddingBottom: "5px",
-                }}
-              >
-                <div>
-                  <p style={{ margin: 0, fontWeight: "500" }}>{admin.name}</p>
-                  <small style={{ color: "gray" }}>{admin.email}</small>
+      {/* Pending Approvals Section */}
+      {(CurrentUser?.role === "owner" || CurrentUser?.role === "admin") && pendingAdmins.length > 0 && (
+        <div className="card border-0 rounded-4 shadow-sm mb-5 bg-white overflow-hidden">
+          <div className="card-header bg-white border-0 p-4 pb-0 d-flex align-items-center gap-2">
+            <div className="p-2 bg-warning bg-opacity-10 rounded-circle">
+              <UserPlus size={18} className="text-warning" />
+            </div>
+            <h6 className="fw-bold mb-0">Pending Approvals</h6>
+            <span className="badge bg-light text-dark border ms-2">{pendingAdmins.length}</span>
+          </div>
+          <div className="card-body p-4">
+            <div className="row g-3">
+              {pendingAdmins.map((admin) => (
+                <div key={admin.email || admin.id} className="col-12 d-flex align-items-center justify-content-between p-3 bg-light bg-opacity-50 rounded-4 border border-light">
+                  <div className="d-flex align-items-center gap-3">
+                    <div className="rounded-circle bg-white shadow-sm p-2 text-primary" style={{width: "40px", height: "40px", display: "flex", alignItems: "center", justifyItems: "center"}}>
+                      <Users size={20} />
+                    </div>
+                    <div>
+                      <div className="fw-bold text-dark">{admin.name}</div>
+                      <div className="text-muted small">{admin.email}</div>
+                    </div>
+                  </div>
+                  <div className="d-flex gap-2">
+                    <button
+                      onClick={() => handleApprove(admin.email)}
+                      disabled={approvingEmails.has(admin.email)}
+                      className="btn btn-sm btn-dark rounded-3 px-3 fw-bold d-flex align-items-center gap-1"
+                    >
+                      <Check size={14} /> {approvingEmails.has(admin.email) ? "Approving..." : "Approve"}
+                    </button>
+                    <button
+                      onClick={() => handleDecline(admin.email)}
+                      disabled={approvingEmails.has(admin.email)}
+                      className="btn btn-sm btn-outline-danger rounded-3 px-3 fw-bold d-flex align-items-center gap-1"
+                    >
+                      <X size={14} /> {approvingEmails.has(admin.email) ? "Declining..." : "Decline"}
+                    </button>
+                  </div>
                 </div>
-                <div>
-                  <button
-                    onClick={() => handleApprove(admin.email)}
-                    disabled={approvingEmails.has(admin.email)}
-                    className="btn btn-sm btn-success me-2"
-                  >
-                    <Check size={14} /> {approvingEmails.has(admin.email) ? "Approving..." : "Approve"}
-                  </button>
-                  <button
-                    onClick={() => handleDecline(admin.email)}
-                    disabled={approvingEmails.has(admin.email)}
-                    className="btn btn-sm btn-danger"
-                  >
-                    <X size={14} /> {approvingEmails.has(admin.email) ? "Declining..." : "Decline"}
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
+              ))}
+            </div>
+          </div>
         </div>
       )}
 
-      {/* Quick fucking analysis */}
-      <div className="row g-3">
+      {/* Primary Analytics Grid */}
+      <div className="row g-4 mb-5">
         <div className="col-md-3">
-          <div className="card p-3 border-0"
-          style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}
-          >
-            <div className="d-flex justify-content-between align-items-center">
-              <h6>Today's Sales</h6>
-              <TrendingUp size={18} className="text-primary" />
+          <div className="card border-0 rounded-4 shadow-sm p-4 bg-white h-100">
+            <div className="d-flex align-items-center justify-content-between mb-2">
+              <div className="p-3 rounded-circle bg-primary bg-opacity-10">
+                <TrendingUp size={24} className="text-primary" />
+              </div>
+              <span className="badge bg-success bg-opacity-10 text-success rounded-pill px-2 py-1 small">+12%</span>
             </div>
-            <h3 className="text-primary">₱{displayTodaySales.toFixed(2)}</h3>
-            <small>
-              <TrendingUp size={14} /> +12% from yesterday
-            </small>
+            <div className="text-muted small fw-medium mb-1">Today's Revenue</div>
+            <h3 className="fw-bold mb-0 text-dark">₱{displayTodaySales.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
           </div>
         </div>
 
         <div className="col-md-3">
-          <div className="card p-3 border-0"
-          style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}
-          >
-            <div className="d-flex justify-content-between align-items-center">
-              <h6>Transactions</h6>
-              <ShoppingCart size={18} className="text-success" />
+          <div className="card border-0 rounded-4 shadow-sm p-4 bg-white h-100">
+            <div className="d-flex align-items-center justify-content-between mb-2">
+              <div className="p-3 rounded-circle bg-success bg-opacity-10">
+                <ShoppingCart size={24} className="text-success" />
+              </div>
+              <span className="text-muted small fw-medium">Items: {displayTodayItemsSold}</span>
             </div>
-            <h3 className="text-success">{displayTodayTransactions}</h3>
-            <small>
-              <Users size={14} /> {displayTodayItemsSold} items sold
-            </small>
+            <div className="text-muted small fw-medium mb-1">Total Transactions</div>
+            <h3 className="fw-bold mb-0 text-dark">{displayTodayTransactions}</h3>
           </div>
         </div>
 
         <div className="col-md-3">
-          <div className="card p-3 border-0"
-          style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}
-          >
-            <div className="d-flex justify-content-between align-items-center">
-              <h6>Inventory Value</h6>
-              <Package size={18} className="text-warning" />
+          <div className="card border-0 rounded-4 shadow-sm p-4 bg-white h-100">
+            <div className="d-flex align-items-center justify-content-between mb-2">
+              <div className="p-3 rounded-circle bg-warning bg-opacity-10">
+                <Package size={24} className="text-warning" />
+              </div>
+              <span className="text-muted small fw-medium">Stock: {displayTotalStock}</span>
             </div>
-            <h3 className="text-warning">₱{displayInventoryValue.toFixed(2)}</h3>
-            <small>{displayTotalStock} items in stock</small>
+            <div className="text-muted small fw-medium mb-1">Inventory Value</div>
+            <h3 className="fw-bold mb-0 text-dark">₱{displayInventoryValue.toLocaleString(undefined, { minimumFractionDigits: 0 })}</h3>
           </div>
         </div>
 
         <div className="col-md-3">
-          <div className="card p-3 border-0"
-          style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}
-          >
-            <div className="d-flex justify-content-between align-items-center">
-              <h6>Stock Alerts</h6>
-              <AlertTriangle size={18} className="text-danger" />
+          <div className="card border-0 rounded-4 shadow-sm p-4 bg-white h-100">
+            <div className="d-flex align-items-center justify-content-between mb-2">
+              <div className="p-3 rounded-circle bg-danger bg-opacity-10">
+                <AlertTriangle size={24} className="text-danger" />
+              </div>
+              <span className="badge bg-danger bg-opacity-10 text-danger rounded-pill px-2 py-1 small">{displayOutOfStockItems} Out</span>
             </div>
-            <h3 className="text-danger">
-              {displayLowStockItems + displayOutOfStockItems}
-            </h3>
-            <small>{displayOutOfStockItems} out of stock</small>
+            <div className="text-muted small fw-medium mb-1 text-danger">Inventory Alerts</div>
+            <h3 className="fw-bold mb-0 text-danger">{displayLowStockItems + displayOutOfStockItems} Items</h3>
           </div>
         </div>
       </div>
 
-      {/* Charts yeahhhhhhhhh  */}
-      <div className="row mt-4 align-items-stretch">
-        <div className="col-lg-6">
-          <div className="card p-3 border-0 h-100"
-          style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}
-          >
-            <h6>
-              <BarChart3 size={18} /> Weekly Sales Trend
-            </h6>
-            <div style={{ width: "100%", height: "242px"}}>
+      {/* Charts Section */}
+      <div className="row g-4 mb-5">
+        <div className="col-lg-7">
+          <div className="card border-0 rounded-4 shadow-sm bg-white p-4 h-100">
+            <div className="d-flex align-items-center gap-2 mb-4">
+              <div className="p-2 bg-primary bg-opacity-10 rounded-3">
+                <BarChart3 size={18} className="text-primary" />
+              </div>
+              <h6 className="fw-bold mb-0">Weekly Revenue Statistics</h6>
+            </div>
+            <div style={{ width: "100%", height: "300px"}}>
               <Chart
                 chartType="LineChart"
                 data={weeklySalesChartData}
-                options={weeklySalesChartOptions}
+                options={{
+                  ...weeklySalesChartOptions,
+                  backgroundColor: 'transparent',
+                  chartArea: { width: "90%", height: "75%" },
+                }}
                 width="100%"
-                height="242px"
+                height="300px"
               />
             </div>
           </div>
         </div>
 
-        <div className="col-lg-6">
-          <div className="card p-3 border-0 h-100"
-            style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}
-            >
-            <h6><BarChart3 size={18} /> Sales by Category</h6>
-            <div style={{ width: "100%", height: "242px"}}>
+        <div className="col-lg-5">
+          <div className="card border-0 rounded-4 shadow-sm bg-white p-4 h-100">
+            <div className="d-flex align-items-center gap-2 mb-4">
+              <div className="p-2 bg-success bg-opacity-10 rounded-3">
+                <Activity size={18} className="text-success" />
+              </div>
+              <h6 className="fw-bold mb-0">Sales by Product Category</h6>
+            </div>
+            <div style={{ width: "100%", height: "300px"}}>
               <Chart
                 chartType="PieChart"
                 data={categoryChartData}
-                options={categoryChartOptions}
+                options={{
+                  ...categoryChartOptions,
+                  backgroundColor: 'transparent',
+                  chartArea: { width: "100%", height: "80%" },
+                  legend: { position: 'bottom', textStyle: { fontSize: 11 } }
+                }}
                 width="100%"
-                height="242px"
+                height="300px"
               />
             </div>
           </div>
         </div>
       </div>
-      {/* Top Products hapit najud mahuman */}
-      <div className="row g-3 mt-1">
-        <div className="col-md-6">
-          <div className="card p-3 border-0"
-          style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}
-          >
-            <h6>Top Products by Value</h6>
-            {topProducts.length === 0 && (
-              <p className="text-muted mb-2">No products to display.</p>
+
+      {/* Data Insight Rows */}
+      <div className="row g-4 mb-5">
+        <div className="col-lg-6">
+          <div className="card border-0 rounded-4 shadow-sm bg-white p-4 h-100">
+            <h6 className="fw-bold text-dark mb-4">Top Inventory Value Products</h6>
+            {topProducts.length === 0 ? (
+              <div className="text-center py-5 text-muted small">No product data available</div>
+            ) : (
+              <div className="d-flex flex-column gap-3">
+                {topProducts.map((product: any, index: number) => (
+                  <div key={product.id || index} className="d-flex align-items-center justify-content-between p-2 rounded-3 hover-bg-light transition-all">
+                    <div className="d-flex align-items-center gap-3">
+                      <div className="bg-light rounded-circle fw-bold small text-muted d-flex align-items-center justify-content-center" style={{ width: "32px", height: "32px", fontSize: "0.7rem" }}>
+                        0{index + 1}
+                      </div>
+                      <div>
+                        <div className="fw-bold text-dark small">{product.name}</div>
+                        <div className="text-muted" style={{fontSize: "0.7rem"}}>{product.stock} units • ₱{Number(product.price).toLocaleString()}</div>
+                      </div>
+                    </div>
+                    <div className="text-end">
+                      <div className="fw-bold text-primary small">₱{(Number(product.price) * Number(product.stock)).toLocaleString()}</div>
+                      <span className="badge bg-light text-muted border py-1 px-2 rounded-pill" style={{fontSize: "0.6rem"}}>{product.category || "General"}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
-            {topProducts.map((product: any, index: number) => (
-                <div
-                  key={product.id || index}
-                  className="d-flex justify-content-between align-items-center mb-2"
-                  style={{
-                    paddingBottom: "5px",
-                  }}
-                >
-                  <div className="d-flex align-items-center gap-2">
-                    <div
-                      style={{
-                        width: "24px",
-                        height: "24px",
-                        borderRadius: "50%",
-                        backgroundColor: "#ddd",
-                        display: "flex",
-                        justifyContent: "center",
-                        alignItems: "center",
-                        fontSize: "12px",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      {index + 1}
-                    </div>
-                    <div>
-                      <p style={{ margin: 0, fontWeight: "500" }}>
-                        {product.name}
-                      </p>
-                      <small style={{ color: "gray" }}>
-                        {product.stock} in stock • ₱{Number(product.price).toFixed(2)}
-                      </small>
-                    </div>
-                  </div>
-                  <div style={{ textAlign: "right" }}>
-                    <p style={{ margin: 0, fontWeight: "500" }}>
-                      ₱{(Number(product.price) * Number(product.stock)).toFixed(2)}
-                    </p>
-                    <small
-                      style={{
-                        border: "1px solid #ccc",
-                        borderRadius: "4px",
-                        padding: "2px 6px",
-                      }}
-                    >
-                      {product.category || "Uncategorized"}
-                    </small>
-                  </div>
-                </div>
-              ))}
           </div>
         </div>
 
         <div className="col-lg-6">
-          <div className="card p-3 border-0 h-100"
-          style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}
-          >
-            {/* Header */}
-            <div className="card-header bg-transparent">
-              <h6>
-                <Clock size={18} /> Recent Transactions
+          <div className="card border-0 rounded-4 shadow-sm bg-white p-4 h-100">
+            <div className="d-flex align-items-center justify-content-between mb-4">
+              <h6 className="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
+                <Clock size={18} className="text-muted" /> Recent Activity
               </h6>
             </div>
-
-            {/* Scrollable body for better user experience 😗😗*/}
-            <div
-              className="card-body"
-              style={{ maxHeight: "255px", overflowY: "auto" }}
-            >
-              {recentTransactions.map((transaction: any) => (
-                <div
-                  key={transaction.id}
-                  className="d-flex justify-content-between align-items-center mb-2"
-                  style={{
-                    background: "white",
-                    paddingBottom: "5px",
-                  }}
-                >
-                  <div>
-                    <p style={{ margin: 0, fontWeight: "500" }}>
-                      {transaction.id}
-                    </p>
-                    <small style={{ color: "gray" }}>
-                      {new Date(transaction.timestamp).toLocaleTimeString()} •{" "}
-                      {(transaction.items || []).length} items
-                    </small>
-                  </div>
-                  <div style={{ textAlign: "right" }}>
-                    <p style={{ margin: 0, fontWeight: "500" }}>
-                      ₱{Number(transaction.total).toFixed(2)}
-                    </p>
-                    <small
-                      style={{
-                        border: "1px solid #ccc",
-                        borderRadius: "4px",
-                        padding: "2px 6px",
-                      }}
-                    >
-                      {transaction.paymentMethod}
-                    </small>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-4">
-        <div
-          className="card p-3 border-0 h-100"
-          style={{ boxShadow: "2px 4px 8px  rgba(0, 0, 0, 0.10)" }}
-        >
-          <div className="card-header bg-transparent d-flex gap-2">
-            {/* ActiveLog HeadTitle_________ */}
-            <h6 className="mt-2 fw-bold me-auto">
-              <Clock size={18} /> Active log
-            </h6>
-            {/* ActiveLog Search_________ */}
-            <div className="flex-grow-0 position-relative border-0">
-              <Search
-                size={18}
-                style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", color: "#6c757d" }}
-              />
-              <input
-                type="text"
-                className="form-control ps-5"
-                placeholder="Search for spacific Account..."
-                value={logSearch}
-                onChange={(event) => setLogSearch(event.target.value)}
-              />
-            </div>
-            {/* ActiveLog Clear Button_________ */}
-            <div className="d-flex gap-2">
-              <button
-                className="btn btn-dark d-flex align-items-center"
-                onClick={handleClearActiveLog}
-                disabled={isClearingLog}
-              >
-                <Trash2 size={18} className="me-2" />
-                {isClearingLog ? "Clearing..." : "Clear Active Log"}
-              </button>
-            </div>
-            {/* ActiveLog PDF button */}
-            <button
-              className="btn btn-outline-secondary d-flex align-items-center"
-              onClick={handleDownloadActiveLogPdf}
-              disabled={isExportingLogPdf}
-            >
-              <FileDown size={18} className="me-2" />
-              {isExportingLogPdf ? "Preparing..." : "PDF"}
-            </button>
-          </div>
-          <div className="card-body" style={{ maxHeight: "255px", overflowY: "auto" }}>
-            <div className="list-group border-0">
-              {isActiveLogLoading && (
-                <div className="list-group-item border-0 text-center text-muted">
-                  Loading activity...
-                </div>
-              )}
-              {!isActiveLogLoading && activeLog.length === 0 && (
-                <div className="list-group-item border-0 text-center text-muted">
-                  No activity logs yet.
-                </div>
-              )}
-              {!isActiveLogLoading && activeLog.length > 0 && filteredActiveLog.length === 0 && (
-                <div className="list-group-item border-0 text-center text-muted">
-                  No matches for “{logSearch.trim()}”.
-                </div>
-              )}
-              {!isActiveLogLoading &&
-                filteredActiveLog.map((entry: any) => (
-                  <div
-                    key={`${entry.id}-${entry.timestamp}`}
-                    className="list-group-item border-0 mb-2 d-flex align-items-start"
-                    style={{ borderRadius: "8px", padding: "12px" }}
-                  >
-                    <div className="me-auto">
-                      <strong>{entry.name}</strong>{" "}
-                      <span className="badge border text-dark ms-1 text-capitalize">
-                        {entry.role}
-                      </span>
-                      <br />
-                      <span className="text-muted">{entry.email}</span>
-                      <br />
-                      <small>
-                        Status:{" "}
-                        <span
-                          className={`badge ${entry.status === 'Logout' ? 'bg-warning text-dark' : 'bg-success'}`}
-                        >
-                          {entry.status || "Login"}
-                        </span>
-                      </small>
-                      <br />
-                      <small>
-                        Time: {entry.timestamp ? new Date(entry.timestamp).toLocaleString() : "—" }
-                      </small>
+            
+            {recentTransactions.length === 0 ? (
+              <div className="text-center py-5 text-muted small">No recent transactions</div>
+            ) : (
+              <div className="d-flex flex-column gap-3 overflow-auto" style={{ maxHeight: "400px" }}>
+                {recentTransactions.map((transaction: any) => (
+                  <div key={transaction.id} className="d-flex align-items-center justify-content-between p-2 rounded-3 hover-bg-light transition-all">
+                    <div className="d-flex align-items-center gap-3">
+                      <div className="bg-primary bg-opacity-10 rounded-3 p-2 text-primary shadow-sm">
+                        <ShoppingCart size={16} />
+                      </div>
+                      <div>
+                        <div className="fw-bold text-dark small">{transaction.id}</div>
+                        <div className="text-muted" style={{fontSize: "0.7rem"}}>
+                          {new Date(transaction.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {(transaction.items || []).length} items
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-end me-2">
-                      <small>IP: {entry.ip || "N/A"}</small>
-                      <br />
-                      <small>Location: {entry.location || "Unavailable"}</small>
-                      <br />
-                      <small>
-                        Lat / Long:{" "}
-                        {Number.isFinite(entry.latitude) && Number.isFinite(entry.longitude)
-                          ? `${entry.latitude?.toFixed(4)}°, ${entry.longitude?.toFixed(4)}°`
-                          : "N/A"}
-                      </small>
+                    <div className="text-end">
+                      <div className="fw-bold text-dark small">₱{Number(transaction.total).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                      <span className="badge bg-dark rounded-pill py-1 px-2" style={{fontSize: "0.6rem"}}>{transaction.paymentMethod}</span>
                     </div>
-                    {/* <div className="ms-none mt-4">
-                      <button
-                        className="btn btn-outline-dark d-flex align-items-center"
-                      >
-                        <Trash2 size={18} className="me-0" />
-
-                      </button>
-                    </div> */}
                   </div>
                 ))}
-            </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      <div className="card p-3 border-0 mt-4" style={{ boxShadow: "2px 4px 8px  rgba(0, 0, 0, 0.10)" }}>
-        <h6>Inventory Status</h6>
-        <div className="d-flex justify-content-between text-center">
-          <div style={{ flex: 1 }}>
-            <h3 style={{ color: "blue" }}>
-              {(displayTotalProducts ?? totalProducts) -
-                (displayLowStockItems ?? lowStockItems) -
-                (displayOutOfStockItems ?? outOfStockItems)}
+      {/* Security Activity Log */}
+      <div className="card border-0 rounded-4 shadow-sm bg-white overflow-hidden mb-5">
+        <div className="card-header bg-white border-0 p-4">
+          <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-4">
+            <div className="d-flex align-items-center gap-2">
+              <div className="p-2 bg-dark rounded-3 text-white shadow-sm">
+                <ShieldCheck size={20} />
+              </div>
+              <div>
+                <h6 className="fw-bold mb-0 text-dark">Security Activity Log</h6>
+                <p className="text-muted small mb-0">Real-time monitoring of system access.</p>
+              </div>
+            </div>
+
+            <div className="d-flex flex-wrap align-items-center gap-3">
+              <div className="position-relative border-0 shadow-sm rounded-3 overflow-hidden" style={{maxWidth: "300px"}}>
+                <Search size={16} className="position-absolute top-50 translate-middle-y ms-3 text-muted" />
+                <input
+                  type="text"
+                  className="form-control border-0 ps-5 small"
+                  placeholder="Filter logs by staff..."
+                  style={{ fontSize: "0.85rem" }}
+                  value={logSearch}
+                  onChange={(e) => setLogSearch(e.target.value)}
+                />
+              </div>
+
+              <div className="btn-group shadow-sm rounded-3 overflow-hidden border bg-white">
+                <button className="btn btn-white btn-sm border-0 d-flex align-items-center gap-2 px-3 fw-medium" onClick={handleDownloadActiveLogPdf} disabled={isExportingLogPdf}>
+                  <FileDown size={14} className="text-muted" />
+                  <span className="small">Export PDF</span>
+                </button>
+                <div className="vr opacity-10"></div>
+                <button className="btn btn-white btn-sm border-0 d-flex align-items-center gap-2 px-3 text-danger fw-medium" onClick={handleClearActiveLog} disabled={isClearingLog}>
+                  <Trash2 size={14} />
+                  <span className="small">Wipe Log</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div className="card-body p-0">
+          <div className="table-responsive" style={{ maxHeight: "400px" }}>
+            <table className="table table-hover align-middle mb-0">
+              <thead className="bg-light border-bottom border-light text-muted small fw-bold text-uppercase">
+                <tr>
+                  <th className="ps-4 py-3">Team Member</th>
+                  <th className="py-3">Action Status</th>
+                  <th className="py-3">Timestamp</th>
+                  <th className="pe-4 py-3 text-end">Access Metadata</th>
+                </tr>
+              </thead>
+              <tbody className="border-0">
+                {isActiveLogLoading ? (
+                  <tr><td colSpan={4} className="text-center py-5 text-muted small">Synchronizing logs...</td></tr>
+                ) : filteredActiveLog.length === 0 ? (
+                  <tr><td colSpan={4} className="text-center py-5 text-muted small">No activity recorded for this period.</td></tr>
+                ) : (
+                  filteredActiveLog.map((entry: any) => (
+                    <tr key={`${entry.id}-${entry.timestamp}`} className="border-bottom border-light hover-bg-light transition-all">
+                      <td className="ps-4">
+                        <div className="d-flex align-items-center gap-2">
+                          <div className="bg-light rounded-circle d-flex align-items-center justify-content-center p-2 text-primary" style={{width: "40px", height: "40px"}}>
+                            {entry.name[0].toUpperCase()}
+                          </div>
+                          <div>
+                            <div className="fw-bold text-dark small">{entry.name}</div>
+                            <div className="text-muted" style={{fontSize: "0.7rem"}}>{entry.email} <span className="badge bg-light text-dark border ms-1">{entry.role}</span></div>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <span className={`badge rounded-pill px-3 py-1 fw-bold ${
+                          entry.status === 'Logout' ? 'bg-warning bg-opacity-10 text-warning' : 'bg-success bg-opacity-10 text-success'
+                        }`} style={{fontSize: "0.65rem"}}>
+                          {entry.status?.toUpperCase() || "LOGIN"}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="text-dark small fw-medium">{entry.timestamp ? new Date(entry.timestamp).toLocaleDateString() : "—"}</div>
+                        <div className="text-muted" style={{fontSize: "0.7rem"}}>{entry.timestamp ? new Date(entry.timestamp).toLocaleTimeString() : "—"}</div>
+                      </td>
+                      <td className="pe-4 text-end">
+                        <div className="text-muted small">IP: {entry.ip || "Unknown"}</div>
+                        <div className="text-primary fw-bold" style={{fontSize: "0.65rem"}}>{entry.location || "N/A"}</div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div className="card border-0 rounded-4 shadow-sm bg-white p-4">
+        <div className="d-flex align-items-center gap-2 mb-4 text-center justify-content-center">
+          <Activity size={20} className="text-primary" />
+          <h6 className="fw-bold mb-0">Live Inventory Performance</h6>
+        </div>
+        <div className="row g-4 text-center">
+          <div className="col-6 col-md-3">
+            <h3 className="fw-bold text-primary mb-1">
+              {((displayTotalProducts ?? totalProducts) - (displayLowStockItems ?? lowStockItems) - (displayOutOfStockItems ?? outOfStockItems)).toLocaleString()}
             </h3>
-            <small>Well Stocked</small>
+            <div className="text-muted small fw-medium text-uppercase tracking-wider">Well Stocked</div>
           </div>
-          <div style={{ flex: 1 }}>
-            <h3 style={{ color: "green" }}>{displayLowStockItems ?? lowStockItems}</h3>
-            <small>Low Stock</small>
+          <div className="col-6 col-md-3 border-start border-light border-opacity-50">
+            <h3 className="fw-bold text-success mb-1">{(displayLowStockItems ?? lowStockItems).toLocaleString()}</h3>
+            <div className="text-muted small fw-medium text-uppercase tracking-wider">Low Threshold</div>
           </div>
-          <div style={{ flex: 1 }}>
-            <h3 style={{ color: "orange" }}>{displayOutOfStockItems ?? outOfStockItems}</h3>
-            <small>Out of Stock</small>
+          <div className="col-6 col-md-3 border-start border-light border-opacity-50">
+            <h3 className="fw-bold text-warning mb-1">{(displayOutOfStockItems ?? outOfStockItems).toLocaleString()}</h3>
+            <div className="text-muted small fw-medium text-uppercase tracking-wider">Out of Stock</div>
           </div>
-          <div style={{ flex: 1 }}>
-            <h3 style={{ color: "red" }}>{displayTotalProducts ?? totalProducts}</h3>
-            <small>Total Products</small>
+          <div className="col-6 col-md-3 border-start border-light border-opacity-50">
+            <h3 className="fw-bold text-danger mb-1">{(displayTotalProducts ?? totalProducts).toLocaleString()}</h3>
+            <div className="text-muted small fw-medium text-uppercase tracking-wider">Total SKUs</div>
           </div>
         </div>
       </div>

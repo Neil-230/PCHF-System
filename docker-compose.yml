@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  # Backend API Service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: pch-backend
+    ports:
+      - "4000:4000" # Mapped to 4000 to match frontend's expected default
+    restart: always
+    environment:
+      - NODE_ENV=production
+      - PORT=4000
+      # You can add MongoDB connection strings, JWT secrets, etc. here
+      # - MONGODB_URI=mongodb://your_production_db
+      # - JWT_SECRET=your_secret
+
+  # Frontend React Service
+  frontend:
+    build:
+      context: ./pchf
+      dockerfile: Dockerfile
+    container_name: pch-frontend
+    ports:
+      - "80:80" # Standard HTTP port for production
+    restart: always
+    environment:
+      - VITE_API_URL=http://localhost:4000/api # Adjust to your production domain if necessary
+    depends_on:
+      - backend
+
+# Optional: Add a volume for MongoDB if you're not using an external DB service
+# db:
+#   image: mongo
+#   ports:
+#     - "27017:27017"

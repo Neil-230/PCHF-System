@@ -69,13 +69,13 @@ export const Settings: React.FC<SettingsProps> = ({ onLogout, onTabChange, user,
       : {
           storeName: "My Store",
           storeAddress: "123 Main St, City, State 12345",
-          phone: "+63 912 345 6789",
+          phone: "09123456789",
           email: "store@example.com",
           taxRate: "10",
           currency: "PHP",
           footerMessage: "Thank you for your purchase! Please come again.",
         };
-  });
+    });
 
   const [securitySettings, setSecuritySettings] = useState<SecuritySettings>(() => {
     const saved = localStorage.getItem("securitySettings");

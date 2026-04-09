@@ -238,7 +238,7 @@ const systemSettingsSchema = new mongoose.Schema({
   // Store info for receipts and POS defaults
   storeName: { type: String, default: 'My Store' },
   storeAddress: { type: String, default: '123 Main St, City, State 12345' },
-  phone: { type: String, default: '+63 912 345 6789' },
+  phone: { type: String, default: '09123456789' },
   email: { type: String, default: 'store@example.com' },
   taxRate: { type: Number, default: 10 },
   currency: { type: String, default: 'PHP' },

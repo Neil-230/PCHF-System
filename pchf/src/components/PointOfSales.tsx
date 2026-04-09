@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import type { Product, CartItem } from "../types";
 import { mockProducts, categories } from "../data/mockData";
-import { Search, Package } from "lucide-react";
+import { Search, Package, User, Phone, MapPin, ShoppingBag, Truck, UserCircle, CreditCard, ChevronRight } from "lucide-react";
 import "./css/PointOfSales.css";
 import { Modal, Button, Card } from "react-bootstrap";
 import { Badge } from "./ui/Badge";
@@ -59,12 +59,13 @@ export function PointOfSale({ onTransactionComplete, user }: PointOfSaleProps) {
   const [cashAmount, setCashAmount] = useState("");
   const [taxRate, setTaxRate] = useState("0"); //tax rate 0 for default
   const [deliveryFeeValue, setDeliveryFeeValue] = useState(50); //Default fee 50php
+  const [isProcessing, setIsProcessing] = useState(false);
   // const didToast = useRef(false);
 
   const [storeSettings, setStoreSettings] = useState({
     storeName: "My Store",
     storeAddress: "123 Main St, City, State 12345",
-    phone: "+1 (555) 123-4567",
+    phone: "09123456789",
     email: "store@example.com",
     footerMessage: "Thank you for your purchase!",
   });
@@ -248,188 +249,235 @@ export function PointOfSale({ onTransactionComplete, user }: PointOfSaleProps) {
       isDelivery,
     };
 
+
+    setIsProcessing(true);
     let saved: any | null = null;
     try {
       const res = await apiService.createTransaction(payload);
       saved = res.transaction;
+
+      // --- PDF receipt ---
+      const doc = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: [80, 200],
+      });
+
+      const date = new Date();
+      const formattedDate = date.toLocaleString();
+
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.text(storeSettings.storeName, 40, 10, { align: "center" });
+
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "normal");
+      doc.text(storeSettings.storeAddress, 40, 14, { align: "center" });
+      doc.text(storeSettings.email, 40, 17, { align: "center" });
+      doc.text(storeSettings.phone, 40, 20, { align: "center" });
+      doc.text("----------------------------------------------------------------------", 40, 24, { align: "center" });
+
+      doc.text(`Customer: ${customerName}`, 10, 29);
+      doc.text(`Contact: ${customerContact}`, 10, 33);
+      doc.text(`Address: ${customerAddress}`, 10, 37);
+      doc.text(`Type: ${deliveryType}`, 10, 41);
+      doc.text(`Date: ${formattedDate}`, 10, 45);
+      doc.text(`Transaction ID: ${saved.id}`, 10, 49);
+      doc.text(`Payment: Cash`, 10, 53);
+      doc.text("----------------------------------------------------------------", 40, 56, { align: "center" });
+
+      const tableData = cart.map((item) => [
+        `${item.quantity} x ${item.product.name}`,
+        `PHP.${(item.product.price * item.quantity).toFixed(2)}`,
+      ]);
+
+      autoTable(doc, {
+        head: [["Item", "Price"]],
+        body: tableData,
+        startY: 58,
+        theme: "plain",
+        styles: { fontSize: 9, cellPadding: 1 },
+        headStyles: { fontStyle: "bold" },
+        columnStyles: { 0: { cellWidth: 45 }, 1: { cellWidth: 20, halign: "right" } },
+        margin: { left: 5 },
+      });
+
+      let finalY = (doc as any).lastAutoTable.finalY + 2;
+      doc.text("----------------------------------------------------------------", 40, finalY, { align: "center" });
+      doc.text(`Subtotal: PHP.${subtotal.toFixed(2)}`, 10, finalY + 5);
+      doc.text(`Tax (${taxRate}%): PHP.${tax.toFixed(2)}`, 10, finalY + 9);
+      if (isDelivery) doc.text(`Delivery Fee: PHP.${deliveryFeeValue.toFixed(2)}`, 10, finalY + 13);
+      doc.setFont("helvetica", "bold");
+      doc.text(`TOTAL: PHP.${total.toFixed(2)}`, 10, finalY + (isDelivery ? 18 : 14));
+      doc.setFont("helvetica", "normal");
+      doc.text(`Cash: PHP.${cash.toFixed(2)}`, 10, finalY + (isDelivery ? 23 : 19));
+      doc.text(`Change: PHP.${change.toFixed(2)}`, 10, finalY + (isDelivery ? 27 : 23));
+      doc.text("----------------------------------------------------------------", 40, finalY + (isDelivery ? 30 : 26), { align: "center" });
+
+      doc.setFontSize(8);
+      doc.text(`Processed by: ${user.name} (${user.role})`, 10, finalY + (isDelivery ? 35 : 31));
+      doc.text(`Email: ${user.email}`, 10, finalY + (isDelivery ? 39 : 35));
+      doc.text("----------------------------------------------------------------", 40, finalY + (isDelivery ? 42 : 38), { align: "center" });
+      doc.setFontSize(8);
+      doc.text(storeSettings.footerMessage, 40, finalY + (isDelivery ? 49 : 45), { align: "center" });
+      doc.save(`receipt_${customerName}.pdf`);
+
+      const uiTransaction: Transaction = {
+        id: saved.id,
+        items: (saved.items || []).map((i: any) => ({
+          product: {
+            id: i.productId,
+            name: i.name,
+            price: i.price,
+            category: "",
+            stock: 0,
+            sku: i.sku,
+          },
+          quantity: i.quantity,
+        })),
+        subtotal: saved.subtotal,
+        tax: saved.tax,
+        total: saved.total,
+        customerName: saved.customerName,
+        customerContact: saved.customerContact,
+        customerAddress: saved.customerAddress,
+        timestamp: new Date(saved.timestamp),
+        status: saved.status || "completed",
+        paymentMethod: saved.paymentMethod || "Cash",
+        handledBy: saved.handledBy || { name: user.name, email: user.email, role: user.role },
+        isDelivery: !!saved.isDelivery,
+        deliveryFee: saved.deliveryFee,
+      };
+
+      onTransactionComplete(uiTransaction);
+      toast.success(`${deliveryType} transaction completed`);
+      setCart([]);
+      setCashAmount("");
+      setIsCheckoutOpen(false);
+      setCustomerName("");
+      setCustomerContact("");
+      setCustomerAddress("");
+      setDeliveryType("Walk-in");
+      setHasEnteredName(false);
+      setIsNameDialogOpen(true);
+
+      const { products } = await apiService.getProducts();
+      setProducts(products);
     } catch (e: any) {
       if (e?.status === 409) {
         toast.error("Data changed by someone else. Please refresh and try again.");
       } else {
         toast.error(e?.message || "Failed to save transaction");
       }
-      return;
+    } finally {
+      setIsProcessing(false);
     }
-
-    // --- PDF receipt ---
-    const doc = new jsPDF({
-      orientation: "portrait",
-      unit: "mm",
-      format: [80, 200],
-    });
-
-    const date = new Date();
-    const formattedDate = date.toLocaleString();
-
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "bold");
-    doc.text(storeSettings.storeName, 40, 10, { align: "center" });
-
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "normal");
-    doc.text(storeSettings.storeAddress, 40, 14, { align: "center" });
-    doc.text(storeSettings.email, 40, 17, { align: "center" });
-    doc.text(storeSettings.phone, 40, 20, { align: "center" });
-    doc.text("----------------------------------------------------------------------", 40, 24, { align: "center" });
-
-    doc.text(`Customer: ${customerName}`, 10, 29);
-    doc.text(`Contact: ${customerContact}`, 10, 33);
-    doc.text(`Address: ${customerAddress}`, 10, 37);
-    doc.text(`Type: ${deliveryType}`, 10, 41);
-    doc.text(`Date: ${formattedDate}`, 10, 45);
-    doc.text(`Transaction ID: ${saved.id}`, 10, 49);
-    doc.text(`Payment: Cash`, 10, 53);
-    doc.text("----------------------------------------------------------------", 40, 56, { align: "center" });
-
-    const tableData = cart.map((item) => [
-      `${item.quantity} x ${item.product.name}`,
-      `PHP.${(item.product.price * item.quantity).toFixed(2)}`,
-    ]);
-
-    autoTable(doc, {
-      head: [["Item", "Price"]],
-      body: tableData,
-      startY: 58,
-      theme: "plain",
-      styles: { fontSize: 9, cellPadding: 1 },
-      headStyles: { fontStyle: "bold" },
-      columnStyles: { 0: { cellWidth: 45 }, 1: { cellWidth: 20, halign: "right" } },
-      margin: { left: 5 },
-    });
-
-    let finalY = (doc as any).lastAutoTable.finalY + 2;
-    doc.text("----------------------------------------------------------------", 40, finalY, { align: "center" });
-    doc.text(`Subtotal: PHP.${subtotal.toFixed(2)}`, 10, finalY + 5);
-    doc.text(`Tax (${taxRate}%): PHP.${tax.toFixed(2)}`, 10, finalY + 9);
-    if (isDelivery) doc.text(`Delivery Fee: PHP.${deliveryFeeValue.toFixed(2)}`, 10, finalY + 13);
-    doc.setFont("helvetica", "bold");
-    doc.text(`TOTAL: PHP.${total.toFixed(2)}`, 10, finalY + (isDelivery ? 18 : 14));
-    doc.setFont("helvetica", "normal");
-    doc.text(`Cash: PHP.${cash.toFixed(2)}`, 10, finalY + (isDelivery ? 23 : 19));
-    doc.text(`Change: PHP.${change.toFixed(2)}`, 10, finalY + (isDelivery ? 27 : 23));
-    doc.text("----------------------------------------------------------------", 40, finalY + (isDelivery ? 30 : 26), { align: "center" });
-
-    doc.setFontSize(8);
-    doc.text(`Processed by: ${user.name} (${user.role})`, 10, finalY + (isDelivery ? 35 : 31));
-    doc.text(`Email: ${user.email}`, 10, finalY + (isDelivery ? 39 : 35));
-    doc.text("----------------------------------------------------------------", 40, finalY + (isDelivery ? 42 : 38), { align: "center" });
-    doc.setFontSize(8);
-    doc.text(storeSettings.footerMessage, 40, finalY + (isDelivery ? 49 : 45), { align: "center" });
-    doc.save(`receipt_${customerName}.pdf`);
-
-    const uiTransaction: Transaction = {
-      id: saved.id,
-      items: (saved.items || []).map((i: any) => ({
-        product: {
-          id: i.productId,
-          name: i.name,
-          price: i.price,
-          category: "",
-          stock: 0,
-          sku: i.sku,
-        },
-        quantity: i.quantity,
-      })),
-      subtotal: saved.subtotal,
-      tax: saved.tax,
-      total: saved.total,
-      customerName: saved.customerName,
-      customerContact: saved.customerContact,
-      customerAddress: saved.customerAddress,
-      timestamp: new Date(saved.timestamp),
-      status: saved.status || "completed",
-      paymentMethod: saved.paymentMethod || "Cash",
-      handledBy: saved.handledBy || { name: user.name, email: user.email, role: user.role },
-      isDelivery: !!saved.isDelivery,
-      deliveryFee: saved.deliveryFee,
-    };
-
-    onTransactionComplete(uiTransaction);
-    toast.success(`${deliveryType} transaction completed`);
-    setCart([]);
-    setCashAmount("");
-    setIsCheckoutOpen(false);
-    setCustomerName("");
-    setCustomerContact("");
-    setCustomerAddress("");
-    setDeliveryType("Walk-in");
-    setHasEnteredName(false);
-    setIsNameDialogOpen(true);
-
-    try {
-      const { products } = await apiService.getProducts();
-      setProducts(products);
-    } catch {}
   };
 
   return (
     <>
       {/* Customer Modal */}
-      <Modal show={isNameDialogOpen} onHide={() => setIsNameDialogOpen(false)} centered
-        style={{ backgroundColor: "rgba(239, 252, 255, 0.31)" }}>
-        <Modal.Header closeButton 
-        style={{marginRight: "2px"}}>
-          <Modal.Title>Enter Customer Details</Modal.Title>
+      <Modal 
+        show={isNameDialogOpen} 
+        onHide={() => setIsNameDialogOpen(false)} 
+        centered
+        contentClassName="border-0 rounded-4 shadow-lg overflow-hidden"
+      >
+        <Modal.Header closeButton className="border-0 p-4 pb-0">
+          <Modal.Title className="fw-bold d-flex align-items-center">
+            <div className="rounded-circle bg-primary bg-opacity-10 p-2 me-3">
+              <UserCircle size={24} className="text-primary" />
+            </div>
+            Customer Information
+          </Modal.Title>
         </Modal.Header>
-        <Modal.Body>
-          <input
-            type="text"
-            className="form-control mb-3"
-            placeholder="Customer Name..."
-            value={customerName}
-            onChange={(e) => setCustomerName(e.target.value.replace(/[^a-zA-Z\s]/g, ""))}
-          />
-          <input
-            type="text"
-            className="form-control mb-3"
-            placeholder="Contact Number..."
-            value={customerContact}
-            onChange={(e) => setCustomerContact(e.target.value.replace(/[^0-9]/g, ""))}
-          />
-          <textarea
-            className="form-control mb-3"
-            placeholder="Address..."
-            value={customerAddress}
-            onChange={(e) => setCustomerAddress(e.target.value)}
-          ></textarea>
-
-          <div className="mb-3">
-            <label className="form-label fw-semibold">Transaction Type</label>
-            <select
-              className="form-select"
-              value={deliveryType}
-              onChange={(e) => setDeliveryType(e.target.value as "Delivery" | "Walk-in")}
-            >
-              <option value="Walk-in">Walk-in</option>
-              <option value="Delivery">For Delivery</option>
-            </select>
+        
+        <Modal.Body className="p-4">
+          <p className="text-muted small mb-4">Please enter the customer details and transaction type before proceeding with the order.</p>
+          
+          <div className="mb-4">
+            <label className="form-label small text-muted text-uppercase fw-bold mb-2">General Details</label>
+            <div className="bg-light bg-opacity-50 p-3 rounded-4 border border-light">
+              <div className="input-group border-0 shadow-sm rounded-3 overflow-hidden mb-3">
+                <span className="input-group-text bg-white border-0 text-muted ps-3"><User size={18} /></span>
+                <input
+                  type="text"
+                  className="form-control border-0 ps-2"
+                  placeholder="Full Name"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value.replace(/[^a-zA-Z\s]/g, ""))}
+                />
+              </div>
+              
+              <div className="input-group border-0 shadow-sm rounded-3 overflow-hidden">
+                <span className="input-group-text bg-white border-0 text-muted ps-3"><Phone size={18} /></span>
+                <input
+                  type="text"
+                  className="form-control border-0 ps-2"
+                  placeholder="Contact Number"
+                  value={customerContact}
+                  onChange={(e) => setCustomerContact(e.target.value.replace(/[^0-9]/g, ""))}
+                />
+              </div>
+            </div>
           </div>
 
-          {deliveryType === "Delivery" && (
-            <div className="mb-3">
-              <label className="form-label fw-semibold">Delivery Fee</label>
-              <input
-                type="number"
-                className="form-control"
-                min="0"
-                value={deliveryFeeValue}
-                onChange={(e) => setDeliveryFeeValue(parseFloat(e.target.value))}
-              />
-            </div>
-          )}
+          <div className="mb-4">
+            <label className="form-label small text-muted text-uppercase fw-bold mb-2">Location & Delivery</label>
+            <div className="bg-light bg-opacity-50 p-3 rounded-4 border border-light">
+              <div className="input-group border-0 shadow-sm rounded-3 overflow-hidden mb-3">
+                <span className="input-group-text bg-white border-0 text-muted ps-3"><MapPin size={18} /></span>
+                <textarea
+                  className="form-control border-0 ps-2"
+                  rows={2}
+                  placeholder="Complete Address"
+                  value={customerAddress}
+                  onChange={(e) => setCustomerAddress(e.target.value)}
+                />
+              </div>
 
-          <Button variant="dark" className="w-100" onClick={handleNameSubmit}>
-            Continue
+              <div className="row g-3">
+                <div className="col-12">
+                  <div className="d-flex p-1 bg-white rounded-3 shadow-sm border border-light overflow-hidden">
+                    <button 
+                      className={`btn flex-grow-1 border-0 py-2 rounded-2 fw-medium transition-all ${deliveryType === 'Walk-in' ? 'bg-dark text-white' : 'bg-transparent text-muted'}`}
+                      onClick={() => setDeliveryType('Walk-in')}
+                    >
+                      <ShoppingBag size={16} className="me-2" />
+                      Walk-in
+                    </button>
+                    <button 
+                      className={`btn flex-grow-1 border-0 py-2 rounded-2 fw-medium transition-all ${deliveryType === 'Delivery' ? 'bg-dark text-white' : 'bg-transparent text-muted'}`}
+                      onClick={() => setDeliveryType('Delivery')}
+                    >
+                      <Truck size={16} className="me-2" />
+                      Delivery
+                    </button>
+                  </div>
+                </div>
+                
+                {deliveryType === "Delivery" && (
+                  <div className="col-12 mt-3">
+                    <div className="input-group border-0 shadow-sm rounded-3 overflow-hidden">
+                      <span className="input-group-text bg-white border-0 text-dark fw-bold ps-3">₱</span>
+                      <input
+                        type="number"
+                        className="form-control border-0 ps-2"
+                        placeholder="Delivery Fee"
+                        min="0"
+                        value={deliveryFeeValue}
+                        onChange={(e) => setDeliveryFeeValue(parseFloat(e.target.value))}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <Button variant="dark" className="w-100 py-3 rounded-3 fw-bold shadow-sm d-flex align-items-center justify-content-center border-0 mt-2" onClick={handleNameSubmit}>
+            Begin Transaction
+            <ChevronRight size={18} className="ms-2" />
           </Button>
         </Modal.Body>
       </Modal>
@@ -672,9 +720,15 @@ export function PointOfSale({ onTransactionComplete, user }: PointOfSaleProps) {
               step="0.01"
               className="form-control border-0 bg-light p-3 rounded-3"
               style={{ boxShadow: "inset 0 1px 4px rgba(0,0,0,0.05)" }}
-              value={taxRate}
-              onChange={(e) => setTaxRate(e.target.value)}
               placeholder="0.00"
+              value={taxRate}
+              onChange={(e) => {
+                const value = e.target.value.replace(/[^0-9.]/g, "");
+                // Ensure only one decimal point
+                const parts = value.split(".");
+                if (parts.length > 2) return;
+                setTaxRate(value);
+              }}
             />
           </div>
           
@@ -686,7 +740,12 @@ export function PointOfSale({ onTransactionComplete, user }: PointOfSaleProps) {
               style={{ boxShadow: "inset 0 1px 4px rgba(0,0,0,0.05)" }}
               placeholder="0.00"
               value={cashAmount}
-              onChange={(e) => setCashAmount(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value.replace(/[^0-9.]/g, "");
+                const parts = value.split(".");
+                if (parts.length > 2) return;
+                setCashAmount(value);
+              }}
             />
           </div>
 
@@ -709,9 +768,14 @@ export function PointOfSale({ onTransactionComplete, user }: PointOfSaleProps) {
             onClick={handleConfirmPayment}
             className="w-100 py-3 shadow-sm"
             style={{ borderRadius: "14px", fontWeight: "bold" }}
-            disabled={!cashAmount || parseFloat(cashAmount) < total}
+            disabled={!cashAmount || parseFloat(cashAmount) < total || isProcessing}
           >
-            Complete Transaction
+            {isProcessing ? (
+              <>
+                <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                Processing...
+              </>
+            ) : "Complete Transaction"}
           </Button>
         </Modal.Body>
       </Modal>

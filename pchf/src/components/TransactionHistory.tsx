@@ -1,7 +1,7 @@
 //TransactionHistory.tsx ngano mag bout kag mag typscript ko
 import { useState, useRef } from "react";
 import type { Transaction } from "../types";
-import { Eye, Search, CreditCard, DollarSign, Receipt, Printer, Trash2 } from "lucide-react";
+import { Eye, Search, CreditCard, DollarSign, Receipt, Printer, Trash2, Calendar, User, Activity, BarChart3, Users, Package } from "lucide-react";
 import { Button, Modal } from "react-bootstrap";
 
 interface TransactionHistoryProps {
@@ -200,111 +200,166 @@ export function TransactionHistory({ transactions, onDeleteAll, canDeleteAll = f
   return (
     <div style={{ marginTop: "1rem" }}>
       {/* Summary Cards */}
-      <div className="row g-3 mb-3">
-        {/* Total Revenue */}
+      <div className="row g-4 mb-4">
         <div className="col-md-4">
-          <div className="card border-0 fs-5" style={{ boxShadow: "2px 4px 8px rgba(0,0,0,0.10)" }}>
-            <h6>Total Revenue</h6>
-            <p className="fw-bold m-0 text-primary">₱{totalRevenue.toFixed(2)}</p>
+          <div className="card border-0 rounded-4 shadow-sm p-3 bg-white">
+            <div className="d-flex align-items-center justify-content-between mb-2">
+              <div className="rounded-circle bg-primary bg-opacity-10 p-2">
+                <BarChart3 size={20} className="text-primary" />
+              </div>
+              <span className="text-muted small fw-medium">Total Revenue</span>
+            </div>
+            <h3 className="fw-bold mb-0 text-dark">₱{totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
+            <div className="text-success small mt-2 d-flex align-items-center">
+              <Activity size={12} className="me-1" />
+              <span>Lifetime Earnings</span>
+            </div>
           </div>
         </div>
-        {/* Total Transactions */}
+
         <div className="col-md-4">
-          <div className="card border-0 fs-5" style={{ boxShadow: "2px 4px 8px rgba(0,0,0,0.10)" }}>
-            <h6>Total Transactions</h6>
-            <p className="fw-bold m-0 text-success">{completedTransactions}</p>
+          <div className="card border-0 rounded-4 shadow-sm p-3 bg-white">
+            <div className="d-flex align-items-center justify-content-between mb-2">
+              <div className="rounded-circle bg-success bg-opacity-10 p-2">
+                <Users size={20} className="text-success" />
+              </div>
+              <span className="text-muted small fw-medium">Total Transactions</span>
+            </div>
+            <h3 className="fw-bold mb-0 text-dark">{completedTransactions.toLocaleString()}</h3>
+            <div className="text-muted small mt-2">
+              Completed Orders
+            </div>
           </div>
         </div>
-        {/* Average */}
+
         <div className="col-md-4">
-          <div className="card border-0 fs-5" style={{ boxShadow: "2px 4px 8px rgba(0,0,0,0.10)" }}>
-            <h6>Average Transaction</h6>
-            <p className="fw-bold m-0 text-warning">₱{averageTransaction.toFixed(2)}</p>
+          <div className="card border-0 rounded-4 shadow-sm p-3 bg-white">
+            <div className="d-flex align-items-center justify-content-between mb-2">
+              <div className="rounded-circle bg-warning bg-opacity-10 p-2">
+                <Activity size={20} className="text-warning" />
+              </div>
+              <span className="text-muted small fw-medium">Average Sale</span>
+            </div>
+            <h3 className="fw-bold mb-0 text-dark">₱{averageTransaction.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
+            <div className="text-muted small mt-2">
+              Per Customer
+            </div>
           </div>
         </div>
       </div>
 
       {/* Filters + Actions */}
-      <div className="row mb-3 g-3 align-items-center">
-        <div className="col-md-3 position-relative">
-          <Search size={16} className="position-absolute top-50 translate-middle-y ms-2" />
-          <input
-            type="text"
-            className="form-control ps-5"
-            placeholder="Search by ID, customer, or processor..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-        <div className="col-md-3 d-flex align-items-center">
-          <span className="fw-bold me-2">From</span>
-          <input type="date" className="form-control" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
-        </div>
-        <div className="col-md-3 d-flex align-items-center">
-          <span className="fw-bold me-2">To</span>
-          <input type="date" className="form-control" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
-        </div>
-        <div className="col-md-3 text-end">
-          <button className="btn btn-dark me-2" onClick={printAllTransactions}>
-            <Printer size={16} className="me-2" /> Print All
-          </button>
-          {canDeleteAll && (
-            <button
-              className="btn btn-danger"
-              onClick={handleDeleteAll}
-              disabled={!dateFrom || !dateTo || isDeleting}
-            >
-              <Trash2 size={16} className="me-2" /> Delete All
-            </button>
-          )}
+      <div className="card border-0 rounded-4 shadow-sm mb-4 bg-white overflow-hidden">
+        <div className="card-body p-3">
+          <div className="row g-3 align-items-center">
+            <div className="col-lg-4 position-relative">
+              <Search size={18} className="position-absolute top-50 translate-middle-y ms-3 text-muted" />
+              <input
+                type="text"
+                className="form-control form-control-lg border-light bg-light bg-opacity-50 ps-5 fs-6"
+                placeholder="Search ID, customer, phone..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            <div className="col-lg-5">
+              <div className="d-flex align-items-center gap-2">
+                <div className="input-group">
+                  <span className="input-group-text bg-transparent border-end-0 text-muted small"><Calendar size={14} /></span>
+                  <input type="date" className="form-control border-start-0 ps-0 text-muted small" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+                </div>
+                <span className="text-muted small">to</span>
+                <div className="input-group">
+                  <span className="input-group-text bg-transparent border-end-0 text-muted small"><Calendar size={14} /></span>
+                  <input type="date" className="form-control border-start-0 ps-0 text-muted small" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+                </div>
+              </div>
+            </div>
+            <div className="col-lg-3 text-end d-flex gap-2 justify-content-end">
+              <button className="btn btn-outline-dark d-flex align-items-center" onClick={printAllTransactions}>
+                <Printer size={16} className="me-2" /> Print
+              </button>
+              {canDeleteAll && (
+                <button
+                  className="btn btn-outline-danger d-flex align-items-center"
+                  onClick={handleDeleteAll}
+                  disabled={!dateFrom || !dateTo || isDeleting}
+                >
+                  <Trash2 size={16} className="me-2" /> Delete
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* table  */}
-      <div className="card border-0 rounded-3" style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}>
-        <div className="table-responsive d-flex rounded-2" ref={printAreaRef}>
-          <table className="table table-hover rounded-2" >
-            <thead>
+      {/* Table */}
+      <div className="card border-0 rounded-4 shadow-sm bg-white overflow-hidden">
+        <div className="table-responsive" ref={printAreaRef}>
+          <table className="table table-hover align-middle mb-0">
+            <thead className="bg-light border-bottom border-light">
               <tr>
-                <th>ID</th>
-                <th>Customer</th>
-                <th>Date & Time</th>
-                <th>Items</th>
-                <th>Payment</th>
-                <th>Delivery</th>
-                <th>Processed By</th>
-                <th>Total</th>
-                <th>Actions</th>
+                <th className="ps-4 py-3 text-muted small fw-bold text-uppercase">Reference</th>
+                <th className="py-3 text-muted small fw-bold text-uppercase">Customer</th>
+                <th className="py-3 text-muted small fw-bold text-uppercase">Date & Time</th>
+                <th className="py-3 text-muted small fw-bold text-uppercase">Items</th>
+                <th className="py-3 text-muted small fw-bold text-uppercase">Method</th>
+                <th className="py-3 text-muted small fw-bold text-uppercase">Type</th>
+                <th className="py-3 text-muted small fw-bold text-uppercase">Processor</th>
+                <th className="py-3 text-muted small fw-bold text-uppercase">Total</th>
+                <th className="pe-4 py-3 text-end text-muted small fw-bold text-uppercase">Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredTransactions.map((transaction) => (
-                <tr key={transaction.id}>
-                  <td>{transaction.id}</td>
-                  <td>{transaction.customerName}</td>
+                <tr key={transaction.id} className="border-bottom border-light">
+                  <td className="ps-4 fw-medium text-dark" style={{fontSize: "0.85rem"}}>#{transaction.id.slice(-6).toUpperCase()}</td>
                   <td>
-                    <div style={{color: "blue"}}>{new Date(transaction.timestamp).toLocaleDateString()}</div>
-                    <div>{new Date(transaction.timestamp).toLocaleTimeString()}</div>
+                    <div className="fw-semibold text-dark">{transaction.customerName}</div>
                   </td>
-                  <td>{transaction.items.length}</td>
-                  <td>{transaction.paymentMethod}</td>
-                  <td >{transaction.isDelivery ? "Yes" : "No"}</td>
                   <td>
-                    {transaction.handledBy
-                      ? `${transaction.handledBy.name} (${transaction.handledBy.role})`
-                      : "N/A"}
+                    <div className="text-dark small">{new Date(transaction.timestamp).toLocaleDateString()}</div>
+                    <div className="text-muted" style={{fontSize: "0.75rem"}}>{new Date(transaction.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                   </td>
-                  <td>₱{transaction.total.toFixed(2)}</td>
                   <td>
-                    <button
-                      className="btn btn-outline-primary btn-sm me-1"
-                      onClick={() => setSelectedTransaction(transaction)}
-                    >
-                      <Eye size={16} />
-                    </button>
-                    <button className="btn btn-outline-dark btn-sm" onClick={() => printTransaction(transaction)}>
-                      <Printer size={16} />
-                    </button>
+                    <span className="badge bg-light text-dark rounded-pill px-2 py-1 fw-medium border">
+                      {transaction.items.length} {transaction.items.length === 1 ? 'item' : 'items'}
+                    </span>
+                  </td>
+                  <td>
+                    <span className="text-muted small d-flex align-items-center">
+                      <CreditCard size={14} className="me-1" /> {transaction.paymentMethod}
+                    </span>
+                  </td>
+                  <td>
+                    <span className={`badge rounded-pill px-3 py-1 fw-bold ${transaction.isDelivery ? "bg-info bg-opacity-10 text-info" : "bg-secondary bg-opacity-10 text-secondary"}`} style={{fontSize: "0.7rem"}}>
+                      {transaction.isDelivery ? "DELIVERY" : "PICKUP"}
+                    </span>
+                  </td>
+                  <td>
+                    <div className="small text-dark font-medium">{transaction.handledBy?.name || "System"}</div>
+                    <div className="text-muted text-uppercase" style={{fontSize: "0.65rem"}}>{transaction.handledBy?.role || "N/A"}</div>
+                  </td>
+                  <td>
+                    <div className="fw-bold text-dark">₱{transaction.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                  </td>
+                  <td className="pe-4 text-end">
+                    <div className="btn-group shadow-sm rounded-3 overflow-hidden">
+                      <button
+                        className="btn btn-white btn-sm border-0 bg-transparent hover-bg-light"
+                        onClick={() => setSelectedTransaction(transaction)}
+                        title="View Details"
+                      >
+                        <Eye size={18} className="text-primary" />
+                      </button>
+                      <button 
+                        className="btn btn-white btn-sm border-0 bg-transparent hover-bg-light" 
+                        onClick={() => printTransaction(transaction)}
+                        title="Print Receipt"
+                      >
+                        <Printer size={18} className="text-dark" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -313,61 +368,123 @@ export function TransactionHistory({ transactions, onDeleteAll, canDeleteAll = f
         </div>
       </div>
 
-      {/* bushit na modal*/}
+      {/* Transaction Details Modal */}
       {selectedTransaction && (
-        <Modal show={true} onHide={() => setSelectedTransaction(null)} 
-          size="lg" centered
-          style={{ backgroundColor: "rgba(239, 252, 255, 0.31)" }}
+        <Modal 
+          show={true} 
+          onHide={() => setSelectedTransaction(null)} 
+          size="lg" 
+          centered
+          className="details-modal"
+          contentClassName="border-0 rounded-4 shadow-lg"
+          backdropClassName="custom-backdrop"
         >
-          <Modal.Header closeButton>
-            <Modal.Title>Transaction Details</Modal.Title>
+          <Modal.Header closeButton className="border-0 pb-0 pt-4 px-4">
+            <Modal.Title className="fw-bold fs-4 d-flex align-items-center">
+              <Receipt className="me-2 text-primary" size={24} />
+              Transaction Receipt
+            </Modal.Title>
           </Modal.Header>
 
-          <Modal.Body>
-            <div className="me-3 ms-3">
-              <p><strong>Customer:</strong> {selectedTransaction.customerName}</p>
-              <p><strong>ID:</strong> {selectedTransaction.id}</p>
-              <p><strong>Date & Time:</strong> {new Date(selectedTransaction.timestamp).toLocaleString()}</p>
-              <p><strong>Payment Method:</strong> {selectedTransaction.paymentMethod}</p>
-              <p><strong>Delivery:</strong> {selectedTransaction.isDelivery ? "Yes" : "No"}</p>
-              {selectedTransaction.isDelivery && (
-                <p><strong>Delivery Fee:</strong> ₱{selectedTransaction.deliveryFee?.toFixed(2)}</p>
-              )}
-
-              {selectedTransaction.handledBy && (
-                <>
-                  <hr />
-                  <p><strong>Processed By:</strong> {selectedTransaction.handledBy.name} ({selectedTransaction.handledBy.role})</p>
-                  <p><strong>Email:</strong> {selectedTransaction.handledBy.email}</p>
-                </>
-              )}
-
-              <h6>Items:</h6>
-              <ul className="list-group mb-3">
-                {selectedTransaction.items.map((item, idx) => (
-                  <li key={idx} className="list-group-item d-flex justify-content-between">
-                    <span>{item.product.name} x {item.quantity}</span>
-                    <span>₱{(item.product.price * item.quantity).toFixed(2)}</span>
-                  </li>
-                ))}
-              </ul>
-
-              <p><strong>Subtotal:</strong> ₱{selectedTransaction.subtotal.toFixed(2)}</p>
-              <p><strong>Tax:</strong> ₱{selectedTransaction.tax.toFixed(2)}</p>
-              {selectedTransaction.isDelivery && (
-                <p><strong>Delivery Fee:</strong> ₱{selectedTransaction.deliveryFee?.toFixed(2)}</p>
-              )}
-              <p className="fw-bold"><strong>Total:</strong> ₱{selectedTransaction.total.toFixed(2)}</p>
+          <Modal.Body className="p-4 pt-2">
+            <div className="bg-light bg-opacity-50 p-3 rounded-4 mb-4 border border-light shadow-sm">
+              <div className="row g-3">
+                <div className="col-md-6">
+                  <label className="text-muted small text-uppercase fw-bold mb-1 d-block">Customer Details</label>
+                  <div className="d-flex align-items-center">
+                    <div className="rounded-circle bg-white shadow-sm p-2 me-2">
+                      <User size={16} className="text-primary" />
+                    </div>
+                    <div>
+                      <div className="fw-bold text-dark">{selectedTransaction.customerName}</div>
+                      <div className="text-muted small">ID: {selectedTransaction.id}</div>
+                    </div>
+                  </div>
+                </div>
+                <div className="col-md-6">
+                  <label className="text-muted small text-uppercase fw-bold mb-1 d-block">Meta Information</label>
+                  <div className="d-flex flex-column gap-1">
+                    <div className="small d-flex justify-content-between">
+                      <span className="text-muted">Date:</span>
+                      <span className="fw-medium text-dark">{new Date(selectedTransaction.timestamp).toLocaleString()}</span>
+                    </div>
+                    <div className="small d-flex justify-content-between">
+                      <span className="text-muted">Payment:</span>
+                      <span className="fw-medium text-dark badge bg-white shadow-sm text-dark border-0">{selectedTransaction.paymentMethod}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
+
+            <h6 className="fw-bold mb-3 d-flex align-items-center">
+              <Package size={18} className="me-2 text-muted" />
+              Purchased Items
+            </h6>
+            <div className="rounded-4 border overflow-hidden mb-4 shadow-sm bg-white">
+              <table className="table table-hover align-middle mb-0">
+                <thead className="bg-light small">
+                  <tr>
+                    <th className="ps-3 fw-bold text-muted">Product</th>
+                    <th className="text-center fw-bold text-muted">Qty</th>
+                    <th className="text-end pe-3 fw-bold text-muted">Price</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {selectedTransaction.items.map((item, idx) => (
+                    <tr key={idx}>
+                      <td className="ps-3 fw-medium">{item.product.name}</td>
+                      <td className="text-center fw-bold text-primary">{item.quantity}</td>
+                      <td className="text-end pe-3 fw-bold text-dark">₱{(item.product.price * item.quantity).toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="row justify-content-end">
+              <div className="col-md-5">
+                <div className="card border-0 bg-light rounded-4 p-3 border border-white shadow-sm">
+                  <div className="d-flex justify-content-between mb-2">
+                    <span className="text-muted small">Subtotal</span>
+                    <span className="fw-medium">₱{selectedTransaction.subtotal.toFixed(2)}</span>
+                  </div>
+                  <div className="d-flex justify-content-between mb-2">
+                    <span className="text-muted small">Tax</span>
+                    <span className="fw-medium text-danger">+₱{selectedTransaction.tax.toFixed(2)}</span>
+                  </div>
+                  {selectedTransaction.isDelivery && (
+                    <div className="d-flex justify-content-between mb-2">
+                      <span className="text-muted small">Delivery Fee</span>
+                      <span className="fw-medium text-primary">₱{selectedTransaction.deliveryFee?.toFixed(2)}</span>
+                    </div>
+                  )}
+                  <hr className="my-2 border-secondary border-opacity-25" />
+                  <div className="d-flex justify-content-between">
+                    <span className="fw-bold text-dark">Grand Total</span>
+                    <span className="fw-bold fs-5 text-primary">₱{selectedTransaction.total.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {selectedTransaction.handledBy && (
+              <div className="mt-4 pt-3 border-top border-light opacity-75">
+                <div className="d-flex align-items-center small text-muted">
+                  <User size={14} className="me-1" />
+                  <span>Processed by <strong>{selectedTransaction.handledBy.name}</strong> ({selectedTransaction.handledBy.role}) • {selectedTransaction.handledBy.email}</span>
+                </div>
+              </div>
+            )}
           </Modal.Body>
 
-          <Modal.Footer>
-            <Button variant="secondary" onClick={() => setSelectedTransaction(null)}>
+          <Modal.Footer className="border-0 px-4 pb-4 gap-2">
+            <Button variant="light" className="rounded-3 px-4 fw-medium" onClick={() => setSelectedTransaction(null)}>
               Close
             </Button>
-            <Button variant="primary" onClick={() => printTransaction(selectedTransaction)}>
-              🖨️ Print 
-              {/* yaga pwedi man diay Emoji ang i icon ba HHAAHHAHA */}
+            <Button variant="dark" className="rounded-3 px-4 fw-medium d-flex align-items-center shadow-sm" onClick={() => printTransaction(selectedTransaction)}>
+              <Printer size={18} className="me-2" />
+              Print Receipt
             </Button>
           </Modal.Footer>
         </Modal>

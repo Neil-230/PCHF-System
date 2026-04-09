@@ -3,7 +3,7 @@ import type { PermissionGroupDescriptor, PermissionOverride, User } from "../typ
 import apiService from "../services/api";
 import { toast } from "sonner";
 import { useToast } from "../hooks";
-import { Shield, UserCheck, UserX, Loader2 } from "lucide-react";
+import { Shield, UserCheck, UserX, Loader2, LayoutGrid, Package, ReceiptText, Settings, ShieldAlert, Search, RefreshCw, UserCog, ShieldCheck, Info, ArrowUpRight } from "lucide-react";
 
 interface PermissionsManagerProps {
   currentUser: User;
@@ -181,11 +181,15 @@ export function PermissionsManager({ currentUser, onNavigate }: PermissionsManag
   const renderEffectiveBadge = (user: User) => {
     const count = user.permissionOverrides?.length || 0;
     if (!count) {
-      return <span className="badge text-bg-light border">Inherited</span>;
+      return (
+        <span className="badge bg-light text-muted border py-2 px-3 rounded-pill fw-medium d-flex align-items-center gap-1">
+          <Shield size={12} /> Standard Inherit
+        </span>
+      );
     }
     return (
-      <span className="badge bg-warning text-dark">
-        {count} override{count > 1 ? "s" : ""}
+      <span className="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 py-2 px-3 rounded-pill fw-bold d-flex align-items-center gap-1">
+        <ShieldAlert size={12} /> {count} Active Overrides
       </span>
     );
   };
@@ -201,66 +205,115 @@ export function PermissionsManager({ currentUser, onNavigate }: PermissionsManag
       );
     }
 
-    return catalog.map((group) => (
-      <div key={group.id} className="mb-4 border rounded-3">
-        <div className="p-3 border-bottom bg-light">
-          <h5 className="mb-1">{group.label}</h5>
-          <p className="text-muted small mb-0">{group.description}</p>
-        </div>
-        <div className="table-responsive">
-          <table className="table table-sm mb-0 align-middle">
-            <thead>
-              <tr>
-                <th style={{ width: "40%" }}>Action</th>
-                <th>Role default</th>
-                <th style={{ width: "40%" }}>Override</th>
-              </tr>
-            </thead>
-            <tbody>
-              {group.actions.map((descriptor) => {
-                const possession = descriptor.possession || "any";
-                const key = getPermissionKey(group.resource, descriptor.action, possession);
-                const draftEffect = overrideDraft[key] || "inherit";
-                const defaultAllowed = descriptor.defaultRoles.includes(activeUser.role as RoleKey);
+    const sections = [
+      {
+        name: "Core Features",
+        icon: <LayoutGrid size={18} className="me-2 text-primary" />,
+        groupIds: ["posAccess", "inventoryAccess", "transactionsAccess", "settingsAccess", "dashboard"],
+      },
+      {
+        name: "Inventory Management",
+        icon: <Package size={18} className="me-2 text-success" />,
+        groupIds: ["inventory"],
+      },
+      {
+        name: "Sales & Records",
+        icon: <ReceiptText size={18} className="me-2 text-info" />,
+        groupIds: ["transactions"],
+      },
+      {
+        name: "System Configuration",
+        icon: <Settings size={18} className="me-2 text-secondary" />,
+        groupIds: ["storeSettings", "notifications", "backup", "signup"],
+      },
+      {
+        name: "Security & Administration",
+        icon: <ShieldAlert size={18} className="me-2 text-danger" />,
+        groupIds: ["userPermissions"],
+      },
+    ];
 
-                return (
-                  <tr key={key}>
-                    <td>
-                      <div className="fw-semibold">{descriptor.label}</div>
-                      <div className="text-muted small text-uppercase">
-                        {descriptor.action} ({possession})
-                      </div>
-                    </td>
-                    <td>
-                      <span className={`badge ${defaultAllowed ? "text-bg-success" : "text-bg-secondary"}`}>
-                        {defaultAllowed ? "Default allow" : "Default deny"}
-                      </span>
-                    </td>
-                    <td>
-                      <div className="d-flex flex-wrap gap-2">
-                        {EFFECT_OPTIONS.map((effect) => (
-                          <button
-                            key={effect}
-                            className={`btn btn-sm ${
-                              draftEffect === effect ? "btn-dark" : "btn-outline-dark"
-                            }`}
-                            onClick={() => handleOverrideEffectChange(key, effect)}
-                            type="button"
-                            disabled={savingOverrides}
-                          >
-                            {effect === "inherit" ? "Inherit" : EFFECT_LABEL[effect as "allow" | "deny"]}
-                          </button>
-                        ))}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+    return (
+      <div className="permission-sections">
+        {sections.map((section) => {
+          const sectionGroups = catalog.filter((g) => section.groupIds.includes(g.id));
+          if (sectionGroups.length === 0) return null;
+
+          return (
+            <div key={section.name} className="mb-5">
+              <div className="d-flex align-items-center mb-3 pb-2 border-bottom">
+                {section.icon}
+                <h5 className="fw-bold mb-0">{section.name}</h5>
+              </div>
+
+              {sectionGroups.map((group) => (
+                <div key={group.id} className="mb-4 border rounded-3 overflow-hidden shadow-sm bg-white">
+                  <div className="p-3 border-bottom bg-light bg-opacity-50">
+                    <h6 className="fw-bold mb-1">{group.label}</h6>
+                    <p className="text-muted small mb-0">{group.description}</p>
+                  </div>
+                  <div className="table-responsive">
+                    <table className="table table-sm mb-0 align-middle">
+                      <thead className="table-light">
+                        <tr>
+                          <th style={{ width: "40%", paddingLeft: "1rem" }}>Action</th>
+                          <th>Role Default</th>
+                          <th style={{ width: "40%", paddingRight: "1rem" }}>Override Control</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {group.actions.map((descriptor) => {
+                          const possession = descriptor.possession || "any";
+                          const key = getPermissionKey(group.resource, descriptor.action, possession);
+                          const draftEffect = overrideDraft[key] || "inherit";
+                          const defaultAllowed = descriptor.defaultRoles.includes(activeUser.role as RoleKey);
+
+                          return (
+                            <tr key={key}>
+                              <td style={{ paddingLeft: "1rem" }}>
+                                <div className="fw-semibold small">{descriptor.label}</div>
+                                <div className="text-muted" style={{ fontSize: "0.7rem" }}>
+                                  {descriptor.action.toUpperCase()} ({possession})
+                                </div>
+                              </td>
+                              <td>
+                                <span className={`badge rounded-pill ${defaultAllowed ? "text-bg-success" : "text-bg-secondary"}`} style={{ fontSize: "0.65rem" }}>
+                                  {defaultAllowed ? "Allow" : "Deny"}
+                                </span>
+                              </td>
+                              <td style={{ paddingRight: "1rem" }}>
+                                <div className="btn-group w-100" role="group">
+                                  {EFFECT_OPTIONS.map((effect) => (
+                                    <button
+                                      key={effect}
+                                      className={`btn btn-xs py-1 px-2 ${
+                                        draftEffect === effect 
+                                          ? (effect === 'allow' ? 'btn-success' : effect === 'deny' ? 'btn-danger' : 'btn-dark')
+                                          : 'btn-outline-secondary opacity-50'
+                                      }`}
+                                      style={{ fontSize: "0.7rem" }}
+                                      onClick={() => handleOverrideEffectChange(key, effect)}
+                                      type="button"
+                                      disabled={savingOverrides}
+                                    >
+                                      {effect === "inherit" ? "Inherit" : EFFECT_LABEL[effect as "allow" | "deny"]}
+                                    </button>
+                                  ))}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ))}
+            </div>
+          );
+        })}
       </div>
-    ));
+    );
   };
 
   const isModalOpen = Boolean(activeUser);
@@ -283,119 +336,154 @@ export function PermissionsManager({ currentUser, onNavigate }: PermissionsManag
 
   return (
     <div className="container py-3">
-      <div className="d-flex justify-content-between align-items-center mb-4">
+      <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-5">
         <div>
-          <h2 className="fw-bold mb-1">Permission Control Center</h2>
+          <h2 className="fw-bold mb-1 text-dark">Access Control Center</h2>
           <p className="text-muted mb-0">
-            Grant or revoke Admin/Cashier privileges. RBAC rules apply instantly across the system.
+            Provision roles and manage granular permission overrides for your team.
           </p>
         </div>
-        <button className="btn btn-outline-dark" onClick={loadUsers} disabled={isLoading}>
+        <button className="btn btn-lg btn-white border-light shadow-sm d-flex align-items-center fw-medium px-4" onClick={loadUsers} disabled={isLoading}>
           {isLoading ? (
-            <>
-              <Loader2 size={16} className="me-2 spin" />
-              Refreshing...
-            </>
+            <Loader2 size={20} className="me-2 spin text-primary" />
           ) : (
-            "Refresh"
+            <RefreshCw size={18} className="me-2 text-primary" />
           )}
+          {isLoading ? "Syncing..." : "Refresh"}
         </button>
       </div>
 
-      <div className="row g-3 mb-4">
+      <div className="row g-4 mb-5">
         {(Object.keys(ROLE_SUMMARY) as RoleKey[]).map((role) => (
           <div className="col-md-4" key={role}>
-            <div className="card border-0 h-100" style={{ boxShadow: "2px 4px 8px rgba(0,0,0,0.08)" }}>
-              <div className="card-body">
-                <div className="d-flex align-items-center gap-2 mb-2">
-                  {role === "owner" ? <Shield size={18} /> : role === "admin" ? <UserCheck size={18} /> : <UserX size={18} />}
-                  <h5 className="m-0">{ROLE_SUMMARY[role].label}</h5>
+            <div className="card border-0 rounded-4 shadow-sm h-100 bg-white">
+              <div className="card-body p-4">
+                <div className="d-flex align-items-center gap-3 mb-3">
+                  <div className={`p-3 rounded-circle bg-opacity-10 ${
+                    role === 'owner' ? 'bg-primary text-primary' : 
+                    role === 'admin' ? 'bg-success text-success' : 
+                    'bg-secondary text-secondary'
+                  }`}>
+                    {role === "owner" ? <Shield size={22} /> : role === "admin" ? <ShieldCheck size={22} /> : <UserCog size={22} />}
+                  </div>
+                  <div>
+                    <h5 className="fw-bold m-0 text-dark">{ROLE_SUMMARY[role].label} Permissions</h5>
+                    <span className="text-muted small">Standard Role</span>
+                  </div>
                 </div>
-                <p className="text-muted small">{ROLE_SUMMARY[role].description}</p>
-                <ul className="small ps-3">
-                  {ROLE_SUMMARY[role].capabilities.map((cap) => (
-                    <li key={cap}>{cap}</li>
-                  ))}
-                </ul>
+                <p className="text-muted mb-4 small" style={{minHeight: "40px"}}>{ROLE_SUMMARY[role].description}</p>
+                <div className="bg-light bg-opacity-50 p-3 rounded-3 mt-auto">
+                  <h6 className="small fw-bold text-uppercase mb-2 text-muted">Core Capabilities</h6>
+                  <ul className="list-unstyled mb-0 small text-dark d-flex flex-column gap-2">
+                    {ROLE_SUMMARY[role].capabilities.slice(0, 4).map((cap) => (
+                      <li key={cap} className="d-flex align-items-start gap-2">
+                        <div className="mt-1 small-dot bg-dark rounded-circle" style={{width: "4px", height: "4px", minWidth: "4px"}}></div>
+                        {cap}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </div>
             </div>
           </div>
         ))}
       </div>
 
-      <div className="card border-0" style={{ boxShadow: "2px 4px 8px rgba(0,0,0,0.08)" }}>
-        <div className="card-body">
-          <div className="d-flex flex-column flex-md-row align-items-md-center gap-3 mb-3">
-            <div className="flex-grow-1">
+      <div className="card border-0 rounded-4 shadow-sm bg-white overflow-hidden">
+        <div className="card-header bg-white border-0 p-4 pb-0">
+          <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+            <div className="position-relative flex-grow-1" style={{maxWidth: "500px"}}>
+              <Search size={18} className="position-absolute top-50 translate-middle-y ms-3 text-muted" />
               <input
                 type="text"
-                className="form-control"
-                placeholder="Search by name, email, or role..."
+                className="form-control form-control-lg border-light bg-light bg-opacity-50 ps-5 fs-6"
+                placeholder="Search staff by name or email..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
-            <span className="text-muted small">
-              Showing {filteredUsers.length} of {Math.max(users.length - 1, 0)} managed accounts
-            </span>
+            <div className="text-muted small d-flex align-items-center gap-2">
+              <span className="badge bg-light text-dark px-2 border">{filteredUsers.length}</span>
+              <span>managed accounts</span>
+            </div>
           </div>
-
+        </div>
+        <div className="card-body p-0">
           <div className="table-responsive">
-            <table className="table align-middle">
-              <thead>
+            <table className="table table-hover align-middle mb-0">
+              <thead className="bg-light text-muted small fw-bold text-uppercase border-bottom border-light">
                 <tr>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Current Role</th>
-                  <th>Overrides</th>
-                  <th className="text-end">Actions</th>
+                  <th className="ps-4 py-3">User Instance</th>
+                  <th className="py-3">Primary Role</th>
+                  <th className="py-3">Customization</th>
+                  <th className="pe-4 py-3 text-end">Administrative Controls</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="border-0">
                 {isLoading ? (
                   <tr>
-                    <td colSpan={5} className="text-center py-5">
-                      <Loader2 className="spin me-2" />
-                      Loading users...
+                    <td colSpan={4} className="text-center py-5">
+                      <div className="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                      <span className="text-muted">Synchronizing user data...</span>
                     </td>
                   </tr>
                 ) : filteredUsers.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="text-center text-muted py-4">
-                      No users match your filters.
+                    <td colSpan={4} className="text-center text-muted py-5">
+                      No staff accounts found matching your filters.
                     </td>
                   </tr>
                 ) : (
                   filteredUsers.map((user) => (
-                    <tr key={user.id}>
-                      <td className="fw-semibold">{user.name}</td>
-                      <td className="text-muted small">{user.email}</td>
-                      <td>
-                        <span className="badge text-uppercase bg-dark">{user.role}</span>
-                      </td>
-                      <td>{renderEffectiveBadge(user)}</td>
-                      <td className="text-end">
-                        <div className="btn-group me-2">
-                          {(["admin", "cashier"] as RoleKey[]).map((role) => (
-                            <button
-                              key={role}
-                              className={`btn btn-sm ${
-                                user.role === role ? "btn-dark" : "btn-outline-dark"
-                              }`}
-                              disabled={updatingUserId === user.id}
-                              onClick={() => handleRoleUpdate(user, role)}
-                            >
-                              {role}
-                            </button>
-                          ))}
+                    <tr key={user.id} className="border-bottom border-light transition-all hover-bg-light">
+                      <td className="ps-4">
+                        <div className="d-flex align-items-center gap-2">
+                          <div className="rounded-circle bg-light d-flex align-items-center justify-content-center p-2 text-primary" style={{width: "40px", height: "40px"}}>
+                            <UserCog size={18} />
+                          </div>
+                          <div>
+                            <div className="fw-bold text-dark">{user.name}</div>
+                            <div className="text-muted small" style={{fontSize: "0.75rem"}}>{user.email}</div>
+                          </div>
                         </div>
-                        <button
-                          className="btn btn-sm btn-outline-secondary"
-                          onClick={() => openOverrideManager(user)}
-                          disabled={isCatalogLoading}
-                        >
-                          Manage access
-                        </button>
+                      </td>
+                      <td>
+                        <div className={`badge rounded-pill px-3 py-1 fw-bold ${
+                          user.role === 'admin' ? 'bg-success bg-opacity-10 text-success' : 'bg-primary bg-opacity-10 text-primary'
+                        }`} style={{fontSize: "0.7rem"}}>
+                          {user.role.toUpperCase()}
+                        </div>
+                      </td>
+                      <td>
+                        <div className="d-flex align-items-center gap-2 fw-medium text-muted small">
+                          {renderEffectiveBadge(user)}
+                        </div>
+                      </td>
+                      <td className="pe-4 text-end">
+                        <div className="d-inline-flex gap-2">
+                          <div className="btn-group shadow-sm rounded-3 overflow-hidden border">
+                            {(["admin", "cashier"] as RoleKey[]).map((role) => (
+                              <button
+                                key={role}
+                                className={`btn btn-sm px-3 border-0 transition-all ${
+                                  user.role === role ? "bg-dark text-white" : "bg-white text-muted hover-bg-light"
+                                }`}
+                                disabled={updatingUserId === user.id}
+                                onClick={() => handleRoleUpdate(user, role)}
+                              >
+                                {role.charAt(0).toUpperCase() + role.slice(1)}
+                              </button>
+                            ))}
+                          </div>
+                          <button
+                            className="btn btn-sm btn-outline-dark d-flex align-items-center gap-2 rounded-3 px-3 fw-medium shadow-sm"
+                            onClick={() => openOverrideManager(user)}
+                            disabled={isCatalogLoading}
+                          >
+                            <ShieldAlert size={16} />
+                            Manage
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -409,22 +497,38 @@ export function PermissionsManager({ currentUser, onNavigate }: PermissionsManag
       {isModalOpen && activeUser && (
         <>
           <div className="modal fade show d-block" tabIndex={-1} role="dialog">
-            <div className="modal-dialog modal-xl modal-dialog-scrollable">
-              <div className="modal-content">
-                <div className="modal-header">
-                  <div>
-                    <h5 className="modal-title">Manage access: {activeUser.name}</h5>
-                    <p className="text-muted small mb-0">
-                      Base role: <strong className="text-uppercase">{activeUser.role}</strong>
+            <div className="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
+              <div className="modal-content border-0 rounded-4 shadow-lg">
+                <div className="modal-header border-0 p-4 pb-0">
+                  <div className="d-flex align-items-center gap-3">
+                    <div className="p-3 bg-primary bg-opacity-10 rounded-4 text-primary">
+                      <ShieldAlert size={28} />
+                    </div>
+                    <div>
+                      <h4 className="fw-bold mb-0 text-dark">Permission Settings</h4>
+                      <div className="d-flex align-items-center gap-2 mt-1">
+                        <span className="text-muted small">Managing for:</span>
+                        <span className="fw-bold text-dark small">{activeUser.name}</span>
+                        <div className="vr mx-1 opacity-25"></div>
+                        <span className="badge bg-dark rounded-pill px-3 py-1 text-uppercase" style={{fontSize: "0.65rem"}}>{activeUser.role}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <button type="button" className="btn-close shadow-none" onClick={closeOverrideManager} disabled={savingOverrides} />
+                </div>
+                <div className="modal-body p-4 pt-4">
+                  <div className="bg-light bg-opacity-50 p-3 rounded-4 mb-4 border border-light d-flex align-items-center gap-3">
+                    <Info size={16} className="text-primary" />
+                    <p className="small text-muted mb-0">
+                      Changes here will create explicit overrides that ignore the default behavior of the <strong>{activeUser.role}</strong> role. Use <strong>"Inherit"</strong> to revert to standard role settings.
                     </p>
                   </div>
-                  <button type="button" className="btn-close" onClick={closeOverrideManager} disabled={savingOverrides} />
+                  {renderPermissionControls()}
                 </div>
-                <div className="modal-body">{renderPermissionControls()}</div>
-                <div className="modal-footer">
+                <div className="modal-footer border-0 p-4 pt-0 gap-2">
                   <button
                     type="button"
-                    className="btn btn-outline-secondary"
+                    className="btn btn-lg btn-light border rounded-3 px-4 fw-medium fs-6"
                     onClick={closeOverrideManager}
                     disabled={savingOverrides}
                   >
@@ -432,12 +536,16 @@ export function PermissionsManager({ currentUser, onNavigate }: PermissionsManag
                   </button>
                   <button
                     type="button"
-                    className="btn btn-dark"
+                    className="btn btn-lg btn-dark rounded-3 px-5 fw-bold fs-6 shadow-sm d-flex align-items-center gap-2"
                     onClick={handleSaveOverrides}
                     disabled={savingOverrides}
                   >
-                    {savingOverrides && <Loader2 size={16} className="me-2 spin" />}
-                    Save overrides
+                    {savingOverrides ? (
+                      <Loader2 size={20} className="spin" />
+                    ) : (
+                      <ArrowUpRight size={20} />
+                    )}
+                    {savingOverrides ? "Applying Changes..." : "Apply Overrides"}
                   </button>
                 </div>
               </div>

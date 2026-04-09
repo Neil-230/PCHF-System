@@ -247,7 +247,11 @@ export function SignUpUpdated({ onSwitchToLogin }: SignUpProps) {
                       onClick={() => handleSendCode()}
                       disabled={isLoading || verificationPending || resendCooldown > 0}
                     >
-                      <Check className="me-2" size={16} />
+                      {isLoading ? (
+                        <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                      ) : (
+                        <Check className="me-2" size={16} />
+                      )}
                       {resendCooldown > 0 
                         ? `Wait ${resendCooldown}s` 
                         : verificationPending 
@@ -338,7 +342,12 @@ export function SignUpUpdated({ onSwitchToLogin }: SignUpProps) {
             Cancel
           </Button>
           <Button onClick={handleVerifyCode} disabled={isLoading}>
-            {isLoading ? 'Verifying...' : 'Verify'}
+            {isLoading ? (
+              <>
+                <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                Verifying...
+              </>
+            ) : 'Verify'}
           </Button>
         </Modal.Footer>
       </Modal>
@@ -389,7 +398,12 @@ export function SignUpUpdated({ onSwitchToLogin }: SignUpProps) {
             </div>
 
             <Button type="submit" className="w-100 mt-3 bg-dark" disabled={isLoading}>
-              {isLoading ? "Creating account..." : "Create Account"}
+              {isLoading ? (
+                <>
+                  <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                  Creating account...
+                </>
+              ) : "Create Account"}
             </Button>
           </form>
         </Modal.Body>

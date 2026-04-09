@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import type { Product } from "../types";
 import type { User } from "../types/auth";
-import { Plus, Edit, Search, Package, Archive, RotateCcw, LayoutGrid, FileDown } from "lucide-react";
+import { Plus, Edit, Search, Package, Archive, RotateCcw, LayoutGrid, FileDown, Boxes, ClipboardList, AlertCircle, ShoppingBag, Tag, Layers, Info } from "lucide-react";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -16,6 +16,7 @@ export function InventoryManagement({ user }: { user?: User }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     price: "",
@@ -72,6 +73,7 @@ export function InventoryManagement({ user }: { user?: User }) {
 
     const skuValue = formData.sku.trim() || generateSKU(formData.category);
 
+    setIsSaving(true);
     try {
       const created = await apiService.createProduct({
         name: formData.name,
@@ -92,6 +94,8 @@ export function InventoryManagement({ user }: { user?: User }) {
         ? "Data changed by someone else. Please refresh and try again."
         : e?.message || "Failed to add product. Please try again.";
       toast.error(errorMsg);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -114,6 +118,7 @@ export function InventoryManagement({ user }: { user?: User }) {
       version: editingProduct.__v,
     } as any;
 
+    setIsSaving(true);
     try {
       const { product } = await apiService.updateProduct(editingProduct.id, updates);
       setProducts((prev) => prev.map((p) => (p.id === editingProduct.id ? product : p)));
@@ -126,6 +131,8 @@ export function InventoryManagement({ user }: { user?: User }) {
         return;
       }
       toast.error(e?.message || "Failed to update product. Please try again.");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -332,86 +339,108 @@ export function InventoryManagement({ user }: { user?: User }) {
   return (
     <div style={{ marginTop: "1rem" }}>
       {/* Stats Cards */}
-      <div className="row g-3 mb-3">
+      <div className="row g-4 mb-4">
         <div className="col-md-3">
-          <div className="card text-center border-0" style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}>
-            <div className="d-flex flex-row justify-content-between align-items-center">
-              <h6>Total Products</h6>
-              {/* <Package size={20} className="mb-2"/> */}
+          <div className="card border-0 rounded-4 shadow-sm p-3 bg-white">
+            <div className="d-flex align-items-center justify-content-between mb-2">
+              <div className="rounded-circle bg-primary bg-opacity-10 p-2">
+                <Boxes size={20} className="text-primary" />
+              </div>
+              <span className="text-muted small fw-medium">Total Items</span>
             </div>
-            <strong className="text-start text-primary fs-5">{totalProducts}</strong>
+            <h3 className="fw-bold mb-0 text-dark">{totalProducts.toLocaleString()}</h3>
+            <div className="text-muted small mt-2">Active SKUs</div>
           </div>
         </div>
-        <div className="col-md-3">
-          <div className="card text-center border-0" style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}>
-            <h6 className="text-start">Total Value</h6>
 
-            <div className="fw-bold text-start text-success fs-5">₱{totalValue.toFixed(2)}</div>
+        <div className="col-md-3">
+          <div className="card border-0 rounded-4 shadow-sm p-3 bg-white">
+            <div className="d-flex align-items-center justify-content-between mb-2">
+              <div className="rounded-circle bg-success bg-opacity-10 p-2">
+                <ShoppingBag size={20} className="text-success" />
+              </div>
+              <span className="text-muted small fw-medium">Stock Value</span>
+            </div>
+            <h3 className="fw-bold mb-0 text-dark">₱{totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
+            <div className="text-muted small mt-2">Inventory Worth</div>
           </div>
         </div>
+
         <div className="col-md-3">
-          <div className="card text-center border-0" style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}>
-            <div className="d-flex flex-row justify-content-between align-items-center">
-              <h6>Low Stock</h6>
-              {/* <span className="badge bg-secondary text-light" style={{ width: "25px" }}>{lowStockProducts}</span> */}
+          <div className="card border-0 rounded-4 shadow-sm p-3 bg-white">
+            <div className="d-flex align-items-center justify-content-between mb-2">
+              <div className="rounded-circle bg-warning bg-opacity-10 p-2">
+                <AlertCircle size={20} className="text-warning" />
+              </div>
+              <span className="text-muted small fw-medium">Low Stock</span>
             </div>
-            <div className="text-warning fw-bold text-warning text-start fs-5">{lowStockProducts} items</div>
+            <h3 className="fw-bold mb-0 text-dark">{lowStockProducts}</h3>
+            <div className="text-warning small mt-2 d-flex align-items-center">
+              Requires Attention
+            </div>
           </div>
         </div>
+
         <div className="col-md-3">
-          <div className="card text-center border-0" style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}>
-            <div className="d-flex flex-row justify-content-between align-items-center">
-              <h6>Out of Stock</h6>
-              {/* <span className="badge bg-danger text-light" style={{ width: "25px" }}>{outOfStockProducts}</span> */}
+          <div className="card border-0 rounded-4 shadow-sm p-3 bg-white text-danger">
+            <div className="d-flex align-items-center justify-content-between mb-2">
+              <div className="rounded-circle bg-danger bg-opacity-10 p-2">
+                <Archive size={20} className="text-danger" />
+              </div>
+              <span className="text-muted small fw-medium">Out of Stock</span>
             </div>
-            <div className="text-danger fw-bold text-start fs-5">{outOfStockProducts} items</div>
+            <h3 className="fw-bold mb-0">{outOfStockProducts}</h3>
+            <div className="text-danger small mt-2">Unavailable Items</div>
           </div>
         </div>
       </div>
 
-      {/* Controls */}
-      <div className="d-flex align-items-center gap-3 my-3">
-        <div className="flex-grow-1 position-relative border-0">
-          <Search
-            size={18}
-            style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", color: "#6c757d" }}
-          />
-          <input
-            type="text"
-            className="form-control ps-5"
-            placeholder="Search products, SKU, or category..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-        
-        <div className="d-flex gap-2">
-          <button
-            className="btn btn-dark d-flex align-items-center"
-            onClick={() => {
-              resetForm();
-              setIsAddDialogOpen(true);
-            }}
-          >
-            <Plus size={18} className="me-2" />
-            Add Product
-          </button>
+      {/* Controls Bar */}
+      <div className="card border-0 rounded-4 shadow-sm mb-4 bg-white">
+        <div className="card-body p-3">
+          <div className="row g-3 align-items-center">
+            <div className="col-lg-5 position-relative border-0 text-start">
+              <Search size={18} className="position-absolute top-50 translate-middle-y ms-3 text-muted" />
+              <input
+                type="text"
+                className="form-control form-control-lg border-light bg-light bg-opacity-50 ps-5 fs-6"
+                placeholder="Search products by name, SKU, or category..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            
+            <div className="col-lg-7 text-end d-flex gap-2 justify-content-end align-items-center">
+              <button
+                className={`btn btn-lg border-0 d-flex align-items-center fs-6 fw-medium ${showArchived ? 'bg-primary text-white shadow-sm' : 'bg-light text-muted'}`}
+                onClick={() => setShowArchived(!showArchived)}
+              >
+                {showArchived ? <LayoutGrid size={18} className="me-2" /> : <Archive size={18} className="me-2" />}
+                {showArchived ? 'Active' : 'Archived'}
+              </button>
 
-          <button
-            className="btn btn-outline-secondary d-flex align-items-center"
-            onClick={handleDownloadPDF}
-          >
-            <FileDown size={18} className="me-2" />
-            Download PDF
-          </button>
+              <div className="vr mx-2 opacity-10"></div>
 
-          <button
-            className={`btn d-flex align-items-center ${showArchived ? 'btn-primary' : 'btn-outline-primary'}`}
-            onClick={() => setShowArchived(!showArchived)}
-          >
-            {showArchived ? <LayoutGrid size={18} className="me-2" /> : <Archive size={18} className="me-2" />}
-            {showArchived ? 'Show Active' : 'Show Archive'}
-          </button>
+              <button
+                className="btn btn-lg btn-outline-dark border-light bg-light bg-opacity-50 d-flex align-items-center fs-6 fw-medium"
+                onClick={handleDownloadPDF}
+              >
+                <FileDown size={18} className="me-2" />
+                Export PDF
+              </button>
+
+              <button
+                className="btn btn-lg btn-dark d-flex align-items-center px-4 fs-6 fw-bold shadow-sm"
+                onClick={() => {
+                  resetForm();
+                  setIsAddDialogOpen(true);
+                }}
+              >
+                <Plus size={20} className="me-2" />
+                Add Product
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -423,244 +452,261 @@ export function InventoryManagement({ user }: { user?: User }) {
         }}
         centered
         size="lg"
-        style={{ backgroundColor: "rgba(239, 252, 255, 0.31)" }}
+        contentClassName="border-0 rounded-4 shadow-lg"
       >
-        <Modal.Header closeButton className="border-0">
-          <Modal.Title>{editingProduct ? (showArchived ? "View Archived Product" : "Edit Product") : "Add Product"}</Modal.Title>
+        <Modal.Header closeButton className="border-0 p-4 pb-2">
+          <Modal.Title className="fw-bold d-flex align-items-center">
+            <div className="rounded-circle bg-primary bg-opacity-10 p-2 me-3">
+              <ClipboardList size={20} className="text-primary" />
+            </div>
+            {editingProduct ? (showArchived ? "View Product Details" : "Edit Product") : "Add New Product"}
+          </Modal.Title>
         </Modal.Header>
 
-        <Modal.Body>
-          <div className="row">
-            <div className="col-md-6 d-flex flex-column">
-              <label className="form-label">Product Name</label>
-              <input
-                type="text"
-                className="form-control"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+        <Modal.Body className="p-4 pt-0">
+          <div className="bg-light bg-opacity-50 p-3 rounded-4 mb-4 border border-light">
+            <div className="row g-3">
+              <div className="col-md-7">
+                <label className="form-label small text-muted text-uppercase fw-bold mb-1">Product Information</label>
+                <div className="mb-3">
+                  <div className="input-group input-group-lg border-0 shadow-sm rounded-3 overflow-hidden">
+                    <span className="input-group-text bg-white border-0 text-muted ps-3"><Package size={18} /></span>
+                    <input
+                      type="text"
+                      className="form-control border-0 ps-2"
+                      placeholder="Product Name"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className="row g-2">
+                  <div className="col-md-6">
+                    <div className="input-group border-0 shadow-sm rounded-3 overflow-hidden">
+                      <span className="input-group-text bg-white border-0 text-muted ps-3"><Tag size={16} /></span>
+                      <select
+                        className="form-select border-0 ps-2"
+                        value={formData.category}
+                        onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                      >
+                        <option value="">Category</option>
+                        {categories.map((cat) => cat !== "All" && (
+                          <option key={cat} value={cat}>{cat}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="col-md-6">
+                    <div className="input-group border-0 shadow-sm rounded-3 overflow-hidden">
+                      <span className="input-group-text bg-white border-0 text-muted ps-3">#</span>
+                      <input
+                        type="text"
+                        className="form-control border-0 ps-2"
+                        placeholder="SKU (Auto)"
+                        value={formData.sku}
+                        onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="col-md-5">
+                <label className="form-label small text-muted text-uppercase fw-bold mb-1">Pricing & Inventory</label>
+                <div className="mb-3">
+                  <div className="input-group input-group-lg border-0 shadow-sm rounded-3 overflow-hidden">
+                    <span className="input-group-text bg-white border-0 text-dark fw-bold ps-3">₱</span>
+                    <input
+                      type="number"
+                      className="form-control border-0 ps-2 fw-bold"
+                      placeholder="0.00"
+                      value={formData.price}
+                      onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <div className="input-group border-0 shadow-sm rounded-3 overflow-hidden">
+                    <span className="input-group-text bg-white border-0 text-muted ps-3"><Layers size={16} /></span>
+                    <input
+                      type="number"
+                      className="form-control border-0 ps-2"
+                      placeholder="Stock Quantity"
+                      value={formData.stock}
+                      onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="row g-4">
+            <div className="col-md-6">
+              <label className="form-label small text-muted text-uppercase fw-bold mb-2 d-flex align-items-center">
+                <Info size={14} className="me-1" /> Description
+              </label>
+              <textarea
+                className="form-control border-light shadow-sm rounded-4"
+                rows={5}
+                placeholder="Details and specifications..."
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               />
             </div>
-            <div className="col-md-6 d-flex flex-column">
-              <label className="form-label">Price</label>
-              <input
-                type="number"
-                className="form-control"
-                value={formData.price}
-                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-              />
-            </div>
-          </div>
-
-          <div className="row mt-3">
-            <div className="col-md-6 d-flex flex-column">
-              <label className="form-label">Category</label>
-              <select
-                className="form-select"
-                value={formData.category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-              >
-                <option value="">Select a category</option>
-                {categories.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="col-md-6 d-flex flex-column">
-              <label className="form-label">Stock</label>
-              <input
-                type="number"
-                className="form-control"
-                value={formData.stock}
-                onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
-              />
-            </div>
-          </div>
-
-          <div className="mt-3">
-            <label className="form-label">SKU (leave blank for auto)</label>
-            <input
-              type="text"
-              className="form-control"
-              value={formData.sku}
-              onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-            />
-          </div>
-
-          <div className="mt-3">
-            <label className="form-label">Description</label>
-            <textarea
-              className="form-control"
-              rows={3}
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            />
-          </div>
-
-          <div className="mt-3">
-            <label className="form-label">Product Image</label>
-            <div className="d-flex align-items-start gap-3">
+            <div className="col-md-6 text-center">
+              <label className="form-label small text-muted text-uppercase fw-bold mb-2">Product Images</label>
               <div 
-                className="border rounded-3 d-flex align-items-center justify-content-center bg-light overflow-hidden"
-                style={{ width: "120px", height: "120px", cursor: "pointer" }}
+                className="border-dashed-custom rounded-4 d-flex flex-column align-items-center justify-content-center bg-light transition-all overflow-hidden mb-3"
+                style={{ height: "135px", cursor: "pointer", border: "2px dashed #dee2e6" }}
                 onClick={() => document.getElementById('productImageInput')?.click()}
               >
                 {formData.image ? (
-                  <img src={formData.image} alt="Preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  <img src={formData.image} alt="Preview" className="w-100 h-100 object-fit-cover" />
                 ) : (
-                  <div className="text-center text-muted p-2">
-                    <Plus size={24} className="mb-1" />
-                    <div style={{ fontSize: "0.75rem" }}>Upload</div>
+                  <div className="text-secondary opacity-75">
+                    <Plus size={32} />
+                    <div className="small fw-bold mt-1">Select File</div>
                   </div>
                 )}
               </div>
-              <div className="flex-grow-1">
-                <input
-                  id="productImageInput"
-                  type="file"
-                  accept="image/*"
-                  className="d-none"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      const reader = new FileReader();
-                      reader.onloadend = () => {
-                        setFormData({ ...formData, image: reader.result as string });
-                      };
-                      reader.readAsDataURL(file);
-                    }
-                  }}
-                />
-                
-                <div className="mb-3">
-                  <label className="form-label small text-muted">Paste Image URL</label>
-                  <input 
-                    type="text" 
-                    className="form-control form-control-sm" 
-                    placeholder="https://example.com/image.jpg"
-                    value={formData.image.startsWith('data:') ? '' : formData.image}
-                    onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                  />
-                  <p className="text-muted" style={{ fontSize: "0.7rem", marginTop: "4px" }}>
-                    Or click the box on the left to upload a local file.
-                  </p>
-                </div>
-
-                {formData.image && (
-                  <button 
-                    className="btn btn-sm btn-outline-danger"
-                    onClick={() => setFormData({ ...formData, image: "" })}
-                  >
-                    Remove Image
-                  </button>
-                )}
-              </div>
+              <input 
+                type="text" 
+                className="form-control form-control-sm border-light shadow-sm mb-2" 
+                placeholder="Or paste Image URL..."
+                value={formData.image.startsWith('data:') ? '' : formData.image}
+                onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+              />
+              <input id="productImageInput" type="file" accept="image/*" className="d-none" onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  const reader = new FileReader();
+                  reader.onloadend = () => setFormData({ ...formData, image: reader.result as string });
+                  reader.readAsDataURL(file);
+                }
+              }} />
             </div>
           </div>
         </Modal.Body>
 
-        <Modal.Footer className="border-0">
-          <Button
-            variant="secondary"
-            onClick={() => {
-              setIsAddDialogOpen(false);
-              setEditingProduct(null);
-            }}
-          >
+        <Modal.Footer className="border-0 p-4 pt-0 gap-2">
+          <Button variant="light" className="px-4 py-2 rounded-3 fw-medium" onClick={() => { setIsAddDialogOpen(false); setEditingProduct(null); }}>
             Cancel
           </Button>
           <Button
-            variant="primary"
-            disabled={showArchived}
+            variant="dark"
+            className="px-5 py-2 rounded-3 fw-bold shadow-sm"
+            disabled={showArchived || isSaving}
             onClick={editingProduct ? handleEditProduct : handleAddProduct}
           >
-            {editingProduct ? "Save Changes" : "Add Product"}
+            {isSaving ? (
+              <>
+                <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                Processing...
+              </>
+            ) : (
+              editingProduct ? "Save Changes" : "Create Product"
+            )}
           </Button>
         </Modal.Footer>
       </Modal>
 
       {/* Products Table */}
-      <div className="card border-0 rounded-3" style={{boxShadow:"2px 4px 8px  rgba(0, 0, 0, 0.10)"}}>
-        <div className="card-body p-0 ">
-          <table className="table table-hover mb-0"> {/*table-striped Used this to make it stripe*/}
-            <thead className="">
-              <tr className="">
-                <th>Preview</th>
-                <th>Category</th>
-                <th>ID</th>
-                <th>Product</th>
-                <th>Price</th>
-                <th>Stock</th>
-                <th>Status</th>
-                <th>Actions</th>
+      <div className="card border-0 rounded-4 shadow-sm bg-white overflow-hidden">
+        <div className="table-responsive">
+          <table className="table table-hover align-middle mb-0">
+            <thead className="bg-light border-bottom border-light">
+              <tr>
+                <th className="ps-4 py-3 text-muted small fw-bold text-uppercase" style={{width: "80px"}}>Preview</th>
+                <th className="py-3 text-muted small fw-bold text-uppercase">Product Details</th>
+                <th className="py-3 text-muted small fw-bold text-uppercase">Reference</th>
+                <th className="py-3 text-muted small fw-bold text-uppercase">Category</th>
+                <th className="py-3 text-muted small fw-bold text-uppercase">Price</th>
+                <th className="py-3 text-muted small fw-bold text-uppercase text-center">Stock</th>
+                <th className="py-3 text-muted small fw-bold text-uppercase">Status</th>
+                <th className="pe-4 py-3 text-end text-muted small fw-bold text-uppercase">Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredProducts.map((product) => {
                 const stockStatus = getStockStatus(product.stock);
                 return (
-                  <tr key={product.id}>
-                    <td>
-                      <div 
-                        className="rounded-2 border bg-light overflow-hidden d-flex align-items-center justify-content-center"
-                        style={{ width: "48px", height: "48px" }}
-                      >
+                  <tr key={product.id} className="border-bottom border-light hover-bg-light transition-all">
+                    <td className="ps-4">
+                      <div className="rounded-3 border border-light overflow-hidden shadow-sm bg-white d-flex align-items-center justify-content-center" style={{ width: "56px", height: "56px" }}>
                         {product.image ? (
-                          <img src={product.image} alt={product.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                          <img src={product.image} alt={product.name} className="w-100 h-100 object-fit-cover" />
                         ) : (
-                          <Package size={20} className="text-secondary opacity-50" />
+                          <Package size={24} className="text-light-grey opacity-25" />
                         )}
                       </div>
                     </td>
                     <td>
-                      <span className="badge text-dark border-0" >{product.category}</span>
+                      <div className="fw-bold text-dark fs-6 mb-0">{product.name}</div>
+                      <div className="text-muted text-truncate" style={{ fontSize: "0.75rem", maxWidth: "250px" }}>{product.description || "No description provided."}</div>
                     </td>
-                    <td style={{ fontFamily: "monospace", fontSize: "0.875rem" }}>{product.sku}</td>
-                    <td style={{backgroundColor:"white"}}>
-                      <div>
-                        <p className="fw-semibold">{product.name}</p>
-                        {product.description && (
-                          <p style={{ fontSize: "0.875rem", color: "#6c757d" }}>{product.description}</p>
+                    <td>
+                      <code className="text-primary bg-primary bg-opacity-10 px-2 py-1 rounded small fw-bold">{product.sku}</code>
+                    </td>
+                    <td>
+                      <span className="badge bg-light text-muted border py-2 px-3 rounded-pill fw-medium d-inline-flex align-items-center">
+                        <Tag size={12} className="me-1" />
+                        {product.category}
+                      </span>
+                    </td>
+                    <td className="fw-bold text-dark">
+                      ₱{product.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </td>
+                    <td className="text-center">
+                      <div className={`fw-bold ${product.stock <= 5 ? 'text-danger' : 'text-dark'}`}>
+                        {product.stock.toLocaleString()}
+                      </div>
+                      <div className="text-muted" style={{fontSize: "0.65rem"}}>Units</div>
+                    </td>
+                    <td>
+                      <span className={`badge rounded-pill px-3 py-2 fw-bold d-flex align-items-center gap-1 w-fit ${
+                        stockStatus.variant === 'danger' ? 'bg-danger bg-opacity-10 text-danger' :
+                        stockStatus.variant === 'warning' ? 'bg-warning bg-opacity-10 text-warning' :
+                        'bg-success bg-opacity-10 text-success'
+                      }`} style={{fontSize: "0.7rem", width: "fit-content"}}>
+                        <div className={`rounded-circle bg-current`} style={{width: "6px", height: "6px", backgroundColor: "currentColor"}}></div>
+                        {stockStatus.label.toUpperCase()}
+                      </span>
+                    </td>
+                    <td className="pe-4 text-end">
+                      <div className="btn-group shadow-sm rounded-3 overflow-hidden border">
+                        {!showArchived && (
+                          <button
+                            className="btn btn-white btn-sm border-0 bg-transparent hover-bg-light p-2"
+                            onClick={() => openEditDialog(product)}
+                            title="Edit Product"
+                          >
+                            <Edit size={18} className="text-secondary" />
+                          </button>
+                        )}
+                        
+                        {user?.role === "owner" && (
+                          <>
+                            {showArchived ? (
+                              <button
+                                className="btn btn-white btn-sm border-0 bg-transparent hover-bg-light p-2"
+                                onClick={() => handleRestoreProduct(product.id)}
+                                title="Restore to Active"
+                              >
+                                <RotateCcw size={18} className="text-success" />
+                              </button>
+                            ) : (
+                              <button
+                                className="btn btn-white btn-sm border-0 bg-transparent hover-bg-light p-2"
+                                onClick={() => handleArchiveProduct(product.id)}
+                                title="Archive Product"
+                              >
+                                <Archive size={18} className="text-warning" />
+                              </button>
+                            )}
+                          </>
                         )}
                       </div>
-                    </td>
-                    <td className="fw-semibold">₱{product.price.toFixed(2)}</td>
-                    <td>{product.stock}</td>
-                    <td>
-                      <span className={`badge fw-bold text-${stockStatus.variant}`}>{stockStatus.label}</span>
-                    </td>
-                    <td>
-                      {!showArchived && (
-                        <button
-                          className="btn btn-outline-secondary btn-sm"
-                          onClick={() => openEditDialog(product)}
-                        >
-                          <Edit size={16} />
-                        </button>
-                      )}
-                      
-                      {user?.role === "owner" && (
-                        <>
-                          {showArchived ? (
-                            <button
-                              className="btn btn-outline-success btn-sm ms-2"
-                              onClick={() => handleRestoreProduct(product.id)}
-                              title="Restore to Active"
-                            >
-                              <RotateCcw size={16} />
-                            </button>
-                          ) : (
-                            <button
-                              className="btn btn-outline-warning btn-sm ms-2"
-                              onClick={() => handleArchiveProduct(product.id)}
-                              title="Archive Product"
-                            >
-                              <Archive size={16} />
-                            </button>
-                          )}
-                        </>
-                      )}
                     </td>
                   </tr>
                 );
