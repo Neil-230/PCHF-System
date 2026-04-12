@@ -7,16 +7,28 @@ import { Button, Modal } from "react-bootstrap";
 interface TransactionHistoryProps {
   transactions: Transaction[];
   onDeleteAll: (params: { dateFrom: string; dateTo: string }) => Promise<{ deletedCount: number }>;
+  onDelete?: (id: string) => Promise<any>;
   canDeleteAll?: boolean;
 }
 
-export function TransactionHistory({ transactions, onDeleteAll, canDeleteAll = false }: TransactionHistoryProps) {
+export function TransactionHistory({ transactions, onDeleteAll, onDelete, canDeleteAll = false }: TransactionHistoryProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
   const printAreaRef = useRef<HTMLDivElement>(null);
+
+  const getStoreSettings = () => {
+    const saved = localStorage.getItem("storeSettings");
+    return saved ? JSON.parse(saved) : {
+      storeName: "PCH Hardware Store",
+      storeAddress: "Your Address Here",
+      phone: "---",
+      email: "---",
+      footerMessage: "Thank you for your purchase! Please come again."
+    };
+  };
 
   const normalizedQuery = searchQuery.trim().toLowerCase();
 
@@ -45,56 +57,156 @@ export function TransactionHistory({ transactions, onDeleteAll, canDeleteAll = f
 
   //Updated: includes Processed By & Delivery info
   const printTransaction = (transaction: Transaction) => {
-    const printWindow = window.open("", "_blank", "width=800,height=600");
+    const store = getStoreSettings();
+    const printWindow = window.open("", "_blank", "width=450,height=600");
     if (!printWindow) return;
 
     printWindow.document.write(`
       <html>
         <head>
-          <title>Transaction ${transaction.id}</title>
+          <title>Receipt #${transaction.id.slice(-6).toUpperCase()}</title>
           <style>
-            body { font-family: Arial, sans-serif; padding: 20px; }
-            h2 { text-align: center; }
-            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-            th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-            th { background: #f4f4f4; }
+            @page { margin: 0; }
+            body { 
+              font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+              padding: 40px; 
+              color: #1a1a1a;
+              line-height: 1.5;
+              max-width: 400px;
+              margin: 0 auto;
+              font-size: 13px;
+            }
+            .header { text-align: center; margin-bottom: 30px; }
+            .store-name { font-weight: 800; font-size: 20px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+            .store-info { color: #666; font-size: 11px; margin-bottom: 2px; }
+            
+            .receipt-title { 
+              text-align: center; 
+              font-weight: 700; 
+              margin: 20px 0; 
+              padding: 8px; 
+              border-top: 1px dashed #ddd; 
+              border-bottom: 1px dashed #ddd;
+              text-transform: uppercase;
+              letter-spacing: 2px;
+            }
+            
+            .meta-section { margin-bottom: 25px; }
+            .meta-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+            .meta-label { color: #666; font-weight: 500; }
+            .meta-value { font-weight: 600; text-align: right; }
+            
+            .items-table { width: 100%; border-collapse: collapse; margin-bottom: 25px; }
+            .items-table th { text-align: left; padding: 10px 0; color: #666; font-weight: 600; border-bottom: 1px solid #eee; font-size: 11px; text-transform: uppercase; }
+            .items-table td { padding: 12px 0; border-bottom: 1px solid #f9f9f9; vertical-align: top; }
+            .item-name { font-weight: 600; margin-bottom: 2px; display: block; }
+            .item-meta { font-size: 11px; color: #888; }
+            .item-total { font-weight: 700; text-align: right; }
+            
+            .totals-section { margin-top: 10px; border-top: 1px solid #eee; padding-top: 15px; }
+            .total-row { display: flex; justify-content: space-between; margin-bottom: 8px; }
+            .total-row.grand-total { margin-top: 15px; padding-top: 15px; border-top: 2px solid #1a1a1a; font-size: 18px; font-weight: 800; }
+            
+            .footer { text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px dashed #ddd; }
+            .footer-msg { font-style: italic; color: #666; margin-bottom: 10px; }
+            .signature { margin-top: 30px; display: flex; justify-content: space-between; }
+            .sig-line { border-top: 1px solid #ddd; width: 45%; padding-top: 5px; font-size: 10px; color: #999; }
+            
+            @media print {
+              body { padding: 20px; }
+              .no-print { display: none; }
+            }
           </style>
         </head>
         <body>
-          <h2>Transaction Receipt</h2>
-          <p><strong>ID:</strong> ${transaction.id}</p>
-          <p><strong>Customer:</strong> ${transaction.customerName}</p>
-          <p><strong>Date:</strong> ${new Date(transaction.timestamp).toLocaleString()}</p>
-          <p><strong>Payment Method:</strong> ${transaction.paymentMethod}</p>
-          <p><strong>Delivery:</strong> ${transaction.isDelivery ? "Yes" : "No"}</p>
-          ${transaction.isDelivery ? `<p><strong>Delivery Fee:</strong> ₱${(transaction.deliveryFee || 0).toFixed(2)}</p>` : ""}
-          ${
-            transaction.handledBy
-              ? `<p><strong>Processed By:</strong> ${transaction.handledBy.name} (${transaction.handledBy.role})<br/>
-                 <strong>Email:</strong> ${transaction.handledBy.email}</p>`
-              : ""
-          }
-          <hr/>
-          <table>
-            <thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead>
+          <div class="header">
+            <div class="store-name">${store.storeName}</div>
+            <div class="store-info">${store.storeAddress}</div>
+            <div class="store-info">Tel: ${store.phone}</div>
+            <div class="store-info">${store.email}</div>
+          </div>
+
+          <div class="receipt-title">Official Receipt</div>
+
+          <div class="meta-section">
+            <div class="meta-row">
+              <span class="meta-label">Reference ID</span>
+              <span class="meta-value">#${transaction.id.slice(-8).toUpperCase()}</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-label">Date</span>
+              <span class="meta-value">${new Date(transaction.timestamp).toLocaleDateString()} ${new Date(transaction.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-label">Customer</span>
+              <span class="meta-value">${transaction.customerName}</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-label">Payment Method</span>
+              <span class="meta-value">${transaction.paymentMethod}</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-label">Order Type</span>
+              <span class="meta-value">${transaction.isDelivery ? "Delivery" : "Pickup"}</span>
+            </div>
+          </div>
+
+          <table class="items-table">
+            <thead>
+              <tr>
+                <th>Items Description</th>
+                <th style="text-align: right;">Amount</th>
+              </tr>
+            </thead>
             <tbody>
               ${transaction.items
                 .map(
                   (item) =>
                     `<tr>
-                      <td>${item.product.name}</td>
-                      <td>${item.quantity}</td>
-                      <td>₱${item.product.price.toFixed(2)}</td>
-                      <td>₱${(item.product.price * item.quantity).toFixed(2)}</td>
+                      <td>
+                        <span class="item-name">${item.product.name}</span>
+                        <span class="item-meta">${item.quantity} x ₱${item.product.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                      </td>
+                      <td class="item-total">₱${(item.product.price * item.quantity).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                     </tr>`
                 )
                 .join("")}
             </tbody>
           </table>
-          <p><strong>Subtotal:</strong> ₱${transaction.subtotal.toFixed(2)}</p>
-          <p><strong>Tax:</strong> ₱${transaction.tax.toFixed(2)}</p>
-          ${transaction.isDelivery ? `<p><strong>Delivery Fee:</strong> ₱${(transaction.deliveryFee || 0).toFixed(2)}</p>` : ""}
-          <p><strong>Total:</strong> <b>₱${transaction.total.toFixed(2)}</b></p>
+
+          <div class="totals-section">
+            <div class="total-row">
+              <span class="meta-label">Subtotal</span>
+              <span class="meta-value">₱${transaction.subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+            </div>
+            <div class="total-row">
+              <span class="meta-label">Tax</span>
+              <span class="meta-value">₱${transaction.tax.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+            </div>
+            ${transaction.isDelivery ? `
+            <div class="total-row">
+              <span class="meta-label">Delivery Fee</span>
+              <span class="meta-value">₱${(transaction.deliveryFee || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+            </div>` : ""}
+            <div class="total-row grand-total">
+              <span>TOTAL</span>
+              <span>₱${transaction.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+            </div>
+          </div>
+
+          <div class="footer">
+            <div class="footer-msg">${store.footerMessage || "Thank you for shopping!"}</div>
+            <div class="store-info">Processed by: ${transaction.handledBy?.name || "System"}</div>
+            
+            <div class="signature">
+              <div class="sig-line">Customer Signature</div>
+              <div class="sig-line">Cashier Signature</div>
+            </div>
+            
+            <div style="margin-top: 25px; font-size: 10px; color: #ccc;">
+              This is a computer generated receipt.
+            </div>
+          </div>
         </body>
       </html>
     `);
@@ -105,70 +217,102 @@ export function TransactionHistory({ transactions, onDeleteAll, canDeleteAll = f
   // PRINT TANAN APILA IMONG MAMAG PRINT
   //print for all the transactionssssit
   const printAllTransactions = () => {
+    const store = getStoreSettings();
     const printWindow = window.open("", "_blank", "width=800,height=600");
     if (!printWindow) return;
-    
 
-    //chat gpt nani atay kapuy naman
     printWindow.document.write(`
       <html>
         <head>
-          <title>All Transactions</title>
+          <title>Sales Report</title>
           <style>
-            body { font-family: Arial, sans-serif; padding: 20px; }
-            h2 { text-align: center; margin-bottom: 20px; }
-            .transaction-block { margin-bottom: 40px; border-bottom: 1px solid #ccc; padding-bottom: 20px; }
-            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-            th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-            th { background: #f4f4f4; }
+            body { 
+              font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+              padding: 40px; 
+              color: #1a1a1a;
+              line-height: 1.5;
+            }
+            .report-header { border-bottom: 2px solid #1a1a1a; padding-bottom: 20px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: flex-end; }
+            .store-name { font-weight: 800; font-size: 24px; text-transform: uppercase; }
+            .report-title { font-weight: 700; color: #666; font-size: 14px; text-transform: uppercase; letter-spacing: 2px; }
+            
+            .summary-bar { background: #f9f9f9; padding: 20px; border-radius: 8px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 40px; }
+            .summary-item { display: flex; flex-direction: column; }
+            .summary-label { font-size: 11px; color: #888; text-transform: uppercase; font-weight: 600; margin-bottom: 5px; }
+            .summary-value { font-size: 18px; font-weight: 700; }
+            
+            .transaction-table { width: 100%; border-collapse: collapse; }
+            .transaction-table th { text-align: left; padding: 12px; border-bottom: 1px solid #1a1a1a; font-size: 11px; text-transform: uppercase; font-weight: 700; color: #1a1a1a; }
+            .transaction-table td { padding: 12px; border-bottom: 1px solid #eee; font-size: 13px; }
+            .ref-id { font-family: monospace; font-weight: 600; color: #000; }
+            .date-col { color: #666; font-size: 12px; }
+            .total-col { font-weight: 700; text-align: right; }
+            
+            @media print {
+              body { padding: 20px; }
+            }
           </style>
         </head>
         <body>
-          <h2>All Transactions Report</h2>
-          <p><strong>Date Range:</strong> ${dateFrom || "Any"} to ${dateTo || "Any"}</p>
-          <hr/>
-          ${filteredTransactions
-            .map(
-              (t) => `
-              <div class="transaction-block">
-                <p><strong>Transaction ID:</strong> ${t.id}</p>
-                <p><strong>Customer:</strong> ${t.customerName}</p>
-                <p><strong>Date:</strong> ${new Date(t.timestamp).toLocaleString()}</p>
-                <p><strong>Payment Method:</strong> ${t.paymentMethod}</p>
-                <p><strong>Delivery:</strong> ${t.isDelivery ? "Yes" : "No"}</p>
-                ${t.isDelivery ? `<p><strong>Delivery Fee:</strong> $${(t.deliveryFee || 0).toFixed(2)}</p>` : ""}
-                ${
-                  t.handledBy
-                    ? `<p><strong>Processed By:</strong> ${t.handledBy.name} (${t.handledBy.role})<br/>
-                       <strong>Email:</strong> ${t.handledBy.email}</p>`
-                    : ""
-                }
-                <table>
-                  <thead>
-                    <tr><th>Item</th><th>Qty</th><th>Price</th><th>Total</th></tr>
-                  </thead>
-                  <tbody>
-                    ${t.items
-                      .map(
-                        (item) => `
-                          <tr>
-                            <td>${item.product.name}</td>
-                            <td>${item.quantity}</td>
-                            <td>₱${item.product.price.toFixed(2)}</td>
-                            <td>₱${(item.product.price * item.quantity).toFixed(2)}</td>
-                          </tr>`
-                      )
-                      .join("")}
-                  </tbody>
-                </table>
-                <p><strong>Subtotal:</strong> ₱${t.subtotal.toFixed(2)}</p>
-                <p><strong>Tax:</strong> ₱${t.tax.toFixed(2)}</p>
-                ${t.isDelivery ? `<p><strong>Delivery Fee:</strong> ₱${(t.deliveryFee || 0).toFixed(2)}</p>` : ""}
-                <p><strong>Total:</strong> <b>₱${t.total.toFixed(2)}</b></p>
-              </div>
-            `
-            )
-            .join("")}
+          <div class="report-header">
+            <div>
+              <div class="store-name">${store.storeName}</div>
+              <div style="font-size: 12px; color: #666;">${store.storeAddress}</div>
+            </div>
+            <div class="report-title">Sales Transaction Report</div>
+          </div>
+
+          <div class="summary-bar">
+            <div class="summary-item">
+              <span class="summary-label">Date Range</span>
+              <span class="summary-value" style="font-size: 13px;">${dateFrom || "Start"} - ${dateTo || "End"}</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">Transactions</span>
+              <span class="summary-value">${filteredTransactions.length}</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">Tax Total</span>
+              <span class="summary-value">₱${filteredTransactions.reduce((s, t) => s + t.tax, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">Total Revenue</span>
+              <span class="summary-value">₱${filteredTransactions.reduce((s, t) => s + t.total, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+            </div>
+          </div>
+
+          <table class="transaction-table">
+            <thead>
+              <tr>
+                <th>REF ID</th>
+                <th>DATE</th>
+                <th>CUSTOMER</th>
+                <th>ITEMS</th>
+                <th>METHOD</th>
+                <th style="text-align: right;">TOTAL</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filteredTransactions
+                .map(
+                  (t) => `
+                  <tr>
+                    <td class="ref-id">#${t.id.slice(-8).toUpperCase()}</td>
+                    <td class="date-col">${new Date(t.timestamp).toLocaleDateString()}</td>
+                    <td>${t.customerName}</td>
+                    <td>${t.items.length} units</td>
+                    <td>${t.paymentMethod}</td>
+                    <td class="total-col">₱${t.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                  </tr>
+                `
+                )
+                .join("")}
+            </tbody>
+          </table>
+          
+          <div style="margin-top: 50px; text-align: center; color: #999; font-size: 11px;">
+            End of Report • Generated on ${new Date().toLocaleString()}
+          </div>
         </body>
       </html>
     `);
@@ -178,22 +322,34 @@ export function TransactionHistory({ transactions, onDeleteAll, canDeleteAll = f
 
   // Delete all transactions within date range
   const handleDeleteAll = async () => {
-    if (!dateFrom || !dateTo) {
-      alert("Please select both start and end dates before deleting.");
-      return;
-    }
+    if (!dateFrom || !dateTo) return;
     const confirmation = window.confirm(
-      `Delete all transactions from ${dateFrom} to ${dateTo}? This cannot be undone.`
+      `CRITICAL ACTION: Delete all transactions from ${dateFrom} to ${dateTo}?\n\nThis cannot be undone and will permanently remove records from the system.`
     );
     if (!confirmation) return;
     setIsDeleting(true);
     try {
       const { deletedCount } = await onDeleteAll({ dateFrom, dateTo });
-      alert(`Deleted ${deletedCount} transaction${deletedCount === 1 ? "" : "s"} successfully.`);
+      alert(`Successfully purged ${deletedCount} transaction records.`);
     } catch (err: any) {
-      alert(err?.message || "Failed to delete transactions. Please try again.");
+      alert(err?.message || "Failed to purge transactions. Please check your permissions.");
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const handleDeleteSingle = async (transaction: Transaction) => {
+    if (!onDelete) return;
+    const confirmation = window.confirm(
+      `Delete transaction #${transaction.id.slice(-6).toUpperCase()} for ${transaction.customerName}?\n\nThis action is permanent.`
+    );
+    if (!confirmation) return;
+    
+    try {
+      await onDelete(transaction.id);
+      alert("Transaction deleted successfully.");
+    } catch (err: any) {
+      alert(err?.message || "Failed to delete transaction.");
     }
   };
 
@@ -280,13 +436,25 @@ export function TransactionHistory({ transactions, onDeleteAll, canDeleteAll = f
                 <Printer size={16} className="me-2" /> Print
               </button>
               {canDeleteAll && (
-                <button
-                  className="btn btn-outline-danger d-flex align-items-center"
-                  onClick={handleDeleteAll}
-                  disabled={!dateFrom || !dateTo || isDeleting}
-                >
-                  <Trash2 size={16} className="me-2" /> Delete
-                </button>
+                <div className="d-flex align-items-center gap-2" title={(!dateFrom || !dateTo) ? "Please select a date range (From & To) to enable deletion" : ""}>
+                  <button
+                    className={`btn d-flex align-items-center fw-medium px-3 rounded-3 transition-all ${
+                      (!dateFrom || !dateTo || isDeleting) 
+                        ? 'btn-light text-muted border-light' 
+                        : 'btn-outline-danger shadow-sm'
+                    }`}
+                    onClick={handleDeleteAll}
+                    disabled={!dateFrom || !dateTo || isDeleting}
+                    style={{ minHeight: '44px' }}
+                  >
+                    {isDeleting ? (
+                      <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    ) : (
+                      <Trash2 size={16} className="me-2" />
+                    )}
+                    {isDeleting ? "Purging..." : "Delete Range"}
+                  </button>
+                </div>
               )}
             </div>
           </div>
@@ -344,21 +512,30 @@ export function TransactionHistory({ transactions, onDeleteAll, canDeleteAll = f
                     <div className="fw-bold text-dark">₱{transaction.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
                   </td>
                   <td className="pe-4 text-end">
-                    <div className="btn-group shadow-sm rounded-3 overflow-hidden">
+                    <div className="btn-group shadow-sm rounded-3 overflow-hidden border border-light">
                       <button
-                        className="btn btn-white btn-sm border-0 bg-transparent hover-bg-light"
+                        className="btn btn-white btn-sm border-0 bg-transparent hover-bg-light p-2"
                         onClick={() => setSelectedTransaction(transaction)}
-                        title="View Details"
+                        title="View Full Details"
                       >
                         <Eye size={18} className="text-primary" />
                       </button>
                       <button 
-                        className="btn btn-white btn-sm border-0 bg-transparent hover-bg-light" 
+                        className="btn btn-white btn-sm border-0 bg-transparent hover-bg-light p-2" 
                         onClick={() => printTransaction(transaction)}
-                        title="Print Receipt"
+                        title="Print Thermal Receipt"
                       >
                         <Printer size={18} className="text-dark" />
                       </button>
+                      {canDeleteAll && onDelete && (
+                        <button 
+                          className="btn btn-white btn-sm border-0 bg-transparent hover-bg-light p-2 text-danger" 
+                          onClick={() => handleDeleteSingle(transaction)}
+                          title="Delete Transaction"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

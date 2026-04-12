@@ -360,6 +360,15 @@ export default function App() {
     }
   };
 
+  const handleDeleteTransaction = async (id: string) => {
+    try {
+      await apiService.deleteTransaction(id);
+      await loadTransactions();
+    } catch (err: any) {
+      throw err;
+    }
+  };
+
   const handleTabChange = (tab: string) => {
     if (!user) return;
     const targetTab = isTabId(tab) ? tab : null;
@@ -388,6 +397,7 @@ export default function App() {
           <TransactionHistory
             transactions={transactions}
             onDeleteAll={handleBulkDeleteTransactions}
+            onDelete={handleDeleteTransaction}
             canDeleteAll={user.role === 'admin' || user.role === 'owner'}
           />
         );

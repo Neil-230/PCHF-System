@@ -28,3 +28,19 @@
 .navbutton:hover {
   transform: translateX(4px);
 }
+
+/* Inventory Export Button Hover Fix */
+.inventory-export-btn {
+  transition: all 0.2s ease-in-out !important;
+  background-color: #f8f9fa !important;
+  color: #212529 !important;
+  border-color: #dee2e6 !important;
+}
+
+.inventory-export-btn:hover {
+  background-color: #212529 !important;
+  color: #ffffff !important;
+  border-color: #212529 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+}

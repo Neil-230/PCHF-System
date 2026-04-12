@@ -14,6 +14,7 @@ type SelectProps = {
   onChange: (value: string) => void;
   disabled?: boolean;
   children?: React.ReactNode; // optional (Radix style) 
+  className?: string;
 };
 
 export function BootstrapSelect({
@@ -24,6 +25,7 @@ export function BootstrapSelect({
   onChange,
   disabled = false,
   children,
+  className = "",
 }: SelectProps) {
   const sizeClass =
     size === "sm" ? "form-select-sm" : size === "lg" ? "form-select-lg" : "";
@@ -32,7 +34,7 @@ export function BootstrapSelect({
     <div className="">
       {label && <label className="form-label fw-semibold ">{label}</label>}
         <select
-          className={`form-select border-muted input-clean ${sizeClass}`}
+          className={`form-select border-muted input-clean ${sizeClass} ${className}`}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled}

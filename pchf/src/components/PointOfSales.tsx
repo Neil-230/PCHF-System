@@ -256,71 +256,138 @@ export function PointOfSale({ onTransactionComplete, user }: PointOfSaleProps) {
       const res = await apiService.createTransaction(payload);
       saved = res.transaction;
 
-      // --- PDF receipt ---
+      // --- Modern Minimal PDF receipt ---
       const doc = new jsPDF({
         orientation: "portrait",
         unit: "mm",
-        format: [80, 200],
+        format: [80, 200], // Thermal paper format
       });
 
       const date = new Date();
-      const formattedDate = date.toLocaleString();
+      const formattedDate = date.toLocaleString('en-US', { 
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', hour12: true 
+      });
 
-      doc.setFontSize(12);
+      // Header
       doc.setFont("helvetica", "bold");
-      doc.text(storeSettings.storeName, 40, 10, { align: "center" });
-
-      doc.setFontSize(8);
+      doc.setFontSize(14);
+      doc.text(storeSettings.storeName.toUpperCase(), 40, 15, { align: "center" });
+      
       doc.setFont("helvetica", "normal");
-      doc.text(storeSettings.storeAddress, 40, 14, { align: "center" });
-      doc.text(storeSettings.email, 40, 17, { align: "center" });
-      doc.text(storeSettings.phone, 40, 20, { align: "center" });
-      doc.text("----------------------------------------------------------------------", 40, 24, { align: "center" });
+      doc.setFontSize(7);
+      doc.setTextColor(100);
+      doc.text(storeSettings.storeAddress, 40, 19, { align: "center" });
+      doc.text(`${storeSettings.phone}  |  ${storeSettings.email}`, 40, 22, { align: "center" });
+      
+      doc.setDrawColor(230);
+      doc.line(10, 26, 70, 26); // Light separator
 
-      doc.text(`Customer: ${customerName}`, 10, 29);
-      doc.text(`Contact: ${customerContact}`, 10, 33);
-      doc.text(`Address: ${customerAddress}`, 10, 37);
-      doc.text(`Type: ${deliveryType}`, 10, 41);
-      doc.text(`Date: ${formattedDate}`, 10, 45);
-      doc.text(`Transaction ID: ${saved.id}`, 10, 49);
-      doc.text(`Payment: Cash`, 10, 53);
-      doc.text("----------------------------------------------------------------", 40, 56, { align: "center" });
+      // Transaction Info
+      doc.setTextColor(0);
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "bold");
+      doc.text("RECEIPT", 40, 32, { align: "center" });
 
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7);
+      doc.setTextColor(100);
+      doc.text(`REF: #${saved.id.slice(-8).toUpperCase()}`, 10, 38);
+      doc.text(`DATE: ${formattedDate}`, 10, 42);
+      doc.text(`CUST: ${customerName.toUpperCase()}`, 10, 46);
+      doc.text(`TYPE: ${deliveryType.toUpperCase()}`, 10, 50);
+
+      // Items Table
       const tableData = cart.map((item) => [
-        `${item.quantity} x ${item.product.name}`,
-        `PHP.${(item.product.price * item.quantity).toFixed(2)}`,
+        { content: item.product.name, styles: { fontStyle: 'bold' } },
+        `${item.quantity}`,
+        `${item.product.price.toFixed(2)}`,
+        `${(item.product.price * item.quantity).toFixed(2)}`
       ]);
 
       autoTable(doc, {
-        head: [["Item", "Price"]],
+        head: [['ITEM', 'QTY', 'PRICE', 'TOTAL']],
         body: tableData,
-        startY: 58,
-        theme: "plain",
-        styles: { fontSize: 9, cellPadding: 1 },
-        headStyles: { fontStyle: "bold" },
-        columnStyles: { 0: { cellWidth: 45 }, 1: { cellWidth: 20, halign: "right" } },
-        margin: { left: 5 },
+        startY: 55,
+        theme: 'plain',
+        styles: { 
+          fontSize: 7, 
+          cellPadding: 0.5,
+          textColor: [0, 0, 0],
+          valign: 'middle'
+        },
+        headStyles: { 
+          fillColor: [250, 250, 250],
+          textColor: [100, 100, 100],
+          fontStyle: 'bold',
+          fontSize: 6
+        },
+        columnStyles: { 
+          0: { cellWidth: 32 }, 
+          1: { cellWidth: 8, halign: 'center' }, 
+          2: { cellWidth: 12, halign: 'right' },
+          3: { cellWidth: 15, halign: 'right' }
+        },
+        margin: { left: 5, right: 5 },
       });
 
-      let finalY = (doc as any).lastAutoTable.finalY + 2;
-      doc.text("----------------------------------------------------------------", 40, finalY, { align: "center" });
-      doc.text(`Subtotal: PHP.${subtotal.toFixed(2)}`, 10, finalY + 5);
-      doc.text(`Tax (${taxRate}%): PHP.${tax.toFixed(2)}`, 10, finalY + 9);
-      if (isDelivery) doc.text(`Delivery Fee: PHP.${deliveryFeeValue.toFixed(2)}`, 10, finalY + 13);
-      doc.setFont("helvetica", "bold");
-      doc.text(`TOTAL: PHP.${total.toFixed(2)}`, 10, finalY + (isDelivery ? 18 : 14));
-      doc.setFont("helvetica", "normal");
-      doc.text(`Cash: PHP.${cash.toFixed(2)}`, 10, finalY + (isDelivery ? 23 : 19));
-      doc.text(`Change: PHP.${change.toFixed(2)}`, 10, finalY + (isDelivery ? 27 : 23));
-      doc.text("----------------------------------------------------------------", 40, finalY + (isDelivery ? 30 : 26), { align: "center" });
+      let finalY = (doc as any).lastAutoTable.finalY + 5;
+      
+      // Totals
+      doc.setDrawColor(240);
+      doc.line(10, finalY, 70, finalY);
+      finalY += 5;
 
-      doc.setFontSize(8);
-      doc.text(`Processed by: ${user.name} (${user.role})`, 10, finalY + (isDelivery ? 35 : 31));
-      doc.text(`Email: ${user.email}`, 10, finalY + (isDelivery ? 39 : 35));
-      doc.text("----------------------------------------------------------------", 40, finalY + (isDelivery ? 42 : 38), { align: "center" });
-      doc.setFontSize(8);
-      doc.text(storeSettings.footerMessage, 40, finalY + (isDelivery ? 49 : 45), { align: "center" });
-      doc.save(`receipt_${customerName}.pdf`);
+      doc.setFontSize(7);
+      doc.setTextColor(100);
+      doc.text("Subtotal", 10, finalY);
+      doc.text(`PHP ${subtotal.toFixed(2)}`, 70, finalY, { align: "right" });
+      
+      finalY += 4;
+      doc.text(`Tax (${taxRate}%)`, 10, finalY);
+      doc.text(`PHP ${tax.toFixed(2)}`, 70, finalY, { align: "right" });
+      
+      if (isDelivery) {
+        finalY += 4;
+        doc.text("Delivery Fee", 10, finalY);
+        doc.text(`PHP ${deliveryFeeValue.toFixed(2)}`, 70, finalY, { align: "right" });
+      }
+
+      finalY += 6;
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(0);
+      doc.text("TOTAL DUE", 10, finalY);
+      doc.text(`PHP ${total.toFixed(2)}`, 70, finalY, { align: "right" });
+
+      finalY += 6;
+      doc.setFontSize(7);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(100);
+      doc.text("Cash Paid", 10, finalY);
+      doc.text(`PHP ${cash.toFixed(2)}`, 70, finalY, { align: "right" });
+      
+      finalY += 4;
+      doc.text("Change", 10, finalY);
+      doc.text(`PHP ${change.toFixed(2)}`, 70, finalY, { align: "right" });
+
+      // Footer
+      finalY += 12;
+      doc.setDrawColor(200);
+      doc.setLineDashPattern([1, 1], 0);
+      doc.line(10, finalY, 70, finalY);
+      
+      finalY += 8;
+      doc.setFontSize(7);
+      doc.setFont("helvetica", "italic");
+      doc.text(storeSettings.footerMessage || "Thank you for your purchase!", 40, finalY, { align: "center" });
+      
+      finalY += 6;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(6);
+      doc.text(`Cashier: ${user.name}`, 40, finalY, { align: "center" });
+      
+      doc.save(`Receipt_${saved.id.slice(-6).toUpperCase()}.pdf`);
 
       const uiTransaction: Transaction = {
         id: saved.id,

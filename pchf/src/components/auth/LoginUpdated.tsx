@@ -4,9 +4,9 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { CardContent } from "../ui/card";
 import { Alert, AlertDescription } from "../ui/alert";
-import { Eye, EyeOff, LogInIcon } from "lucide-react";
+import { Eye, EyeOff, LogInIcon, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
-import "../css/login.css";
+import "../css/auth_modern.css";
 import { FcGoogle } from "react-icons/fc";
 import apiService from "../../services/api";
 import { executeRecaptcha } from "../../services/recaptcha";
@@ -189,229 +189,227 @@ export function LoginUpdated({ onLogin, onSwitchToSignUp }: LoginProps) {
   };
 
   return (
-    <div className="d-flex align-items-center justify-content-center p-4" style={{ minHeight: "100vh" }}>
-      <div className="d-flex flex-column" style={{ minWidth: "50%" }}>
-        <div className="container-fluid">
-          <div className="row entireLogin">
-            <div className="col-md-6 p-0">
-              <div className="headerMes d-flex flex-column p-5 h-100 justify-content-center border border-0 bg-dark">
-                <div className="text-center">
-                  <div className="">
-                    <h3 className="text-secondary">Welcome back!</h3>
-                  </div>
-                  <h1 className="text-light">PCH - Hardware Store</h1>
-                </div>
+    <div className="auth-modern-container">
+      <div className="auth-modern-card animate-fade-in">
+        {/* Sidebar */}
+        <div className="auth-modern-sidebar">
+          <div className="mb-auto">
+            <div className="d-flex align-items-center gap-2 mb-4">
+              <div className="bg-white rounded-3 p-2 d-flex align-items-center justify-content-center" style={{ width: '40px', height: '40px' }}>
+                <span className="text-dark fw-bold fs-5">P</span>
               </div>
+              <span className="fs-5 fw-bold tracking-tight">PCH Hardware</span>
             </div>
-            <div className="col-md-6 p-0">
-              <div className="bodyLOG d-flex flex-column justify-content-center p-5 border border-0">
-                <CardContent className="">
-                  <form onSubmit={handleSubmit}>
-                    {error && (
-                      <Alert variant="destructive" className="border-0 shadow-sm mb-4 bg-red-50 text-red-900">
-                        <AlertDescription className="d-flex align-items-center gap-2">
-                          {countdown > 0 && (
-                            <div className="spinner-grow spinner-grow-sm text-danger" role="status">
-                              <span className="visually-hidden">Loading...</span>
-                            </div>
-                          )}
-                          <span>{error}</span>
-                        </AlertDescription>
-                      </Alert>
-                    )}
-
-                    {countdown > 0 && !error.includes('attempts') && (
-                      <Alert className="mb-4 bg-zinc-50 border-zinc-200">
-                        <AlertDescription className="text-zinc-600 d-flex justify-content-between align-items-center">
-                          <span>Rate limit active. Please wait:</span>
-                          <strong className="font-mono text-zinc-900">{formatTime(countdown)}</strong>
-                        </AlertDescription>
-                      </Alert>
-                    )}
-
-                    <div className="mb-3">
-                      <Label htmlFor="email" className="fw-bold">Email</Label>
-                      <Input
-                        className="EmailINT"
-                        id="email"
-                        type="email"
-                        placeholder="Enter your email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                      />
-                    </div>
-
-                    <div className="mb-2">
-                      <Label htmlFor="password" className="fw-bold">Password</Label>
-                      <div className="position-relative">
-                        <input
-                          className="PassINT form-control pe-5"
-                          id="password"
-                          type={showPassword ? "text" : "password"}
-                          placeholder="Enter your password"
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          required
-                        />
-                        <button
-                          type="button"
-                          className="btn btn-sm bg-transparent border-0 position-absolute top-50 end-0 translate-middle-y me-2"
-                          onClick={() => setShowPassword(!showPassword)}
-                        >
-                          {showPassword ? <Eye /> : <EyeOff />}
-                        </button>
-                      </div>
-                    </div>
-
-                    <Button type="submit" className="w-100 mt-3 bg-dark border-secondary" disabled={isLoading || countdown > 0}>
-                      <LogInIcon className="me-2" size={16}></LogInIcon>
-                      {countdown > 0 ? `Wait ${formatTime(countdown)}` : isLoading ? 'Signing in...' : 'Sign in'}
-                    </Button>
-
-                    {/* <div className="text-center mt-2">
-                      <button
-                        type="button"
-                        className="border border-0 rounded-2 w-100 text-sm text-light"
-                        style={{
-                          backgroundColor: "#1877F2",
-                          cursor: "pointer",
-                        }}
-                        onClick={handleFacebookSignup}
-                      >
-                        <FaFacebook size={20} className="me-2" />
-                        Continue with Facebook
-                      </button>
-                    </div> */}
-                    <div className="text-center mt-2">
-                      <button
-                        type="button"
-                        className="border border rounded-2 w-100 text-sm"
-                        style={{
-                          border: "1px solid #dadce0",
-                          backgroundColor: "#fff",
-                          color: "#1f1f1f",
-                          cursor: "pointer",
-                        }}
-                        onClick={handleGoogleSignup}
-                      >
-                        <FcGoogle size={20} className="me-2" />
-                        Sign in with Google
-                      </button>
-                    </div>
-
-                    <div className="text-center mt-3">
-                      <button
-                        type="button"
-                        className="btn btn-link p-0 text-dark fw-bold text-decoration-none"
-                        data-bs-toggle="modal"
-                        data-bs-target="#forgotPasswordModal"
-                        onClick={() => {
-                          setStep("email");
-                          setResetEmail('');
-                          setResetCode('');
-                          setNewPassword('');
-                          setConfirmPassword('');
-                          setResetError('');
-                        }}
-                      >
-                        Forgot Password?
-                      </button>
-                    </div>
-                  </form>
-
-                  <div className="mt-2 text-center mt-3">
-                    <p className="text-sm text-muted-foreground mb-0">
-                      Don't have an account?{' '}
-                      <Button
-                        type="button"
-                        variant="link"
-                        className="p-0 text-dark fw-bold text-decoration-none"
-                        onClick={onSwitchToSignUp}>
-                        Sign up
-                      </Button>
-                    </p>
-                  </div>
-                </CardContent>
-              </div>
-            </div>
-            <div className="text-center mt-3 text">
-              <p className="">Enter your credentials to access the system</p>
+          </div>
+          
+          <div className="mb-auto">
+            <h2 className="display-6 fw-bold mb-3">Optimize your business operations.</h2>
+            <p className="text-secondary opacity-75 fs-5">
+              Access your dashboard, manage inventory, and process transactions with our unified hardware store system.
+            </p>
+          </div>
+          
+          <div className="mt-auto pt-5">
+            <div className="d-flex gap-4 opacity-50 text-sm">
+              <span>© 2024 PCH System</span>
+              <span>Privacy Policy</span>
             </div>
           </div>
         </div>
+
+        {/* Form Area */}
+        <div className="auth-modern-form-area">
+          <div className="mb-4">
+            <h1 className="auth-modern-title">Welcome back</h1>
+            <p className="auth-modern-subtitle">Sign in to your account to continue</p>
+          </div>
+
+          <form onSubmit={handleSubmit}>
+            {error && (
+              <Alert variant="destructive" className="mb-4 border-0 shadow-sm bg-danger bg-opacity-10 text-danger py-2">
+                <AlertDescription className="small d-flex align-items-center gap-2">
+                  {error}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <div className="auth-modern-input-group">
+              <Label htmlFor="email" className="auth-modern-label">Email Address</Label>
+              <Input
+                className="auth-modern-input"
+                id="email"
+                type="email"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="auth-modern-input-group">
+              <div className="d-flex justify-content-between align-items-center mb-1">
+                <Label htmlFor="password" className="auth-modern-label mb-0">Password</Label>
+                <button
+                  type="button"
+                  className="btn btn-link p-0 text-xs text-decoration-none text-muted"
+                  data-bs-toggle="modal"
+                  data-bs-target="#forgotPasswordModal"
+                  tabIndex={-1}
+                  onClick={() => {
+                    setStep("email");
+                    setResetError('');
+                  }}
+                >
+                  Forgot password?
+                </button>
+              </div>
+              <div className="position-relative">
+                <input
+                  className="auth-modern-input pe-5"
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+                <button
+                  type="button"
+                  className="btn btn-sm bg-transparent border-0 position-absolute top-50 end-0 translate-middle-y me-2 text-muted"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <Eye size={18} /> : <EyeOff size={18} />}
+                </button>
+              </div>
+            </div>
+
+            <button 
+              type="submit" 
+              className="auth-modern-button-primary mt-2" 
+              disabled={isLoading || countdown > 0}
+            >
+              {isLoading ? (
+                <span className="spinner-border spinner-border-sm" role="status"></span>
+              ) : (
+                <>
+                  Sign in
+                  <ArrowRight size={16} />
+                </>
+              )}
+            </button>
+
+            <div className="auth-modern-divider">
+              <span>or continue with</span>
+            </div>
+
+            <button
+              type="button"
+              className="auth-modern-button-google"
+              onClick={handleGoogleSignup}
+            >
+              <FcGoogle size={20} />
+              Google
+            </button>
+          </form>
+
+          <p className="auth-modern-footer">
+            Don't have an account?{' '}
+            <button
+              type="button"
+              className="btn btn-link p-0 auth-modern-link align-baseline fs-6"
+              onClick={onSwitchToSignUp}>
+              Sign up free
+            </button>
+          </p>
+        </div>
       </div>
 
-      {/* === FORGOT PASSWORD MODAL === */}
-      <div className="modal fade" id="forgotPasswordModal" tabIndex={-1} aria-hidden="true" style={{ backgroundColor: "rgba(239, 252, 255, 0.31)" }}>
+      {/* === FORGOT PASSWORD MODAL (Styling update) === */}
+      <div className="modal fade" id="forgotPasswordModal" tabIndex={-1} aria-hidden="true">
         <div className="modal-dialog modal-dialog-centered">
-          <div className="modal-content p-3" style={{ backgroundColor: "rgba(255, 255, 255, 1)" }}>
-            <div className="modal-header border border-0" >
-              <h5 className="modal-title">Forgot Password</h5>
+          <div className="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div className="modal-header border-0 pb-0 pt-4 px-4 bg-white">
+              <div>
+                <h5 className="modal-title fw-bold">Reset Password</h5>
+                <p className="text-secondary small mb-0">We'll help you get back into your account.</p>
+              </div>
               <button type="button" className="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div className="modal-body ">
-              {resetError && <div className="alert alert-danger">{resetError}</div>}
+            <div className="modal-body p-4">
+              {resetError && (
+                <div className="alert alert-danger border-0 small py-2 mb-3">
+                  {resetError}
+                </div>
+              )}
 
               {step === "email" && (
-                <>
+                <div className="mb-0">
+                  <Label className="small fw-bold mb-2">Email Address</Label>
                   <Input
-                    className="FogPa"
+                    className="auth-modern-input"
                     type="email"
                     value={resetEmail}
                     onChange={(e) => setResetEmail(e.target.value)}
-                    placeholder="Enter your email"
+                    placeholder="Enter your registered email"
                   />
-                </>
+                </div>
               )}
 
               {step === "code" && (
-                <>
+                <div className="mb-0">
+                  <Label className="small fw-bold mb-2">Verification Code</Label>
                   <Input
-                    className="FogPa"
+                    className="auth-modern-input text-center fs-5 tracking-widest fw-bold"
                     type="text"
                     value={resetCode}
                     onChange={(e) => setResetCode(e.target.value)}
-                    placeholder="Enter 6-digit code"
+                    placeholder="000000"
+                    maxLength={6}
                   />
-                </>
+                </div>
               )}
 
               {step === "reset" && (
-                <>
-                  <Input
-                    className="FogPa mb-4"
-                    type="password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Enter new password"
-                  />
-                  <Input
-                    className="FogPa"
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Confirm new password"
-                  />
-                </>
+                <div className="d-flex flex-column gap-3">
+                  <div>
+                    <Label className="small fw-bold mb-2">New Password</Label>
+                    <Input
+                      className="auth-modern-input"
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Minimum 8 characters"
+                    />
+                  </div>
+                  <div>
+                    <Label className="small fw-bold mb-2">Confirm New Password</Label>
+                    <Input
+                      className="auth-modern-input"
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Repeat your password"
+                    />
+                  </div>
+                </div>
               )}
             </div>
 
-            <div className="modal-footer border border-0">
+            <div className="modal-footer border-0 p-4 pt-0">
               {step === "email" && (
-                <Button className="bg-dark border-0 w-100" onClick={handleSendCode} disabled={resetIsLoading}>
-                  {resetIsLoading ? 'Sending...' : 'Send Code'}
-                </Button>
+                <button className="auth-modern-button-primary" onClick={handleSendCode} disabled={resetIsLoading}>
+                  {resetIsLoading ? <span className="spinner-border spinner-border-sm"></span> : 'Send verification code'}
+                </button>
               )}
               {step === "code" && (
-                <Button className="bg-dark border-0 w-100" onClick={handleVerifyCode} disabled={resetIsLoading}>
-                  {resetIsLoading ? 'Verifying...' : 'Verify Code'}
-                </Button>
+                <button className="auth-modern-button-primary" onClick={handleVerifyCode} disabled={resetIsLoading}>
+                  {resetIsLoading ? <span className="spinner-border spinner-border-sm"></span> : 'Verify code'}
+                </button>
               )}
               {step === "reset" && (
-                <Button className="bg-dark border-0 w-100" onClick={handleResetPassword} disabled={resetIsLoading}>
-                  {resetIsLoading ? 'Resetting...' : 'Reset Password'}
-                </Button>
+                <button className="auth-modern-button-primary" onClick={handleResetPassword} disabled={resetIsLoading}>
+                  {resetIsLoading ? <span className="spinner-border spinner-border-sm"></span> : 'Reset password'}
+                </button>
               )}
             </div>
           </div>
@@ -420,3 +418,4 @@ export function LoginUpdated({ onLogin, onSwitchToSignUp }: LoginProps) {
     </div>
   );
 }
+

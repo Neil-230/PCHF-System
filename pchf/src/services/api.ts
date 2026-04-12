@@ -340,6 +340,12 @@ class ApiService {
     });
   }
 
+  async deleteTransaction(id: string): Promise<{ message: string }> {
+    return this.request(`/transactions/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
   // ============ DASHBOARD ENDPOINTS ============
   async getDashboardMetrics(): Promise<any> {
     return this.request('/dashboard/metrics');

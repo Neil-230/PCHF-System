@@ -211,13 +211,6 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
     }
   };
   
-//  <iframe
-//     src="https://nonspirited-interwrought-scott.ngrok-free.dev"
-
-//     style="position:fixed;bottom:0;right:0;z-index:9999;border:0;width:420px;height:720px;border-radius:16px;overflow:hidden;background:transparent;pointer-events:auto;"
-//     allow="microphone;"
-//     ></iframe>
-
   //handle the pdf export
   const handleDownloadActiveLogPdf = async () => {
     if (!filteredActiveLog.length) {
@@ -225,27 +218,80 @@ export function Dashboard({ transactions, CurrentUser }: DashboardProps) {
       return;
     }
     setIsExportingLogPdf(true);
+    
+    const store = (() => {
+      const saved = localStorage.getItem("storeSettings");
+      return saved ? JSON.parse(saved) : { storeName: "PCH Hardware Store", storeAddress: "System Security Audit" };
+    })();
+
     try {
       const doc = new jsPDF({ orientation: "landscape" });
-      doc.setFontSize(16);
-      doc.text("Active Log", 14, 15);
+      
+      // Modern Header
+      doc.setFillColor(33, 37, 41);
+      doc.rect(0, 0, 297, 40, 'F');
+      
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(24);
+      doc.setTextColor(255, 255, 255);
+      doc.text("SECURITY ACTIVITY LOG", 14, 20);
+      
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(200, 200, 200);
+      doc.text(store.storeName, 14, 27);
+      doc.text(`Generated on: ${new Date().toLocaleString()} • Total Entries: ${filteredActiveLog.length}`, 14, 33);
+
       autoTable(doc, {
-        startY: 20,
-        head: [["Name", "Email", "Role", "Status", "Time", "IP", "Location"]],
+        startY: 50,
+        head: [["Staff Name", "Email Address", "Access Role", "Activity Status", "Timestamp", "IP Address", "Location"]],
         body: filteredActiveLog.map((entry) => [
           entry.name,
           entry.email,
-          entry.role,
-          entry.status,
+          entry.role.toUpperCase(),
+          entry.status?.toUpperCase() || "LOGIN",
           entry.timestamp ? new Date(entry.timestamp).toLocaleString() : "—",
           entry.ip || "N/A",
           entry.location || "Unavailable",
         ]),
-        styles: { fontSize: 9 },
-        headStyles: { fillColor: [51, 51, 51] },
+        theme: 'striped',
+        styles: { 
+          fontSize: 8,
+          cellPadding: 4,
+          valign: 'middle',
+          font: 'helvetica'
+        },
+        headStyles: { 
+          fillColor: [33, 37, 41],
+          textColor: [255, 255, 255],
+          fontStyle: 'bold'
+        },
+        columnStyles: {
+          3: { fontStyle: 'bold' }
+        },
+        didParseCell: (data) => {
+          if (data.section === 'body' && data.column.index === 3) {
+            const status = data.cell.raw;
+            if (status === 'LOGOUT') {
+              data.cell.styles.textColor = [255, 152, 0]; // Warning orange
+            } else {
+              data.cell.styles.textColor = [25, 135, 84]; // Success green
+            }
+          }
+        }
       });
-      doc.save(`active-log-${new Date().toISOString().slice(0, 10)}.pdf`);
-      toast.success("PDF downloaded");
+
+      // Pagination
+      const pageCount = (doc as any).internal.getNumberOfPages();
+      for(let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(150);
+        doc.text(`Security Audit Report • ${store.storeName} • Page ${i} of ${pageCount}`, 14, 200);
+      }
+
+      doc.save(`Security_Log_${new Date().toISOString().split('T')[0]}.pdf`);
+      toast.success("Security log exported successfully");
     } catch (error: any) {
       toast.error(error?.message || "Failed to export PDF");
     } finally {

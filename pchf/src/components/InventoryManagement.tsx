@@ -227,108 +227,119 @@ export function InventoryManagement({ user }: { user?: User }) {
 
   const handleDownloadPDF = () => {
     const doc = new jsPDF();
+    const store = (() => {
+      const saved = localStorage.getItem("storeSettings");
+      return saved ? JSON.parse(saved) : { storeName: "PCH Hardware Store", storeAddress: "Your Address" };
+    })();
     
-    // Title
+    // Header Section
+    doc.setFillColor(33, 37, 41); // Dark header
+    doc.rect(0, 0, 210, 40, 'F');
+    
+    doc.setFont("helvetica", "bold");
     doc.setFontSize(22);
-    doc.setTextColor(40, 40, 40);
-    doc.text("Inventory Report", 14, 22);
+    doc.setTextColor(255, 255, 255);
+    doc.text(store.storeName.toUpperCase(), 14, 20);
     
-    // Subtitle / Date
-    doc.setFontSize(10);
-    doc.setTextColor(100, 100, 100);
-    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 30);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(200, 200, 200);
+    doc.text(store.storeAddress, 14, 26);
+    doc.text(`Inventory Report • Generated on: ${new Date().toLocaleString()}`, 14, 32);
 
-    // Filter categories
+    // Summary Stats Cards (Mini)
     const outOfStock = products.filter((p) => p.stock === 0);
     const lowStock = products.filter((p) => p.stock > 0 && p.stock <= 10);
-    const inStock = products.filter((p) => p.stock > 10);
+    const totalVal = products.reduce((sum, p) => sum + p.price * p.stock, 0);
 
-    // Summary stats
-    doc.setFontSize(10);
-    doc.setTextColor(60, 60, 60);
-    doc.text(`Total Items: ${products.length}  |  Out of Stock: ${outOfStock.length}  |  Low Stock: ${lowStock.length}`, 14, 38);
+    doc.setFillColor(248, 249, 250);
+    doc.roundedRect(14, 45, 182, 20, 2, 2, 'F');
+    
+    doc.setFontSize(8);
+    doc.setTextColor(100, 100, 100);
+    doc.setFont("helvetica", "bold");
+    doc.text("TOTAL PRODUCTS", 20, 53);
+    doc.text("OUT OF STOCK", 70, 53);
+    doc.text("LOW STOCK", 120, 53);
+    doc.text("INVENTORY VALUE", 160, 53);
+
+    doc.setFontSize(11);
+    doc.setTextColor(33, 37, 41);
+    doc.text(products.length.toString(), 20, 60);
+    doc.text(outOfStock.length.toString(), 70, 60);
+    doc.text(lowStock.length.toString(), 120, 60);
+    doc.text(`PHP ${totalVal.toLocaleString()}`, 160, 60);
 
     const tableColumn = ["Product Name", "SKU", "Category", "Price", "Stock", "Status"];
     const tableRows: any[] = [];
 
-    // Helper to add rows
-    const addRows = (items: Product[], statusLabel: string) => {
-      items.forEach((p) => {
-        tableRows.push([
-          p.name,
-          p.sku,
-          p.category,
-          `PHP ${p.price.toFixed(2)}`,
-          p.stock.toString(),
-          statusLabel
-        ]);
-      });
-    };
+    // Grouping rows
+    const allProductsSorted = [...products].sort((a, b) => {
+      if (a.stock === 0 && b.stock !== 0) return -1;
+      if (a.stock !== 0 && b.stock === 0) return 1;
+      return a.stock - b.stock;
+    });
 
-    // Add rows grouping by stock status to keep it organized
-    addRows(outOfStock, "Out of Stock");
-    addRows(lowStock, "Low Stock");
-    addRows(inStock, "In Stock");
+    allProductsSorted.forEach((p) => {
+      const status = p.stock === 0 ? "OUT OF STOCK" : p.stock <= 10 ? "LOW STOCK" : "IN STOCK";
+      tableRows.push([
+        p.name,
+        p.sku,
+        p.category,
+        `PHP ${p.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+        p.stock.toString(),
+        status
+      ]);
+    });
 
     autoTable(doc, {
       head: [tableColumn],
       body: tableRows,
-      startY: 45,
-      theme: 'grid',
+      startY: 72,
+      theme: 'striped',
       styles: {
-        fontSize: 9,
-        cellPadding: 6,
-        textColor: [40, 40, 40],
-        lineColor: [240, 240, 240],
-        lineWidth: 0.1,
+        fontSize: 8,
+        cellPadding: 4,
+        valign: 'middle',
         font: 'helvetica'
       },
       headStyles: {
-        fillColor: [250, 250, 250],
-        textColor: [50, 50, 50],
+        fillColor: [33, 37, 41],
+        textColor: [255, 255, 255],
         fontStyle: 'bold',
-        lineWidth: { bottom: 0.5 },
-        lineColor: [200, 200, 200]
-      },
-      alternateRowStyles: {
-        fillColor: [252, 252, 252],
+        fontSize: 8,
+        halign: 'left'
       },
       columnStyles: {
-        3: { halign: 'right' }, // Price right aligned
-        4: { halign: 'center' }, // Stock center aligned
+        3: { halign: 'right' },
+        4: { halign: 'center' },
+        5: { fontStyle: 'bold' }
       },
       didParseCell: function(data) {
-        // Color code status column
         if (data.section === 'body' && data.column.index === 5) {
           const status = data.cell.raw;
-          if (status === 'Out of Stock') {
-            data.cell.styles.textColor = [220, 53, 69]; // Danger red
-            data.cell.styles.fontStyle = 'bold';
-          } else if (status === 'Low Stock') {
-            data.cell.styles.textColor = [255, 152, 0]; // Warning orange
-            data.cell.styles.fontStyle = 'bold';
+          if (status === 'OUT OF STOCK') {
+            data.cell.styles.textColor = [220, 53, 69];
+          } else if (status === 'LOW STOCK') {
+            data.cell.styles.textColor = [255, 152, 0];
           } else {
-            data.cell.styles.textColor = [25, 135, 84]; // Success green
+            data.cell.styles.textColor = [25, 135, 84];
           }
         }
       }
     });
 
-    // Add footer with page numbers
+    // Page Numbers
     const pageCount = (doc as any).internal.getNumberOfPages();
     for(let i = 1; i <= pageCount; i++) {
         doc.setPage(i);
         doc.setFontSize(8);
         doc.setTextColor(150);
-        doc.text(
-            `Page ${i} of ${pageCount}`,
-            (doc.internal.pageSize as any).getWidth() - 20,
-            (doc.internal.pageSize as any).getHeight() - 10,
-            { align: 'right' }
-        );
+        doc.text(`Page ${i} of ${pageCount}`, 190, 285, { align: 'right' });
+        doc.text(store.storeName, 14, 285);
     }
 
-    doc.save("Inventory_Report.pdf");
+    doc.save(`Inventory_Report_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   const totalProducts = products.length;
@@ -422,7 +433,7 @@ export function InventoryManagement({ user }: { user?: User }) {
               <div className="vr mx-2 opacity-10"></div>
 
               <button
-                className="btn btn-lg btn-outline-dark border-light bg-light bg-opacity-50 d-flex align-items-center fs-6 fw-medium"
+                className="btn btn-lg btn-light border d-flex align-items-center fs-6 fw-medium inventory-export-btn"
                 onClick={handleDownloadPDF}
               >
                 <FileDown size={18} className="me-2" />
