@@ -4,7 +4,7 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { CardContent } from "../ui/card";
 import { Alert, AlertDescription } from "../ui/alert";
-import { Eye, EyeOff, LogInIcon, ArrowRight } from "lucide-react";
+import { Eye, EyeOff, LogInIcon, ArrowRight, ShieldAlert, Timer } from "lucide-react";
 import { toast } from "sonner";
 import "../css/auth_modern.css";
 import { FcGoogle } from "react-icons/fc";
@@ -38,6 +38,7 @@ export function LoginUpdated({ onLogin, onSwitchToSignUp }: LoginProps) {
   const [resetError, setResetError] = useState('');
   const [resetIsLoading, setResetIsLoading] = useState(false);
   const [countdown, setCountdown] = useState(0);
+  const [initialCountdown, setInitialCountdown] = useState(0);
 
   // Countdown timer effect
   useEffect(() => {
@@ -77,7 +78,8 @@ export function LoginUpdated({ onLogin, onSwitchToSignUp }: LoginProps) {
       if (err?.status === 429 || rawMessage.includes('too many attempts')) {
         const retryAfter = err?.body?.retryAfter || 900; // fallback to 15 mins
         setCountdown(retryAfter);
-        friendly = `Too many attempts. Please wait ${formatTime(retryAfter)} before trying again.`;
+        setInitialCountdown(retryAfter);
+        friendly = `Security lockout active. Please wait for the timer to reset.`;
       } else if (rawMessage.includes('google sign-in')) {
         friendly = 'This email is linked to Google Sign-In. Please continue using the Google button to log in.';
       } else if (rawMessage.includes('facebook login')) {
@@ -114,7 +116,8 @@ export function LoginUpdated({ onLogin, onSwitchToSignUp }: LoginProps) {
       if (err?.status === 429) {
         const retryAfter = err?.body?.retryAfter || 3600;
         setCountdown(retryAfter);
-        setResetError(`Too many requests. Please wait ${formatTime(retryAfter)}.`);
+        setInitialCountdown(retryAfter);
+        setResetError(`Too many requests. Please wait for the cooldown.`);
       } else {
         setResetError(errorMsg);
       }
@@ -225,7 +228,34 @@ export function LoginUpdated({ onLogin, onSwitchToSignUp }: LoginProps) {
           </div>
 
           <form onSubmit={handleSubmit}>
-            {error && (
+            {countdown > 0 && (
+              <div className="auth-countdown-container">
+                <div className="auth-countdown-header">
+                  <div className="auth-countdown-icon">
+                    <ShieldAlert size={18} />
+                  </div>
+                  <h3 className="auth-countdown-title">Security Delay</h3>
+                </div>
+                
+                <div className="auth-countdown-timer">
+                  {formatTime(countdown)}
+                  <span>remaining</span>
+                </div>
+
+                <div className="auth-countdown-progress-bg">
+                  <div 
+                    className="auth-countdown-progress-bar" 
+                    style={{ width: `${(countdown / initialCountdown) * 100}%` }}
+                  ></div>
+                </div>
+                
+                <p className="text-xs text-secondary mt-1 opacity-70">
+                  Multiple failed attempts detected. For your security, login is temporarily disabled.
+                </p>
+              </div>
+            )}
+
+            {error && countdown === 0 && (
               <Alert variant="destructive" className="mb-4 border-0 shadow-sm bg-danger bg-opacity-10 text-danger py-2">
                 <AlertDescription className="small d-flex align-items-center gap-2">
                   {error}
@@ -336,7 +366,28 @@ export function LoginUpdated({ onLogin, onSwitchToSignUp }: LoginProps) {
               <button type="button" className="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div className="modal-body p-4">
-              {resetError && (
+              {countdown > 0 ? (
+                <div className="auth-countdown-container mb-4">
+                  <div className="auth-countdown-header">
+                    <div className="auth-countdown-icon">
+                      <ShieldAlert size={18} />
+                    </div>
+                    <h3 className="auth-countdown-title">Security Delay</h3>
+                  </div>
+                  
+                  <div className="auth-countdown-timer">
+                    {formatTime(countdown)}
+                    <span>remaining</span>
+                  </div>
+
+                  <div className="auth-countdown-progress-bg">
+                    <div 
+                      className="auth-countdown-progress-bar" 
+                      style={{ width: `${(countdown / initialCountdown) * 100}%` }}
+                    ></div>
+                  </div>
+                </div>
+              ) : resetError && (
                 <div className="alert alert-danger border-0 small py-2 mb-3">
                   {resetError}
                 </div>

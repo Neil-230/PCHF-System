@@ -10,7 +10,7 @@ import rateLimit from 'express-rate-limit';
 // ============================================
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 20, // Relaxed to 30 login attempts per IP per 15 minutes
+  max: 2, // Relaxed to 30 login attempts per IP per 15 minutes
   standardHeaders: true,
   legacyHeaders: false,
   message: {
