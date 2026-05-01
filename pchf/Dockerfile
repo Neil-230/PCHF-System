@@ -1,5 +1,5 @@
 # Stage 1: Build the React application
-FROM node:18-alpine AS build
+FROM node:20-alpine AS build
 
 # Set the working directory
 WORKDIR /app
@@ -12,17 +12,24 @@ RUN npm install
 COPY . .
 RUN npm run build
 
-# Stage 2: Serve the application with Nginx
-FROM nginx:stable-alpine
+# Stage 2: Serve the application with Express
+FROM node:20-alpine
 
-# Copy the built files from the build stage to Nginx's static file directory
-COPY --from=build /app/dist /usr/share/nginx/html
+WORKDIR /app
 
-# Replace the default Nginx configuration (optional, but recommended for SPAs)
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Copy package.json for production dependencies
+COPY package*.json ./
+# Install only production dependencies
+RUN npm install --omit=dev
+
+# Copy the built files from the build stage
+COPY --from=build /app/dist ./dist
+
+# Copy the server script
+COPY server.js ./
 
 # Expose port 80 for traffic
 EXPOSE 80
 
-# Run Nginx in the foreground
-CMD ["nginx", "-g", "daemon off;"]
+# Start the express server
+CMD ["node", "server.js"]

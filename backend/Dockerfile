@@ -1,5 +1,5 @@
 # Use Node.js LTS as the base image
-FROM node:18-alpine
+FROM node:20-alpine
 
 # Set the working directory inside the container
 WORKDIR /app
@@ -12,7 +12,7 @@ RUN npm install --production
 COPY . .
 
 # Expose the API port (adjust if your backend uses a different port)
-EXPOSE 5000
+EXPOSE 4000
 
 # Command to run the application
 CMD ["npm", "start"]
