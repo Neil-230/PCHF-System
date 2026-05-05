@@ -21,7 +21,6 @@ createRoot(document.getElementById('root')!).render(
         position="top-right"
         visibleToasts={3}
         closeButton
-        containerClassName="toaster-container"
       />
       <Routes>
         <Route path="/" element={<App />} />

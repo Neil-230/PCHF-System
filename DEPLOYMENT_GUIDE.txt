@@ -1,0 +1,44 @@
+=== DEPLOYMENT GUIDE FOR FOURAXIS ===
+
+1. UPLOAD PROJECT (Run this in your PC's PowerShell first)
+---------------------------------------------------------
+cd "d:\Programming\Node Js\System"
+scp -r . fouraxis@167.172.73.9:/home/fouraxis/project/
+(Password: fouraxis@4)
+
+
+2. VIDEO RECORDING SCRIPT
+-------------------------
+STEP 1: Show Folder Structure in VS Code
+- Points to: backend/ folder
+- Points to: frontend/ folder
+- Points to: docker-compose.yml
+Script: "I am using the required project structure with separate frontend and backend folders."
+
+STEP 2: Show Configuration
+- Open frontend/vite.config.ts -> highlight base: '/fouraxis/'
+- Open docker-compose.yml -> highlight port 3001
+Script: "Vite and Docker are configured for my assigned port 3001 and subdirectory /fouraxis."
+
+STEP 3: Run on Server (In SSH Terminal)
+- Command: cd ~/project
+- Command: docker compose up -d --build
+- Command: docker ps
+Script: "Now running the application via Docker Compose. Both containers are active."
+
+STEP 4: Access in Browser
+- URL: http://167.172.73.9/fouraxis
+Script: "The application is successfully running at my assigned URL."
+
+STEP 5: Stop (In SSH Terminal)
+- Command: docker compose down
+Script: "Testing complete, stopping the containers now."
+
+
+3. COMMAND CHEAT-SHEET
+----------------------
+Login:   ssh fouraxis@167.172.73.9
+Start:   docker compose up -d --build
+Check:   docker ps
+Logs:    docker logs fouraxis-frontend
+Stop:    docker compose down
