@@ -11,8 +11,8 @@ const PORT = process.env.PORT || 80;
 // Serve static files from the dist directory under the /fouraxis path
 app.use('/fouraxis', express.static(path.join(__dirname, 'dist')));
 
-// Handle React routing, return all requests to React app
-app.get('/fouraxis/*', (req, res) => {
+// Handle React routing, return all requests to React app as a fallback
+app.use((req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 

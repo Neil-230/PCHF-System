@@ -13,6 +13,9 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=4000
+      - ENCRYPTION_KEY=3knEyC+S6hoCi5ZFUrksl96D7wn/thRbgRUleyQrI9Y=
+      - MONGODB_URI=mongodb+srv://2301106964_:2301106964_@cluster0.gly4jyq.mongodb.net/?appName=Cluster0
+      - JWT_SECRET=a7f3k9m2p5l8q1r6t9u2v3w4x5y6z7a8b9c0d1e2f3g4h5i6j7k8l9m0n1o2p
 
   # Frontend React Service
   frontend:
@@ -21,7 +24,7 @@ services:
       dockerfile: Dockerfile
     container_name: fouraxis-frontend
     ports:
-      - "3001:80" # Assigned port 3001 maps to internal port 80
+      - "3031:80" # Assigned port 3031 maps to internal port 80
     restart: always
     environment:
       - VITE_API_URL=/fouraxis/api # Relative path for API
