@@ -60,13 +60,8 @@ export function LoginUpdated({ onLogin, onSwitchToSignUp }: LoginProps) {
     setIsLoading(true);
 
     try {
-      // Require reCAPTCHA for manual login (Bypassed for demo)
-      let recaptchaToken;
-      try {
-        recaptchaToken = await executeRecaptcha('login');
-      } catch (e) {
-        recaptchaToken = 'demo-bypass-token';
-      }
+      // Require reCAPTCHA for manual login
+      const recaptchaToken = await executeRecaptcha('login');
       const response = await apiService.login(email, password, recaptchaToken);
 
       if (response.token) {
