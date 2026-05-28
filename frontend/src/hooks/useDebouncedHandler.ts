@@ -10,7 +10,7 @@ export const useDebouncedHandler = <T extends any[]>(
   handler: (...args: T) => Promise<void>,
   delay = 500
 ) => {
-  const timeoutRef = useRef<NodeJS.Timeout>();
+  const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const isProcessingRef = useRef(false);
 
   return useCallback(

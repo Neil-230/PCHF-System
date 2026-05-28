@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import type { Product, CartItem } from "../types";
 import { mockProducts, categories } from "../data/mockData";
-import { Search, Package, User, Phone, MapPin, ShoppingBag, Truck, UserCircle, CreditCard, ChevronRight } from "lucide-react";
+import { Search, Package, User, Phone, MapPin, ShoppingBag, Truck, UserCircle, ChevronRight } from "lucide-react";
 import "./css/PointOfSales.css";
 import { Modal, Button, Card } from "react-bootstrap";
 import { Badge } from "./ui/Badge";
@@ -114,10 +114,6 @@ export function PointOfSale({ onTransactionComplete, user }: PointOfSaleProps) {
       });
   }, []);
 
-  
-  const removeFromCart = (productId: string) => {
-    setCart((prev) => prev.filter((item) => item.product.id !== productId));
-  };
 
   const clearCart = () => {
     if (cart.length === 0) {
@@ -299,7 +295,7 @@ export function PointOfSale({ onTransactionComplete, user }: PointOfSaleProps) {
 
       // Items Table
       const tableData = cart.map((item) => [
-        { content: item.product.name, styles: { fontStyle: 'bold' } },
+        { content: item.product.name, styles: { fontStyle: 'bold' as const } },
         `${item.quantity}`,
         `${item.product.price.toFixed(2)}`,
         `${(item.product.price * item.quantity).toFixed(2)}`
@@ -374,7 +370,7 @@ export function PointOfSale({ onTransactionComplete, user }: PointOfSaleProps) {
       // Footer
       finalY += 12;
       doc.setDrawColor(200);
-      doc.setLineDashPattern([1, 1], 0);
+      (doc as any).setLineDashPattern([1, 1], 0);
       doc.line(10, finalY, 70, finalY);
       
       finalY += 8;

@@ -1,7 +1,7 @@
 //TransactionHistory.tsx ngano mag bout kag mag typscript ko
 import { useState, useRef } from "react";
 import type { Transaction } from "../types";
-import { Eye, Search, CreditCard, DollarSign, Receipt, Printer, Trash2, Calendar, User, Activity, BarChart3, Users, Package } from "lucide-react";
+import { Eye, Search, CreditCard, Receipt, Printer, Trash2, Calendar, User, Activity, BarChart3, Users, Package } from "lucide-react";
 import { Button, Modal } from "react-bootstrap";
 
 interface TransactionHistoryProps {

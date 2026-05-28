@@ -3,7 +3,7 @@ import type { PermissionGroupDescriptor, PermissionOverride, User } from "../typ
 import apiService from "../services/api";
 import { toast } from "sonner";
 import { useToast } from "../hooks";
-import { Shield, UserCheck, UserX, Loader2, LayoutGrid, Package, ReceiptText, Settings, ShieldAlert, Search, RefreshCw, UserCog, ShieldCheck, Info, ArrowUpRight } from "lucide-react";
+import { Shield, Loader2, LayoutGrid, Package, ReceiptText, Settings, ShieldAlert, Search, RefreshCw, UserCog, ShieldCheck, Info, ArrowUpRight } from "lucide-react";
 
 interface PermissionsManagerProps {
   currentUser: User;
